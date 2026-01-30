@@ -55,7 +55,7 @@ filtered_df = df[
     (df['Date'].dt.date <= date_range[1])
 ]
 
-st.title("🏌️ Golf Shot Tracker Dashboard")
+st.title("Golf Shot Tracker Dashboard")
 st.markdown(f"**{len(filtered_df)}** shots from **{filtered_df['Round ID'].nunique()}** rounds")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -101,3 +101,10 @@ fig_sg_lie = px.bar(
     x='Starting Location',
     y='Avg SG',
     color='Avg SG',
+    color_continuous_scale=['#c77d3a', '#fafaf8', '#2d5016'],
+    color_continuous_midpoint=0
+)
+st.plotly_chart(fig_sg_lie, use_container_width=True)
+
+with st.expander("View Raw Data"):
+    st.dataframe(filtered_df)
