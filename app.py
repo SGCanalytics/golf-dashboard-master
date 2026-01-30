@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # ============================================================
 # CONFIG
@@ -8,6 +9,72 @@ import plotly.express as px
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZ8-dHrvrfl8YQnRSLpCYS6GjTHpXQm2uVuqS0X5t3yOxhciFnvxlLSSMX_gplveVmlP5Uz8nOmJF/pub?gid=0&single=true&output=csv"
 
 st.set_page_config(page_title="Golf Shot Tracker", layout="wide")
+
+# Shot type order
+SHOT_TYPE_ORDER = ['Driving', 'Approach', 'Short Game', 'Putt', 'Recovery', 'Other']
+
+# ============================================================
+# CUSTOM CSS
+# ============================================================
+st.markdown("""
+<style>
+    /* Center align dataframes */
+    .stDataFrame {
+        display: flex;
+        justify-content: center;
+    }
+    .stDataFrame > div {
+        text-align: center;
+    }
+    
+    /* Tiger 5 cards */
+    .tiger5-card {
+        background: linear-gradient(135deg, #2d5016 0%, #3d6b22 100%);
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+        height: 120px;
+    }
+    .tiger5-card.has-fails {
+        background: linear-gradient(135deg, #c77d3a 0%, #a06830 100%);
+    }
+    .tiger5-card h3 {
+        font-size: 14px;
+        margin: 0 0 10px 0;
+        font-weight: 500;
+    }
+    .tiger5-card .fail-count {
+        font-size: 36px;
+        font-weight: 700;
+        margin: 0;
+    }
+    .tiger5-card .label {
+        font-size: 12px;
+        opacity: 0.8;
+    }
+    
+    /* Grit score card */
+    .grit-card {
+        background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+        height: 120px;
+    }
+    .grit-card h3 {
+        font-size: 14px;
+        margin: 0 0 10px 0;
+        font-weight: 500;
+    }
+    .grit-card .score {
+        font-size: 36px;
+        font-weight: 700;
+        margin: 0;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # CALCULATION FUNCTIONS
@@ -58,24 +125,20 @@ def score_to_name(hole_score, par):
 def load_data():
     df = pd.read_csv(SHEET_URL)
     
-    # Standardize text fields
     df['Player'] = df['Player'].str.strip().str.title()
     df['Course'] = df['Course'].str.strip().str.title()
     df['Tournament'] = df['Tournament'].str.strip().str.title()
     
-    # Calculate Par from first shot of each hole
     first_shots = df[df['Shot'] == 1].copy()
     first_shots['Par'] = first_shots['Starting Distance'].apply(determine_par)
     df = df.merge(first_shots[['Round ID', 'Hole', 'Par']], on=['Round ID', 'Hole'], how='left')
     
-    # Calculate Shot Type
     df['Shot Type'] = df.apply(lambda row: determine_shot_type(
         row['Starting Location'],
         row['Starting Distance'],
         row['Par']
     ), axis=1)
     
-    # Create unique Shot ID
     df['Shot ID'] = df['Round ID'] + '-H' + df['Hole'].astype(str) + '-S' + df['Shot'].astype(str)
     
     return df
@@ -101,22 +164,14 @@ def calculate_tiger5(filtered_df, hole_summary):
     t5_3putt_attempts = (hole_summary['num_putts'] >= 1).sum()
     t5_3putt_fails = (hole_summary['num_putts'] >= 3).sum()
     three_putt_holes = hole_summary[hole_summary['num_putts'] >= 3][['Player', 'Round ID', 'Date', 'Course', 'Hole', 'Par', 'Hole Score']].copy()
-    results['3 Putts'] = {
-        'attempts': t5_3putt_attempts,
-        'fails': t5_3putt_fails,
-        'detail_holes': three_putt_holes
-    }
+    results['3 Putts'] = {'attempts': t5_3putt_attempts, 'fails': t5_3putt_fails, 'detail_holes': three_putt_holes}
     
     # Tiger 5 #2: Double Bogeys
     t5_dbl_bogey_attempts = len(hole_summary)
     dbl_bogey_mask = hole_summary['Hole Score'] >= hole_summary['Par'] + 2
     t5_dbl_bogey_fails = dbl_bogey_mask.sum()
     dbl_bogey_holes = hole_summary[dbl_bogey_mask][['Player', 'Round ID', 'Date', 'Course', 'Hole', 'Par', 'Hole Score']].copy()
-    results['Double Bogeys'] = {
-        'attempts': t5_dbl_bogey_attempts,
-        'fails': t5_dbl_bogey_fails,
-        'detail_holes': dbl_bogey_holes
-    }
+    results['Double Bogeys'] = {'attempts': t5_dbl_bogey_attempts, 'fails': t5_dbl_bogey_fails, 'detail_holes': dbl_bogey_holes}
     
     # Tiger 5 #3: Bogey on Par 5
     par_5_holes = hole_summary[hole_summary['Par'] == 5]
@@ -124,11 +179,7 @@ def calculate_tiger5(filtered_df, hole_summary):
     bogey_par5_mask = par_5_holes['Hole Score'] >= 6
     t5_bogey_par5_fails = bogey_par5_mask.sum()
     bogey_par5_holes = par_5_holes[bogey_par5_mask][['Player', 'Round ID', 'Date', 'Course', 'Hole', 'Par', 'Hole Score']].copy()
-    results['Bogey on Par 5'] = {
-        'attempts': t5_bogey_par5_attempts,
-        'fails': t5_bogey_par5_fails,
-        'detail_holes': bogey_par5_holes
-    }
+    results['Bogey on Par 5'] = {'attempts': t5_bogey_par5_attempts, 'fails': t5_bogey_par5_fails, 'detail_holes': bogey_par5_holes}
     
     # Tiger 5 #4: 2 Shot Game Shots
     short_game_shots = filtered_df[filtered_df['Shot Type'] == 'Short Game'].copy()
@@ -145,11 +196,7 @@ def calculate_tiger5(filtered_df, hole_summary):
             on=['Player', 'Round ID', 'Hole'],
             how='left'
         )
-    results['2 Shot Game Shots'] = {
-        'attempts': t5_2shot_attempts,
-        'fails': t5_2shot_fails,
-        'detail_holes': missed_sg_holes
-    }
+    results['Missed Chip/Pitch'] = {'attempts': t5_2shot_attempts, 'fails': t5_2shot_fails, 'detail_holes': missed_sg_holes}
     
     # Tiger 5 #5: Approach (125yds) Bogey
     approach_125_condition = (
@@ -171,35 +218,14 @@ def calculate_tiger5(filtered_df, hole_summary):
     approach125_fail_mask = approach_125_with_score['Hole Score'] > approach_125_with_score['Par']
     t5_approach125_fails = approach125_fail_mask.sum()
     approach125_fail_holes = approach_125_with_score[approach125_fail_mask].copy()
-    results['Approach (125yds) Bogey'] = {
-        'attempts': t5_approach125_attempts,
-        'fails': t5_approach125_fails,
-        'detail_holes': approach125_fail_holes
-    }
+    results['125yd Bogey'] = {'attempts': t5_approach125_attempts, 'fails': t5_approach125_fails, 'detail_holes': approach125_fail_holes}
     
-    # Build summary dataframe
-    tiger5_data = []
-    for stat_name in ['3 Putts', 'Double Bogeys', 'Bogey on Par 5', '2 Shot Game Shots', 'Approach (125yds) Bogey']:
-        data = results[stat_name]
-        tiger5_data.append({
-            'Stat': stat_name,
-            'Attempts': data['attempts'],
-            'Fails': data['fails']
-        })
+    # Calculate totals for Grit Score
+    total_attempts = sum(r['attempts'] for r in results.values())
+    total_fails = sum(r['fails'] for r in results.values())
+    grit_score = ((total_attempts - total_fails) / total_attempts * 100) if total_attempts > 0 else 0
     
-    tiger5_df = pd.DataFrame(tiger5_data)
-    tiger5_df['Fail %'] = (tiger5_df['Fails'] / tiger5_df['Attempts'] * 100).round(1)
-    tiger5_df['Success %'] = ((tiger5_df['Attempts'] - tiger5_df['Fails']) / tiger5_df['Attempts'] * 100).round(1)
-    tiger5_df = tiger5_df.fillna(0)
-    
-    return tiger5_df, results
-
-def get_shots_for_hole(filtered_df, player, round_id, hole):
-    return filtered_df[
-        (filtered_df['Player'] == player) &
-        (filtered_df['Round ID'] == round_id) &
-        (filtered_df['Hole'] == hole)
-    ][['Shot', 'Starting Distance', 'Starting Location', 'Ending Distance', 'Ending Location', 'Strokes Gained']].copy()
+    return results, total_fails, grit_score
 
 def calculate_scoring_distribution(hole_summary):
     score_order = ['Eagle', 'Birdie', 'Par', 'Bogey', 'Double or Worse']
@@ -254,7 +280,6 @@ date_range = st.sidebar.date_input(
     max_value=max_date
 )
 
-# Apply filters
 filtered_df = df[
     (df['Player'].isin(players)) &
     (df['Course'].isin(courses)) &
@@ -263,8 +288,8 @@ filtered_df = df[
     (df['Date'].dt.date <= date_range[1])
 ]
 
-# Build hole summary from filtered data
 hole_summary = build_hole_summary(filtered_df)
+tiger5_results, total_tiger5_fails, grit_score = calculate_tiger5(filtered_df, hole_summary)
 
 # ============================================================
 # HEADER
@@ -273,35 +298,44 @@ st.title("Golf Shot Tracker Dashboard")
 st.markdown(f"**{len(filtered_df)}** shots from **{filtered_df['Round ID'].nunique()}** rounds")
 
 # ============================================================
-# TIGER 5 (TOP FOCUS)
+# TIGER 5 CARDS
 # ============================================================
-st.header("Tiger 5 Summary")
-st.markdown("*Goal: 0 Total Fails*")
+st.header("Tiger 5")
 
-tiger5_df, tiger5_details = calculate_tiger5(filtered_df, hole_summary)
+tiger5_names = ['3 Putts', 'Double Bogeys', 'Bogey on Par 5', 'Missed Chip/Pitch', '125yd Bogey']
 
-col_t5_1, col_t5_2 = st.columns([3, 1])
+col1, col2, col3, col4, col5, col6 = st.columns(6)
+cols = [col1, col2, col3, col4, col5, col6]
 
-with col_t5_1:
-    st.dataframe(
-        tiger5_df,
-        use_container_width=True,
-        hide_index=True
-    )
+for i, stat_name in enumerate(tiger5_names):
+    fails = tiger5_results[stat_name]['fails']
+    card_class = "tiger5-card has-fails" if fails > 0 else "tiger5-card"
+    with cols[i]:
+        st.markdown(f"""
+        <div class="{card_class}">
+            <h3>{stat_name}</h3>
+            <p class="fail-count">{int(fails)}</p>
+            <p class="label">fails</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-with col_t5_2:
-    total_fails = tiger5_df['Fails'].sum()
-    st.metric("Total Tiger 5 Fails", int(total_fails))
+with cols[5]:
+    st.markdown(f"""
+    <div class="grit-card">
+        <h3>Grit Score</h3>
+        <p class="score">{grit_score:.1f}%</p>
+        <p class="label">success rate</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Tiger 5 Drill-Downs
-st.subheader("Tiger 5 Fail Details")
-
-for stat_name in ['3 Putts', 'Double Bogeys', 'Bogey on Par 5', '2 Shot Game Shots', 'Approach (125yds) Bogey']:
-    detail = tiger5_details[stat_name]
-    fail_count = detail['fails']
-    
-    if fail_count > 0:
-        with st.expander(f"{stat_name} ({int(fail_count)} fails)"):
+# Tiger 5 Drill-Down
+with st.expander("View Tiger 5 Fail Details"):
+    for stat_name in tiger5_names:
+        detail = tiger5_results[stat_name]
+        fail_count = detail['fails']
+        
+        if fail_count > 0:
+            st.markdown(f"### {stat_name} ({int(fail_count)} fails)")
             detail_holes = detail['detail_holes']
             
             for idx, row in detail_holes.iterrows():
@@ -315,7 +349,6 @@ for stat_name in ['3 Putts', 'Double Bogeys', 'Bogey on Par 5', '2 Shot Game Sho
                 
                 st.markdown(f"**{player}** | {date} | {course} | Hole {hole} (Par {int(par)}) | Score: {int(hole_score)}")
                 
-                # Get relevant shots based on fail type
                 if stat_name == '3 Putts':
                     shots = filtered_df[
                         (filtered_df['Player'] == player) &
@@ -324,8 +357,7 @@ for stat_name in ['3 Putts', 'Double Bogeys', 'Bogey on Par 5', '2 Shot Game Sho
                         (filtered_df['Shot Type'] == 'Putt')
                     ][['Shot', 'Starting Distance', 'Ending Distance', 'Strokes Gained']].copy()
                     shots.columns = ['Putt #', 'Start (ft)', 'End (ft)', 'SG']
-                
-                elif stat_name == '2 Shot Game Shots':
+                elif stat_name == 'Missed Chip/Pitch':
                     shots = filtered_df[
                         (filtered_df['Player'] == player) &
                         (filtered_df['Round ID'] == round_id) &
@@ -333,7 +365,6 @@ for stat_name in ['3 Putts', 'Double Bogeys', 'Bogey on Par 5', '2 Shot Game Sho
                         (filtered_df['Shot Type'] == 'Short Game')
                     ][['Shot', 'Starting Distance', 'Starting Location', 'Ending Distance', 'Ending Location', 'Strokes Gained']].copy()
                     shots.columns = ['Shot #', 'Start Dist', 'Start Lie', 'End Dist', 'End Lie', 'SG']
-                
                 else:
                     shots = filtered_df[
                         (filtered_df['Player'] == player) &
@@ -344,14 +375,45 @@ for stat_name in ['3 Putts', 'Double Bogeys', 'Bogey on Par 5', '2 Shot Game Sho
                 
                 shots['SG'] = shots['SG'].round(2)
                 st.dataframe(shots, use_container_width=True, hide_index=True)
-                st.markdown("---")
+            st.markdown("---")
 
 # ============================================================
-# SG BY SHOT TYPE
+# STROKES GAINED CARDS
+# ============================================================
+st.header("Strokes Gained Summary")
+
+num_rounds = filtered_df['Round ID'].nunique()
+total_sg = filtered_df['Strokes Gained'].sum()
+sg_per_round = total_sg / num_rounds if num_rounds > 0 else 0
+sg_driving = filtered_df[filtered_df['Shot Type'] == 'Driving']['Strokes Gained'].sum()
+sg_approach = filtered_df[filtered_df['Shot Type'] == 'Approach']['Strokes Gained'].sum()
+
+# SG Putts 5-10 feet
+putts_5_10 = filtered_df[
+    (filtered_df['Shot Type'] == 'Putt') &
+    (filtered_df['Starting Distance'] >= 5) &
+    (filtered_df['Starting Distance'] <= 10)
+]
+sg_putts_5_10 = putts_5_10['Strokes Gained'].sum()
+
+col1, col2, col3, col4, col5 = st.columns(5)
+
+with col1:
+    st.metric("Total SG", f"{total_sg:.2f}")
+with col2:
+    st.metric("SG / Round", f"{sg_per_round:.2f}")
+with col3:
+    st.metric("SG Driving", f"{sg_driving:.2f}")
+with col4:
+    st.metric("SG Approach", f"{sg_approach:.2f}")
+with col5:
+    st.metric("SG Putts 5-10ft", f"{sg_putts_5_10:.2f}")
+
+# ============================================================
+# SG BY SHOT TYPE CHART
 # ============================================================
 st.header("Strokes Gained by Shot Type")
 
-# Table
 sg_by_type = filtered_df.groupby('Shot Type')['Strokes Gained'].agg(
     Total_SG='sum',
     Num_Shots='count',
@@ -360,22 +422,44 @@ sg_by_type = filtered_df.groupby('Shot Type')['Strokes Gained'].agg(
 sg_by_type.columns = ['Shot Type', 'Total SG', '# Shots', 'SG/Shot']
 sg_by_type['Total SG'] = sg_by_type['Total SG'].round(2)
 sg_by_type['SG/Shot'] = sg_by_type['SG/Shot'].round(3)
-sg_by_type = sg_by_type.sort_values('Total SG', ascending=False)
 
-st.dataframe(sg_by_type, use_container_width=True, hide_index=True)
+# Order by SHOT_TYPE_ORDER
+sg_by_type['Shot Type'] = pd.Categorical(sg_by_type['Shot Type'], categories=SHOT_TYPE_ORDER, ordered=True)
+sg_by_type = sg_by_type.sort_values('Shot Type')
 
-# Trend Chart by Date
-st.subheader("SG by Shot Type Trend (by Date)")
+fig_sg_type = px.bar(
+    sg_by_type,
+    x='Shot Type',
+    y='Total SG',
+    color='Total SG',
+    color_continuous_scale=['#c77d3a', '#fafaf8', '#2d5016'],
+    color_continuous_midpoint=0,
+    text='Total SG'
+)
+fig_sg_type.update_traces(textposition='outside', texttemplate='%{text:.2f}')
+fig_sg_type.update_layout(showlegend=False, coloraxis_showscale=False)
+fig_sg_type.add_hline(y=0, line_dash="dash", line_color="gray")
+st.plotly_chart(fig_sg_type, use_container_width=True)
+
+with st.expander("View Shot Type Details"):
+    st.dataframe(sg_by_type, use_container_width=True, hide_index=True)
+
+# ============================================================
+# SG TREND BY DATE
+# ============================================================
+st.header("Strokes Gained Trend")
 
 sg_trend = filtered_df.groupby([filtered_df['Date'].dt.date, 'Shot Type'])['Strokes Gained'].sum().reset_index()
 sg_trend.columns = ['Date', 'Shot Type', 'Total SG']
+sg_trend['Shot Type'] = pd.Categorical(sg_trend['Shot Type'], categories=SHOT_TYPE_ORDER, ordered=True)
 
 fig_trend = px.line(
     sg_trend,
     x='Date',
     y='Total SG',
     color='Shot Type',
-    markers=True
+    markers=True,
+    category_orders={'Shot Type': SHOT_TYPE_ORDER}
 )
 fig_trend.update_layout(
     xaxis_title="Date",
@@ -384,19 +468,6 @@ fig_trend.update_layout(
 )
 fig_trend.add_hline(y=0, line_dash="dash", line_color="gray")
 st.plotly_chart(fig_trend, use_container_width=True)
-
-# Bar chart
-st.subheader("Total SG by Shot Type")
-
-fig_sg_type = px.bar(
-    sg_by_type,
-    x='Shot Type',
-    y='Total SG',
-    color='Total SG',
-    color_continuous_scale=['#c77d3a', '#fafaf8', '#2d5016'],
-    color_continuous_midpoint=0
-)
-st.plotly_chart(fig_sg_type, use_container_width=True)
 
 # ============================================================
 # SG BY STARTING LOCATION
@@ -413,55 +484,72 @@ sg_by_lie['Total SG'] = sg_by_lie['Total SG'].round(2)
 sg_by_lie['SG/Shot'] = sg_by_lie['SG/Shot'].round(3)
 sg_by_lie = sg_by_lie.sort_values('Total SG', ascending=False)
 
-st.dataframe(sg_by_lie, use_container_width=True, hide_index=True)
-
 fig_sg_lie = px.bar(
     sg_by_lie,
     x='Starting Location',
     y='Total SG',
     color='Total SG',
     color_continuous_scale=['#c77d3a', '#fafaf8', '#2d5016'],
-    color_continuous_midpoint=0
+    color_continuous_midpoint=0,
+    text='Total SG'
 )
+fig_sg_lie.update_traces(textposition='outside', texttemplate='%{text:.2f}')
+fig_sg_lie.update_layout(showlegend=False, coloraxis_showscale=False)
+fig_sg_lie.add_hline(y=0, line_dash="dash", line_color="gray")
 st.plotly_chart(fig_sg_lie, use_container_width=True)
+
+with st.expander("View Starting Location Details"):
+    st.dataframe(sg_by_lie, use_container_width=True, hide_index=True)
 
 # ============================================================
 # SCORING DISTRIBUTION
 # ============================================================
-st.header("Scoring Distribution by Par")
+st.header("Scoring Distribution")
 
 scoring_dist, scoring_pct = calculate_scoring_distribution(hole_summary)
+score_order = ['Eagle', 'Birdie', 'Par', 'Bogey', 'Double or Worse']
 
-tab1, tab2 = st.tabs(["Counts", "Percentages"])
+# Pie chart for overall distribution
+overall_dist = hole_summary['Score Name'].value_counts().reindex(score_order, fill_value=0)
 
-with tab1:
-    st.dataframe(scoring_dist, use_container_width=True)
+fig_pie = px.pie(
+    values=overall_dist.values,
+    names=overall_dist.index,
+    color=overall_dist.index,
+    color_discrete_map={
+        'Eagle': '#1a365d',
+        'Birdie': '#2d5016',
+        'Par': '#6b7280',
+        'Bogey': '#c77d3a',
+        'Double or Worse': '#991b1b'
+    }
+)
+fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+st.plotly_chart(fig_pie, use_container_width=True)
 
-with tab2:
-    score_order = ['Eagle', 'Birdie', 'Par', 'Bogey', 'Double or Worse']
-    st.dataframe(scoring_pct[score_order], use_container_width=True)
-
-# Overall stats
-st.markdown("**Overall**")
 col_s1, col_s2, col_s3 = st.columns(3)
 
 with col_s1:
     st.metric("Avg Score", f"{hole_summary['Hole Score'].mean():.2f}")
-
 with col_s2:
     pars_or_better = (hole_summary['Hole Score'] <= hole_summary['Par']).sum()
-    pars_or_better_pct = pars_or_better / len(hole_summary) * 100
+    pars_or_better_pct = pars_or_better / len(hole_summary) * 100 if len(hole_summary) > 0 else 0
     st.metric("Pars or Better", f"{pars_or_better_pct:.1f}%")
-
 with col_s3:
-    total_holes = len(hole_summary)
-    st.metric("Total Holes", total_holes)
+    st.metric("Total Holes", len(hole_summary))
+
+with st.expander("View Scoring Distribution by Par"):
+    tab1, tab2 = st.tabs(["Counts", "Percentages"])
+    with tab1:
+        st.dataframe(scoring_dist, use_container_width=True)
+    with tab2:
+        st.dataframe(scoring_pct[score_order], use_container_width=True)
 
 # ============================================================
 # RAW DATA
 # ============================================================
 with st.expander("View Raw Shot Data"):
-    st.dataframe(filtered_df)
+    st.dataframe(filtered_df, use_container_width=True)
 
 with st.expander("View Hole Summary"):
-    st.dataframe(hole_summary)
+    st.dataframe(hole_summary, use_container_width=True)
