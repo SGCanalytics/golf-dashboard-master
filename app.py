@@ -5,7 +5,7 @@ import plotly.express as px
 # ============================================================
 # CONFIG
 # ============================================================
-SHEET_URL = "YOUR_PUBLISHED_CSV_URL_HERE"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZ8-dHrvrfl8YQnRSLpCYS6GjTHpXQm2uVuqS0X5t3yOxhciFnvxlLSSMX_gplveVmlP5Uz8nOmJF/pub?gid=0&single=true&output=csv"
 
 st.set_page_config(page_title="Golf Shot Tracker", layout="wide")
 
@@ -15,6 +15,10 @@ st.set_page_config(page_title="Golf Shot Tracker", layout="wide")
 @st.cache_data(ttl=300)  # Cache for 5 minutes
 def load_data():
     df = pd.read_csv(SHEET_URL)
+    # Standardize text fields
+    df['Player'] = df['Player'].str.strip().str.title()
+    df['Course'] = df['Course'].str.strip().str.title()
+    df['Tournament'] = df['Tournament'].str.strip().str.title()
     return df
 
 df = load_data()
@@ -26,27 +30,41 @@ st.sidebar.title("Filters")
 
 players = st.sidebar.multiselect(
     "Player",
-    options=df['Player'].unique(),
+    options=sorted(df['Player'].unique()),
     default=df['Player'].unique()
 )
 
 courses = st.sidebar.multiselect(
     "Course",
-    options=df['Course'].unique(),
+    options=sorted(df['Course'].unique()),
     default=df['Course'].unique()
 )
 
 tournaments = st.sidebar.multiselect(
     "Tournament",
-    options=df['Tournament'].unique(),
+    options=sorted(df['Tournament'].unique()),
     default=df['Tournament'].unique()
+)
+
+# Date filter
+df['Date'] = pd.to_datetime(df['Date'])
+min_date = df['Date'].min().date()
+max_date = df['Date'].max().date()
+
+date_range = st.sidebar.date_input(
+    "Date Range",
+    value=(min_date, max_date),
+    min_value=min_date,
+    max_value=max_date
 )
 
 # Apply filters
 filtered_df = df[
     (df['Player'].isin(players)) &
     (df['Course'].isin(courses)) &
-    (df['Tournament'].isin(tournaments))
+    (df['Tournament'].isin(tournaments)) &
+    (df['Date'].dt.date >= date_range[0]) &
+    (df['Date'].dt.date <= date_range[1])
 ]
 
 # ============================================================
@@ -117,3 +135,15 @@ st.plotly_chart(fig_sg_lie, use_container_width=True)
 # ============================================================
 with st.expander("View Raw Data"):
     st.dataframe(filtered_df)
+```
+
+---
+
+**Next steps:**
+
+1. Share your GitHub repo URL
+2. Create `requirements.txt` in your repo with:
+```
+streamlit
+pandas
+plotly
