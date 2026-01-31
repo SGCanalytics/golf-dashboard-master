@@ -797,26 +797,26 @@ with tab_approach:
                 </div>
             """, unsafe_allow_html=True)
 
-            with col:
+        with col:
     # Build sparkline data for this bucket
-    spark_df = bucket_df.sort_values("Date")  # ensure chronological
-    spark_values = spark_df["Strokes Gained"].rolling(3).mean()  # smooth a bit
+            spark_df = bucket_df.sort_values("Date")  # ensure chronological
+            spark_values = spark_df["Strokes Gained"].rolling(3).mean()  # smooth a bit
 
     # Create sparkline
-    fig_spark = px.line(
-        spark_df,
-        y=spark_values,
-        height=60,
-        width=160
+            fig_spark = px.line(
+            spark_df,
+            y=spark_values,
+            height=60,
+            width=160
     )
-    fig_spark.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0),
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)"
+            fig_spark.update_layout(
+            margin=dict(l=0, r=0, t=0, b=0),
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)"
     )
-    fig_spark.update_traces(line=dict(color="#FFC72C", width=2))
+            fig_spark.update_traces(line=dict(color="#FFC72C", width=2))
 
     # Render hero card
     st.markdown(f"""
