@@ -859,8 +859,8 @@ with tab_approach:
     col1, col2, col3 = st.columns(3)
 
     # Radar 1 — SG per Shot
-   
-with col1:
+    
+    with col1:
     fig_radar_sg = px.line_polar(
         radar_df,
         r="SG/Shot",
@@ -872,36 +872,28 @@ with col1:
     )
     fig_radar_sg.update_traces(fill='toself')
 
-    # Force a tick at 0.0 so the ring exists
     fig_radar_sg.update_layout(
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
             radialaxis=dict(
                 showgrid=True,
-                gridcolor="#444",
-                color="#FFC72C",
-                tickvals=[sg_min, 0, sg_max],
-                ticktext=["", "0.0", ""]
+                gridcolor=["#444", "#FFC72C", "#444"],   # ⭐ middle ring = bold gold
+                gridwidth=[1, 4, 1],                    # ⭐ middle ring = thick
+                tickvals=[sg_min, 0, sg_max],           # force 0.0 ring
+                ticktext=["", "0.0", ""],
+                color="#FFC72C"
             ),
-            angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+            angularaxis=dict(
+                showgrid=True,
+                gridcolor="#444",
+                color="#FFC72C"
+            )
         ),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font_family="Inter",
         font_color="#FFC72C",
         height=350
-    )
-
-    # ⭐ Draw a bold ring at r = 0.0 using polar coordinates
-    fig_radar_sg.add_shape(
-        type="circle",
-        xref="x",
-        yref="y",
-        x0=0,
-        y0=0,
-        x1=0,
-        y1=0,
-        line=dict(color="#FFC72C", width=4)
     )
 
     st.plotly_chart(fig_radar_sg, use_container_width=True)
