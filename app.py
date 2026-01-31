@@ -90,11 +90,42 @@ st.markdown("""
     .driving-table .row-danger { background: linear-gradient(90deg, #E03C31 0%, #c93028 100%); }
     .driving-table .row-danger td { font-weight: 700; color: #fff; padding: 0.875rem 0.75rem; }
     .driving-table .indent { padding-left: 2rem !important; }
-    
-    .hero-stat { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 16px; padding: 2rem; text-align: center; border: 2px solid #FFC72C; margin-bottom: 1.5rem; }
-    .hero-stat .hero-value { font-family: 'Playfair Display', serif; font-size: 4rem; font-weight: 700; color: #FFC72C; line-height: 1; margin-bottom: 0.5rem; }
-    .hero-stat .hero-label { font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 500; color: #D3AF7E; text-transform: uppercase; letter-spacing: 0.1em; }
-    .hero-stat .hero-sub { font-family: 'Inter', sans-serif; font-size: 0.8rem; color: rgba(255,199,44,0.6); margin-top: 0.5rem; }
+
+    .hero-stat {
+    background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    border: 2px solid #FFC72C;
+    margin-bottom: 1.5rem;
+}
+
+.hero-stat .hero-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.6rem;        /* was 4rem */
+    font-weight: 700;
+    color: #FFC72C;
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+}
+
+.hero-stat .hero-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #D3AF7E;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.3rem;
+}
+
+.hero-stat .hero-sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;       /* slightly smaller */
+    color: rgba(255,199,44,0.75);  /* stronger contrast */
+    margin-top: 0.25rem;
+}
+
     
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
