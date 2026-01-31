@@ -79,23 +79,6 @@ st.markdown("""
         letter-spacing: -0.01em;
     }
     
-    /* Card Container */
-    .metric-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid #e8e8e8;
-        margin-bottom: 1rem;
-        transition: all 0.2s ease;
-    }
-    
-    .metric-card:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-        transform: translateY(-2px);
-    }
-    
     /* Tiger 5 Success Card */
     .tiger-card-success {
         background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
@@ -246,21 +229,55 @@ st.markdown("""
     
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background: #000000;
+        background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
     }
     
-    section[data-testid="stSidebar"] .stMarkdown,
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] .stSelectbox label,
-    section[data-testid="stSidebar"] span {
-        color: #FFC72C !important;
+    section[data-testid="stSidebar"] > div:first-child {
+        padding-top: 2rem;
     }
     
-    section[data-testid="stSidebar"] h1 {
-        color: #FFC72C !important;
-        font-size: 1.5rem !important;
-        border-bottom: 1px solid #333;
+    .sidebar-title {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #FFC72C;
+        margin-bottom: 0.5rem;
         padding-bottom: 1rem;
+        border-bottom: 1px solid #333;
+    }
+    
+    .sidebar-label {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #D3AF7E;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.5rem;
+        margin-top: 1.25rem;
+    }
+    
+    section[data-testid="stSidebar"] .stMultiSelect label,
+    section[data-testid="stSidebar"] .stDateInput label {
+        color: #D3AF7E !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
+    }
+    
+    section[data-testid="stSidebar"] .stMultiSelect > div > div {
+        background-color: #2a2a2a !important;
+        border: 1px solid #444 !important;
+        border-radius: 8px !important;
+    }
+    
+    section[data-testid="stSidebar"] .stDateInput > div > div > input {
+        background-color: #2a2a2a !important;
+        border: 1px solid #444 !important;
+        border-radius: 8px !important;
+        color: #ffffff !important;
     }
     
     /* Data Table Styling */
@@ -325,11 +342,30 @@ st.markdown("""
         padding-bottom: 2rem;
     }
     
-    /* Divider */
-    .section-divider {
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
-        margin: 2rem 0;
+    /* Par Score Card */
+    .par-score-card {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid #FFC72C;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .par-score-card .par-label {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #333;
+    }
+    
+    .par-score-card .par-value {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #000;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -502,35 +538,43 @@ df = load_data()
 # SIDEBAR FILTERS
 # ============================================================
 with st.sidebar:
-    st.markdown("# Filters")
+    st.markdown('<p class="sidebar-title">Filters</p>', unsafe_allow_html=True)
     
+    st.markdown('<p class="sidebar-label">Player</p>', unsafe_allow_html=True)
     players = st.multiselect(
         "Player",
         options=sorted(df['Player'].unique()),
-        default=df['Player'].unique()
+        default=df['Player'].unique(),
+        label_visibility="collapsed"
     )
     
+    st.markdown('<p class="sidebar-label">Course</p>', unsafe_allow_html=True)
     courses = st.multiselect(
         "Course",
         options=sorted(df['Course'].unique()),
-        default=df['Course'].unique()
+        default=df['Course'].unique(),
+        label_visibility="collapsed"
     )
     
+    st.markdown('<p class="sidebar-label">Tournament</p>', unsafe_allow_html=True)
     tournaments = st.multiselect(
         "Tournament",
         options=sorted(df['Tournament'].unique()),
-        default=df['Tournament'].unique()
+        default=df['Tournament'].unique(),
+        label_visibility="collapsed"
     )
     
     df['Date'] = pd.to_datetime(df['Date'])
     min_date = df['Date'].min().date()
     max_date = df['Date'].max().date()
     
+    st.markdown('<p class="sidebar-label">Date Range</p>', unsafe_allow_html=True)
     date_range = st.date_input(
         "Date Range",
         value=(min_date, max_date),
         min_value=min_date,
-        max_value=max_date
+        max_value=max_date,
+        label_visibility="collapsed"
     )
 
 filtered_df = df[
@@ -646,9 +690,14 @@ st.markdown('<p class="section-title">Strokes Gained Summary</p>', unsafe_allow_
 num_rounds = filtered_df['Round ID'].nunique()
 total_sg = filtered_df['Strokes Gained'].sum()
 sg_per_round = total_sg / num_rounds if num_rounds > 0 else 0
-sg_driving = filtered_df[filtered_df['Shot Type'] == 'Driving']['Strokes Gained'].sum()
-sg_approach = filtered_df[filtered_df['Shot Type'] == 'Approach']['Strokes Gained'].sum()
 
+# SG Tee to Green (all shots except putts)
+sg_tee_to_green = filtered_df[filtered_df['Shot Type'] != 'Putt']['Strokes Gained'].sum()
+
+# SG Putting
+sg_putting = filtered_df[filtered_df['Shot Type'] == 'Putt']['Strokes Gained'].sum()
+
+# SG Putts 5-10 feet
 putts_5_10 = filtered_df[
     (filtered_df['Shot Type'] == 'Putt') &
     (filtered_df['Starting Distance'] >= 5) &
@@ -684,20 +733,20 @@ with col2:
     ''', unsafe_allow_html=True)
 
 with col3:
-    val_class = sg_value_class(sg_driving)
+    val_class = sg_value_class(sg_tee_to_green)
     st.markdown(f'''
         <div class="sg-card">
-            <div class="card-label">SG Driving</div>
-            <div class="card-value {val_class}">{sg_driving:.2f}</div>
+            <div class="card-label">SG Tee to Green</div>
+            <div class="card-value {val_class}">{sg_tee_to_green:.2f}</div>
         </div>
     ''', unsafe_allow_html=True)
 
 with col4:
-    val_class = sg_value_class(sg_approach)
+    val_class = sg_value_class(sg_putting)
     st.markdown(f'''
         <div class="sg-card">
-            <div class="card-label">SG Approach</div>
-            <div class="card-value {val_class}">{sg_approach:.2f}</div>
+            <div class="card-label">SG Putting</div>
+            <div class="card-value {val_class}">{sg_putting:.2f}</div>
         </div>
     ''', unsafe_allow_html=True)
 
@@ -711,7 +760,7 @@ with col5:
     ''', unsafe_allow_html=True)
 
 # ============================================================
-# SG BY SHOT TYPE CHART
+# SG BY SHOT TYPE
 # ============================================================
 st.markdown('<p class="section-title">Performance by Shot Type</p>', unsafe_allow_html=True)
 
@@ -755,10 +804,25 @@ fig_sg_type.update_layout(
     height=400
 )
 
-st.plotly_chart(fig_sg_type, use_container_width=True)
+col_chart, col_table = st.columns([2, 1])
 
-with st.expander("View Shot Type Details"):
-    st.dataframe(sg_by_type, use_container_width=True, hide_index=True)
+with col_chart:
+    st.plotly_chart(fig_sg_type, use_container_width=True)
+
+with col_table:
+    summary_table = sg_by_type[['Shot Type', 'Shots', 'SG/Shot']].copy()
+    summary_table.columns = ['Shot Type', '# Shots', 'SG/Shot']
+    st.dataframe(summary_table, use_container_width=True, hide_index=True, height=400)
+
+# Shot Type Detail Expanders
+for shot_type in SHOT_TYPE_ORDER:
+    shot_data = filtered_df[filtered_df['Shot Type'] == shot_type]
+    if len(shot_data) > 0:
+        with st.expander(f"{shot_type} Details ({len(shot_data)} shots)"):
+            detail_table = shot_data[['Course', 'Hole', 'Starting Distance', 'Starting Location', 'Ending Distance', 'Ending Location', 'Strokes Gained']].copy()
+            detail_table.columns = ['Course', 'Hole', 'Start Dist', 'Start Lie', 'End Dist', 'End Lie', 'SG']
+            detail_table['SG'] = detail_table['SG'].round(2)
+            st.dataframe(detail_table, use_container_width=True, hide_index=True)
 
 # ============================================================
 # SG TREND BY DATE
@@ -804,55 +868,6 @@ fig_trend.update_layout(
 st.plotly_chart(fig_trend, use_container_width=True)
 
 # ============================================================
-# SG BY STARTING LOCATION
-# ============================================================
-st.markdown('<p class="section-title">Performance by Lie</p>', unsafe_allow_html=True)
-
-sg_by_lie = filtered_df.groupby('Starting Location')['Strokes Gained'].agg(
-    Total_SG='sum',
-    Num_Shots='count',
-    SG_per_Shot='mean'
-).reset_index()
-sg_by_lie.columns = ['Lie', 'Total SG', 'Shots', 'SG/Shot']
-sg_by_lie['Total SG'] = sg_by_lie['Total SG'].round(2)
-sg_by_lie['SG/Shot'] = sg_by_lie['SG/Shot'].round(3)
-sg_by_lie = sg_by_lie.sort_values('Total SG', ascending=True)
-
-colors_lie = [ODU_RED if x < 0 else ODU_GOLD for x in sg_by_lie['Total SG']]
-
-fig_sg_lie = go.Figure(data=[
-    go.Bar(
-        y=sg_by_lie['Lie'],
-        x=sg_by_lie['Total SG'],
-        orientation='h',
-        marker_color=colors_lie,
-        text=sg_by_lie['Total SG'].apply(lambda x: f'{x:.2f}'),
-        textposition='outside',
-        textfont=dict(family='Inter', size=12, color='#000000')
-    )
-])
-
-fig_sg_lie.update_layout(
-    plot_bgcolor='white',
-    paper_bgcolor='white',
-    font_family='Inter',
-    xaxis=dict(
-        title='Total Strokes Gained',
-        gridcolor='#e8e8e8',
-        zerolinecolor=ODU_BLACK,
-        zerolinewidth=2
-    ),
-    yaxis=dict(title=''),
-    margin=dict(t=40, b=40, l=100, r=60),
-    height=350
-)
-
-st.plotly_chart(fig_sg_lie, use_container_width=True)
-
-with st.expander("View Lie Details"):
-    st.dataframe(sg_by_lie, use_container_width=True, hide_index=True)
-
-# ============================================================
 # SCORING DISTRIBUTION
 # ============================================================
 st.markdown('<p class="section-title">Scoring Distribution</p>', unsafe_allow_html=True)
@@ -887,16 +902,30 @@ with col_chart:
     st.plotly_chart(fig_pie, use_container_width=True)
 
 with col_metrics:
-    st.markdown("<div style='height: 2rem;'></div>", unsafe_allow_html=True)
+    st.markdown("**Average Score by Par**")
+    st.markdown("<div style='height: 0.5rem;'></div>", unsafe_allow_html=True)
     
-    avg_score = hole_summary['Hole Score'].mean() if len(hole_summary) > 0 else 0
-    st.metric("Average Score", f"{avg_score:.2f}")
+    avg_by_par = hole_summary.groupby('Par')['Hole Score'].mean()
     
-    pars_or_better = (hole_summary['Hole Score'] <= hole_summary['Par']).sum()
-    pars_or_better_pct = pars_or_better / len(hole_summary) * 100 if len(hole_summary) > 0 else 0
-    st.metric("Pars or Better", f"{pars_or_better_pct:.1f}%")
+    for par in [3, 4, 5]:
+        if par in avg_by_par.index:
+            avg_score = avg_by_par[par]
+            st.markdown(f'''
+                <div class="par-score-card">
+                    <span class="par-label">Par {par}</span>
+                    <span class="par-value">{avg_score:.2f}</span>
+                </div>
+            ''', unsafe_allow_html=True)
     
-    st.metric("Total Holes", len(hole_summary))
+    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+    
+    overall_avg = hole_summary['Hole Score'].mean() if len(hole_summary) > 0 else 0
+    st.markdown(f'''
+        <div class="par-score-card" style="border-left-color: #000;">
+            <span class="par-label">Overall Avg</span>
+            <span class="par-value">{overall_avg:.2f}</span>
+        </div>
+    ''', unsafe_allow_html=True)
 
 with st.expander("View Scoring Distribution by Par"):
     tab1, tab2 = st.tabs(["Counts", "Percentages"])
@@ -914,4 +943,7 @@ with st.expander("View Raw Shot Data"):
     st.dataframe(filtered_df, use_container_width=True)
 
 with st.expander("View Hole Summary"):
-    st.dataframe(hole_summary, use_container_width=True)
+    # Clean up hole summary for display
+    display_hole_summary = hole_summary[['Player', 'Course', 'Hole', 'Par', 'Hole Score', 'num_penalties', 'num_putts', 'Score Name']].copy()
+    display_hole_summary.columns = ['Player', 'Course', 'Hole', 'Par', 'Score', 'Penalties', 'Putts', 'Result']
+    st.dataframe(display_hole_summary, use_container_width=True, hide_index=True)
