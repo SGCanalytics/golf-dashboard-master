@@ -760,42 +760,108 @@ with tab_approach:
             """, unsafe_allow_html=True)
 
     # ------------------------------------------------------------
-    # DISTANCE BUCKET TABLE
+    # RADAR CHARTS (SG/Shot, Proximity, GIR%)
     # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Distance Bucket Breakdown</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">Approach Profile by Distance Bucket</p>', unsafe_allow_html=True)
 
-    table_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
+    # Prepare radar data
+    radar_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
 
-    rows = []
-    for bucket in table_buckets:
+    radar_rows = []
+    for bucket in radar_buckets:
         dfb = approach_df[approach_df['Table Bucket'] == bucket]
 
         if len(dfb) == 0:
-            rows.append([bucket, 0, 0, 0, 0, 0, 0, 0, 0])
+            radar_rows.append([bucket, 0, 0, 0])
             continue
 
-        total_sg = dfb['Strokes Gained'].sum()
-        shots = len(dfb)
         sg_per_shot = dfb['Strokes Gained'].mean()
         prox = dfb['Ending Distance'].mean()
+        gir = (dfb['Ending Location'] == 'Green').mean() * 100
 
-        green_df = dfb[dfb['Ending Location'] == 'Green']
-        prox_green = green_df['Ending Distance'].mean() if len(green_df) > 0 else 0
-        gir = len(green_df) / shots * 100
+        radar_rows.append([bucket, sg_per_shot, prox, gir])
 
-        good = (dfb['Strokes Gained'] > 0.5).sum()
-        bad = (dfb['Strokes Gained'] < -0.5).sum()
+    radar_df = pd.DataFrame(radar_rows, columns=["Bucket", "SG/Shot", "Proximity", "GIR%"])
 
-        rows.append([
-            bucket, total_sg, shots, sg_per_shot, prox, prox_green, gir, good, bad
-        ])
+    # Fixed scales (Option 1)
+    sg_min, sg_max = -0.5, 0.5
+    prox_min, prox_max = 0, 60
+    gir_min, gir_max = 0, 100
 
-    bucket_table = pd.DataFrame(rows, columns=[
-        "Bucket", "Total SG", "# Shots", "SG/Shot", "Proximity (ft)",
-        "Prox on Green Hit (ft)", "GIR %", "Good Shots", "Bad Shots"
-    ])
+    # Create three columns for radars
+    col1, col2, col3 = st.columns(3)
 
-    st.dataframe(bucket_table, use_container_width=True, hide_index=True)
+    # -------------------------
+    # Radar 1 — SG per Shot
+    # -------------------------
+    with col1:
+        fig_radar_sg = px.line_polar(
+            radar_df,
+            r="SG/Shot",
+            theta="Bucket",
+            line_close=True,
+            range_r=[sg_min, sg_max],
+            title="SG per Shot",
+            color_discrete_sequence=[ODU_GOLD]
+        )
+        fig_radar_sg.update_traces(fill='toself')
+        fig_radar_sg.update_layout(
+            polar=dict(bgcolor="white"),
+            paper_bgcolor="white",
+            font_family="Inter",
+            height=350
+        )
+        st.plotly_chart(fig_radar_sg, use_container_width=True)
+
+    # -------------------------
+    # Radar 2 — Proximity
+    # -------------------------
+    with col2:
+        fig_radar_prox = px.line_polar(
+            radar_df,
+            r="Proximity",
+            theta="Bucket",
+            line_close=True,
+            range_r=[prox_min, prox_max],
+            title="Proximity (ft)",
+            color_discrete_sequence=[ODU_BLACK]
+        )
+        fig_radar_prox.update_traces(fill='toself')
+        fig_radar_prox.update_layout(
+            polar=dict(bgcolor="white"),
+            paper_bgcolor="white",
+            font_family="Inter",
+            height=350
+        )
+        st.plotly_chart(fig_radar_prox, use_container_width=True)
+
+    # -------------------------
+    # Radar 3 — GIR %
+    # -------------------------
+    with col3:
+        fig_radar_gir = px.line_polar(
+            radar_df,
+            r="GIR%",
+            theta="Bucket",
+            line_close=True,
+            range_r=[gir_min, gir_max],
+            title="GIR %",
+            color_discrete_sequence=[ODU_GREEN]
+        )
+        fig_radar_gir.update_traces(fill='toself')
+        fig_radar_gir.update_layout(
+            polar=dict(bgcolor="white"),
+            paper_bgcolor="white",
+            font_family="Inter",
+            height=350
+        )
+        st.plotly_chart(fig_radar_gir, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # COLLAPSIBLE DISTANCE BUCKET TABLE
+    # ------------------------------------------------------------
+    with st.expander("View Full Distance Bucket Table"):
+        st.dataframe(bucket_table, use_container_width=True, hide_index=True)
 
     # ------------------------------------------------------------
     # SCATTER PLOT
