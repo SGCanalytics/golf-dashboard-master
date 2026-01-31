@@ -720,8 +720,6 @@ with tab_driving:
 # TAB: APPROACH
 # ============================================================
 with tab_approach:
-    with tab_approach:
-
     st.markdown('<p class="section-title">Approach Play</p>', unsafe_allow_html=True)
 
     # Filter to approach shots only
