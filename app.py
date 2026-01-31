@@ -888,15 +888,19 @@ with tab_approach:
 
     # Radar 2 — Proximity
     with col2:
+        # Invert proximity so closer = better (farther out on radar)
+        radar_df["Proximity_Inverted"] = prox_max - radar_df["Proximity"]
+
         fig_radar_prox = px.line_polar(
             radar_df,
-            r="Proximity",
+            r="Proximity_Inverted",
             theta="Bucket",
             line_close=True,
-            range_r=[prox_min, prox_max],
-            title="Proximity (ft)",
+            range_r=[0, prox_max],   # 0 = worst, 60 = best (inverted)
+            title="Proximity (Closer = Better)",
             color_discrete_sequence=[ODU_BLACK]
         )
+
         fig_radar_prox.update_traces(fill='toself')
 
         fig_radar_prox.update_layout(
