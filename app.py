@@ -898,12 +898,20 @@ with tab_approach:
             color_discrete_sequence=[ODU_BLACK]
         )
         fig_radar_prox.update_traces(fill='toself')
+
         fig_radar_prox.update_layout(
-            polar=dict(bgcolor="white"),
-            paper_bgcolor="white",
+            polar=dict(
+                bgcolor="rgba(0,0,0,0)",
+                radialaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C"),
+                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+            ),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             font_family="Inter",
+            font_color="#FFC72C",
             height=350
         )
+
         st.plotly_chart(fig_radar_prox, use_container_width=True)
 
     # Radar 3 — GIR %
@@ -918,12 +926,20 @@ with tab_approach:
             color_discrete_sequence=[ODU_GREEN]
         )
         fig_radar_gir.update_traces(fill='toself')
+
         fig_radar_gir.update_layout(
-            polar=dict(bgcolor="white"),
-            paper_bgcolor="white",
+            polar=dict(
+                bgcolor="rgba(0,0,0,0)",
+                radialaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C"),
+                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+            ),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             font_family="Inter",
+            font_color="#FFC72C",
             height=350
         )
+
         st.plotly_chart(fig_radar_gir, use_container_width=True)
 
     # Collapsible table
