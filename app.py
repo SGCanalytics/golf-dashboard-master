@@ -720,6 +720,7 @@ with tab_driving:
 # TAB: APPROACH
 # ============================================================
 with tab_approach:
+    with tab_approach:
 
     st.markdown('<p class="section-title">Approach Play</p>', unsafe_allow_html=True)
 
@@ -760,11 +761,44 @@ with tab_approach:
             """, unsafe_allow_html=True)
 
     # ------------------------------------------------------------
+    # BUILD DISTANCE BUCKET TABLE (needed for radars + expander)
+    # ------------------------------------------------------------
+    table_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
+
+    rows = []
+    for bucket in table_buckets:
+        dfb = approach_df[approach_df['Table Bucket'] == bucket]
+
+        if len(dfb) == 0:
+            rows.append([bucket, 0, 0, 0, 0, 0, 0, 0, 0])
+            continue
+
+        total_sg = dfb['Strokes Gained'].sum()
+        shots = len(dfb)
+        sg_per_shot = dfb['Strokes Gained'].mean()
+        prox = dfb['Ending Distance'].mean()
+
+        green_df = dfb[dfb['Ending Location'] == 'Green']
+        prox_green = green_df['Ending Distance'].mean() if len(green_df) > 0 else 0
+        gir = len(green_df) / shots * 100
+
+        good = (dfb['Strokes Gained'] > 0.5).sum()
+        bad = (dfb['Strokes Gained'] < -0.5).sum()
+
+        rows.append([
+            bucket, total_sg, shots, sg_per_shot, prox, prox_green, gir, good, bad
+        ])
+
+    bucket_table = pd.DataFrame(rows, columns=[
+        "Bucket", "Total SG", "# Shots", "SG/Shot", "Proximity (ft)",
+        "Prox on Green Hit (ft)", "GIR %", "Good Shots", "Bad Shots"
+    ])
+
+    # ------------------------------------------------------------
     # RADAR CHARTS (SG/Shot, Proximity, GIR%)
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Approach Profile by Distance Bucket</p>', unsafe_allow_html=True)
 
-    # Prepare radar data
     radar_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
 
     radar_rows = []
@@ -783,17 +817,14 @@ with tab_approach:
 
     radar_df = pd.DataFrame(radar_rows, columns=["Bucket", "SG/Shot", "Proximity", "GIR%"])
 
-    # Fixed scales (Option 1)
+    # Fixed scales
     sg_min, sg_max = -0.5, 0.5
     prox_min, prox_max = 0, 60
     gir_min, gir_max = 0, 100
 
-    # Create three columns for radars
     col1, col2, col3 = st.columns(3)
 
-    # -------------------------
     # Radar 1 — SG per Shot
-    # -------------------------
     with col1:
         fig_radar_sg = px.line_polar(
             radar_df,
@@ -813,9 +844,7 @@ with tab_approach:
         )
         st.plotly_chart(fig_radar_sg, use_container_width=True)
 
-    # -------------------------
     # Radar 2 — Proximity
-    # -------------------------
     with col2:
         fig_radar_prox = px.line_polar(
             radar_df,
@@ -835,9 +864,7 @@ with tab_approach:
         )
         st.plotly_chart(fig_radar_prox, use_container_width=True)
 
-    # -------------------------
     # Radar 3 — GIR %
-    # -------------------------
     with col3:
         fig_radar_gir = px.line_polar(
             radar_df,
@@ -857,9 +884,7 @@ with tab_approach:
         )
         st.plotly_chart(fig_radar_gir, use_container_width=True)
 
-    # ------------------------------------------------------------
-    # COLLAPSIBLE DISTANCE BUCKET TABLE
-    # ------------------------------------------------------------
+    # Collapsible table
     with st.expander("View Full Distance Bucket Table"):
         st.dataframe(bucket_table, use_container_width=True, hide_index=True)
 
@@ -891,13 +916,38 @@ with tab_approach:
 
     st.plotly_chart(fig_scatter, use_container_width=True)
 
-    
+    # ------------------------------------------------------------
+    # BOXPLOT
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Proximity by Distance Bucket</p>', unsafe_allow_html=True)
+
+    fig_box = px.box(
+        approach_df.dropna(subset=['Hero Bucket']),
+        x="Hero Bucket",
+        y="Ending Distance",
+        color="Starting Location",
+        color_discrete_map={
+            "Fairway": ODU_GOLD,
+            "Rough": ODU_RED,
+            "Sand": ODU_PURPLE,
+            "Tee": ODU_BLACK
+        }
+    )
+
+    fig_box.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        height=400
+    )
+
+    st.plotly_chart(fig_box, use_container_width=True)
+
     # ------------------------------------------------------------
     # HEATMAP (Ordered Axes)
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">SG per Shot Heatmap</p>', unsafe_allow_html=True)
 
-    # Reverse distance order (longest → shortest)
     bucket_order = [">200", "150–200", "100–150", "50–100"]
     lie_order = ["Tee", "Fairway", "Rough", "Sand"]
 
@@ -925,60 +975,55 @@ with tab_approach:
 
     st.plotly_chart(fig_heat, use_container_width=True)
 
-# ------------------------------------------------------------
-# APPROACH TREND ANALYSIS
-# ------------------------------------------------------------
-st.markdown('<p class="section-title">Approach SG Trend by Round</p>', unsafe_allow_html=True)
+    # ------------------------------------------------------------
+    # APPROACH TREND ANALYSIS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Approach SG Trend by Round</p>', unsafe_allow_html=True)
 
-# Build round-level SG: Approach
-round_labels = filtered_df.groupby('Round ID').agg(
-    Date=('Date', 'first'),
-    Course=('Course', 'first')
-).reset_index()
+    round_labels = filtered_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first')
+    ).reset_index()
 
-round_labels['Label'] = round_labels.apply(
-    lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
-    axis=1
-)
+    round_labels['Label'] = round_labels.apply(
+        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+        axis=1
+    )
 
-# Sum SG: Approach per round
-sg_round = approach_df.groupby('Round ID')['Strokes Gained'].sum().reset_index()
-sg_round = sg_round.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
-sg_round = sg_round.sort_values('Date')
+    sg_round = approach_df.groupby('Round ID')['Strokes Gained'].sum().reset_index()
+    sg_round = sg_round.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    sg_round = sg_round.sort_values('Date')
 
-# Moving average toggle
-use_ma = st.checkbox("Apply Moving Average", value=False)
+    use_ma = st.checkbox("Apply Moving Average", value=False)
 
-if use_ma:
-    window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
-    sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
-    y_col = 'SG_MA'
-else:
-    y_col = 'Strokes Gained'
+    if use_ma:
+        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
+        sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
+        y_col = 'SG_MA'
+    else:
+        y_col = 'Strokes Gained'
 
-# Build trend chart
-fig_trend = px.line(
-    sg_round,
-    x='Label',
-    y=y_col,
-    markers=True,
-    title="SG: Approach Trend",
-    color_discrete_sequence=[ODU_BLACK]
-)
+    fig_trend = px.line(
+        sg_round,
+        x='Label',
+        y=y_col,
+        markers=True,
+        title="SG: Approach Trend",
+        color_discrete_sequence=[ODU_BLACK]
+    )
 
-fig_trend.update_layout(
-    plot_bgcolor='white',
-    paper_bgcolor='white',
-    font_family='Inter',
-    xaxis_title='',
-    yaxis_title='Strokes Gained',
-    height=400
-)
+    fig_trend.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        xaxis_title='',
+        yaxis_title='Strokes Gained',
+        height=400
+    )
 
-fig_trend.update_xaxes(tickangle=-45)
+    fig_trend.update_xaxes(tickangle=-45)
 
-st.plotly_chart(fig_trend, use_container_width=True)
-
+    st.plotly_chart(fig_trend, use_container_width=True)
 
 # ============================================================
 # TAB: SHORT GAME
