@@ -1138,24 +1138,212 @@ with tab_short_game:
             sg_detail['SG'] = sg_detail['SG'].round(2)
             st.dataframe(sg_detail, use_container_width=True, hide_index=True)
 
+
 # ============================================================
 # TAB: PUTTING
 # ============================================================
 with tab_putting:
-    st.markdown('<p class="section-title">Putting Analysis</p>', unsafe_allow_html=True)
-    st.info("🕳️ Putting analysis coming soon! This will include make % by distance, 3-putt avoidance, and putt length after approach.")
-    
-    putt_shots = filtered_df[filtered_df['Shot Type'] == 'Putt'].copy()
-    if len(putt_shots) > 0:
-        putt_sg = putt_shots['Strokes Gained'].sum()
-        st.metric("Total SG Putting", f"{putt_sg:.2f}")
-        
-        with st.expander(f"View All Putts ({len(putt_shots)} total)"):
-            putt_detail = putt_shots[['Player', 'Date', 'Course', 'Hole', 'Starting Distance', 'Ending Distance', 'Strokes Gained']].copy()
-            putt_detail['Date'] = pd.to_datetime(putt_detail['Date']).dt.strftime('%m/%d/%Y')
-            putt_detail.columns = ['Player', 'Date', 'Course', 'Hole', 'Start (ft)', 'End (ft)', 'SG']
-            putt_detail['Hole'] = putt_detail['Hole'].astype(int)
-            putt_detail['Start (ft)'] = putt_detail['Start (ft)'].round(0).astype(int)
-            putt_detail['End (ft)'] = putt_detail['End (ft)'].round(0).astype(int)
-            putt_detail['SG'] = putt_detail['SG'].round(2)
-            st.dataframe(putt_detail, use_container_width=True, hide_index=True)
+
+    # ---- FILTER PUTTING SHOTS ----
+    putting_df = filtered_df[filtered_df["Shot Type"] == "Putt"].copy()
+
+    # Distance bins for charts
+    putting_df["Distance Bin"] = pd.cut(
+        putting_df["Starting Distance"],
+        bins=[0, 5, 10, 20, 30, 200],
+        labels=["0–5 ft", "5–10 ft", "10–20 ft", "20–30 ft", ">30 ft"],
+        right=True
+    )
+
+    # ---- HERO CARD METRICS ----
+    # 1. Total SG Putting
+    total_sg_putting = putting_df["Strokes Gained"].sum()
+    sg_per_round = total_sg_putting / putting_df["Round"].nunique()
+
+    # 2. Make % (4–5 ft)
+    mask_4_5 = (putting_df["Starting Distance"] >= 4) & (putting_df["Starting Distance"] <= 5)
+    attempts_4_5 = mask_4_5.sum()
+    makes_4_5 = (mask_4_5 & (putting_df["Putts"] == 1)).sum()
+    make_pct_4_5 = (makes_4_5 / attempts_4_5 * 100) if attempts_4_5 > 0 else 0
+
+    # 3. SG: 5–10 ft
+    mask_5_10 = (putting_df["Starting Distance"] >= 5) & (putting_df["Starting Distance"] <= 10)
+    sg_5_10 = putting_df.loc[mask_5_10, "Strokes Gained"].sum()
+    sg_5_10_per = sg_5_10 / mask_5_10.sum() if mask_5_10.sum() > 0 else 0
+
+    # 4. Number of 3-putts
+    three_putts = (putting_df["Putts"] >= 3).sum()
+    three_putt_pct = three_putts / putting_df["Hole"].nunique() * 100
+
+    # 5. Lag Misses (>5 ft)
+    lag_misses = (putting_df["Ending Distance"] > 5).sum()
+    lag_miss_pct = lag_misses / len(putting_df) * 100
+
+# ============================================================
+# Hero Cards
+# ============================================================
+
+    st.markdown('<p class="section-title">Putting Performance</p>', unsafe_allow_html=True)
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    # Card 1: Total SG Putting
+    with col1:
+        st.markdown(f"""
+            <div class="hero-stat">
+                <div class="stat-label">Total SG Putting</div>
+                <div class="stat-value">{total_sg_putting:.2f}</div>
+                <div class="stat-sub">SG per round: {sg_per_round:.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Card 2: Make % 4–5 ft
+    with col2:
+        st.markdown(f"""
+            <div class="hero-stat">
+                <div class="stat-label">Make % (4–5 ft)</div>
+                <div class="stat-value">{make_pct_4_5:.1f}%</div>
+                <div class="stat-sub">{makes_4_5} of {attempts_4_5}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Card 3: SG 5–10 ft
+    with col3:
+        st.markdown(f"""
+            <div class="hero-stat">
+                <div class="stat-label">SG (5–10 ft)</div>
+                <div class="stat-value">{sg_5_10:.2f}</div>
+                <div class="stat-sub">Per attempt: {sg_5_10_per:.3f}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Card 4: 3-Putts
+    with col4:
+        st.markdown(f"""
+            <div class="hero-stat">
+                <div class="stat-label">3-Putts</div>
+                <div class="stat-value">{three_putts}</div>
+                <div class="stat-sub">{three_putt_pct:.1f}% of holes</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Card 5: Lag Misses
+    with col5:
+        st.markdown(f"""
+            <div class="hero-stat">
+                <div class="stat-label">Lag Misses (>5 ft)</div>
+                <div class="stat-value">{lag_misses}</div>
+                <div class="stat-sub">{lag_miss_pct:.1f}% of putts</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+
+# ============================================================
+# Combine Chart
+# ============================================================
+    st.markdown('<p class="section-title">Putting Outcomes by Distance</p>', unsafe_allow_html=True)
+
+    # Aggregate
+    agg = putting_df.groupby("Distance Bin").agg(
+        one_putt=("Putts", lambda x: (x == 1).sum()),
+        two_putt=("Putts", lambda x: (x == 2).sum()),
+        three_putt=("Putts", lambda x: (x >= 3).sum()),
+        sg=("Strokes Gained", "sum")
+    ).reset_index()
+
+    fig_putt_combo = go.Figure()
+
+    # Stacked bars
+    fig_putt_combo.add_bar(name="1-Putt", x=agg["Distance Bin"], y=agg["one_putt"])
+    fig_putt_combo.add_bar(name="2-Putt", x=agg["Distance Bin"], y=agg["two_putt"])
+    fig_putt_combo.add_bar(name="3+ Putts", x=agg["Distance Bin"], y=agg["three_putt"])
+
+    # SG line
+    fig_putt_combo.add_trace(go.Scatter(
+        name="SG",
+        x=agg["Distance Bin"],
+        y=agg["sg"],
+        mode="lines+markers",
+        yaxis="y2",
+        line=dict(color=ODU_GOLD, width=3)
+    ))
+
+    fig_putt_combo.update_layout(
+        barmode="stack",
+        yaxis=dict(title="Putts"),
+        yaxis2=dict(title="SG", overlaying="y", side="right"),
+        height=450,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font_family="Inter"
+    )
+
+    st.plotly_chart(fig_putt_combo, use_container_width=True)
+
+# ============================================================
+# Make %
+# ============================================================
+
+    st.markdown('<p class="section-title">Make % by Distance</p>', unsafe_allow_html=True)
+
+    make_table = putting_df.groupby("Distance Bin").agg(
+        Attempts=("Putts", "count"),
+        Makes=("Putts", lambda x: (x == 1).sum())
+    )
+    make_table["Make %"] = (make_table["Makes"] / make_table["Attempts"] * 100).round(1)
+
+    st.dataframe(make_table)
+
+# ============================================================
+# Lag Scatter plot
+# ============================================================
+    st.markdown('<p class="section-title">Lag Putting Scatter</p>', unsafe_allow_html=True)
+
+    fig_lag = px.scatter(
+        putting_df,
+        x="Starting Distance",
+        y="Ending Distance",
+        color="Putts",
+        hover_data=["Strokes Gained"],
+        title="First Putt Distance vs Leave Distance"
+    )
+
+    st.plotly_chart(fig_lag, use_container_width=True)
+
+# ============================================================
+# Trend Line SG
+# ============================================================
+    st.markdown('<p class="section-title">SG Putting Over Time</p>', unsafe_allow_html=True)
+
+    trend = putting_df.groupby("Round").agg(
+        sg_total=("Strokes Gained", "sum"),
+        sg_5_10=("Strokes Gained", lambda x: x[mask_5_10].sum())
+    ).reset_index()
+
+    fig_trend = go.Figure()
+    fig_trend.add_trace(go.Scatter(x=trend["Round"], y=trend["sg_total"], mode="lines+markers", name="SG Putting"))
+    fig_trend.add_trace(go.Scatter(x=trend["Round"], y=trend["sg_5_10"], mode="lines+markers", name="SG 5–10 ft"))
+
+    fig_trend.update_layout(height=400, font_family="Inter")
+
+    st.plotly_chart(fig_trend, use_container_width=True)
+
+# ============================================================
+# Clutch Indeix
+# ============================================================
+
+    st.markdown('<p class="section-title">Clutch Index</p>', unsafe_allow_html=True)
+
+    clutch_mask = (putting_df["Putt Type"] == "Birdie") & (putting_df["Starting Distance"] <= 10)
+    clutch_attempts = clutch_mask.sum()
+    clutch_makes = (clutch_mask & (putting_df["Putts"] == 1)).sum()
+    clutch_index = clutch_makes / clutch_attempts * 100 if clutch_attempts > 0 else 0
+
+    st.markdown(f"""
+        <div class="hero-stat" style="width: 250px;">
+            <div class="stat-label">Clutch Index</div>
+            <div class="stat-value">{clutch_index:.1f}%</div>
+            <div class="stat-sub">{clutch_makes} of {clutch_attempts} birdie putts inside 10 ft</div>
+        </div>
+    """, unsafe_allow_html=True)
+
