@@ -720,7 +720,6 @@ with tab_driving:
 # TAB: APPROACH
 # ============================================================
 with tab_approach:
-   with tab_approach:
 
     st.markdown('<p class="section-title">Approach Play</p>', unsafe_allow_html=True)
 
@@ -872,19 +871,19 @@ with tab_approach:
     heatmap_pivot = heatmap_data.pivot(index='Hero Bucket', columns='Lie', values='Strokes Gained')
 
     fig_heat = px.imshow(
-     heatmap_pivot.loc[bucket_order, lie_order],
-     color_continuous_scale='RdYlGn',
-     aspect='auto'
-)
+        heatmap_pivot.loc[bucket_order, lie_order],
+        color_continuous_scale='RdYlGn',
+        aspect='auto'
+    )
 
-fig_heat.update_layout(
-    plot_bgcolor='white',
-    paper_bgcolor='white',
-    font_family='Inter',
-    height=400
-)
+    fig_heat.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        height=400
+    )
 
-st.plotly_chart(fig_heat, use_container_width=True)
+    st.plotly_chart(fig_heat, use_container_width=True)
 
     # ------------------------------------------------------------
     # APPROACH TREND ANALYSIS
@@ -911,35 +910,7 @@ st.plotly_chart(fig_heat, use_container_width=True)
     use_ma = st.checkbox("Apply Moving Average", value=False)
 
     if use_ma:
-        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
-        sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
-        y_col = 'SG_MA'
-    else:
-        y_col = 'Strokes Gained'
-
-    # Build trend chart
-    fig_trend = px.line(
-        sg_round,
-        x='Label',
-        y=y_col,
-        markers=True,
-        title="SG: Approach Trend",
-        color_discrete_sequence=[ODU_BLACK]
-    )
-
-    fig_trend.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
-        xaxis_title='',
-        yaxis_title='Strokes Gained',
-        height=400
-    )
-
-    fig_trend.update_xaxes(tickangle=-45)
-
-    st.plotly_chart(fig_trend, use_container_width=True)
-
+        window = st.selectbox("Moving Average Window", [3, 5,
 
 # ============================================================
 # TAB: SHORT GAME
