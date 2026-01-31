@@ -139,6 +139,44 @@ def fmt_pct(count, total):
 def fmt_pr(count, rounds):
     return f"{count/rounds:.1f}" if rounds > 0 else "-"
 
+# Distance bucket assignment for hero cards (all lies)
+def approach_bucket(distance):
+    if 50 <= distance < 100:
+        return "50–100"
+    elif 100 <= distance < 150:
+        return "100–150"
+    elif 150 <= distance < 200:
+        return "150–200"
+    elif distance >= 200:
+        return ">200"
+    return None
+
+# Distance bucket assignment for table (lie‑restricted)
+def approach_bucket_table(row):
+    d = row['Starting Distance']
+    lie = row['Starting Location']
+
+    # Tee + Fairway buckets
+    if lie in ['Fairway', 'Tee']:
+        if 50 <= d < 100:
+            return "50–100"
+        elif 100 <= d < 150:
+            return "100–150"
+        elif 150 <= d < 200:
+            return "150–200"
+        elif d >= 200:
+            return ">200"
+
+    # Rough buckets
+    if lie == 'Rough':
+        if d < 150:
+            return "Rough <150"
+        else:
+            return "Rough >150"
+
+    return None
+
+
 # ============================================================
 # DATA LOADING
 # ============================================================
@@ -682,23 +720,165 @@ with tab_driving:
 # TAB: APPROACH
 # ============================================================
 with tab_approach:
-    st.markdown('<p class="section-title">Approach Shot Analysis</p>', unsafe_allow_html=True)
-    st.info("🎯 Approach analysis coming soon! This will include GIR tracking, proximity to hole, and approach shot dispersion by distance.")
-    
-    approach_shots = filtered_df[filtered_df['Shot Type'] == 'Approach'].copy()
-    if len(approach_shots) > 0:
-        approach_sg = approach_shots['Strokes Gained'].sum()
-        st.metric("Total SG Approach", f"{approach_sg:.2f}")
-        
-        with st.expander(f"View Approach Shots ({len(approach_shots)} total)"):
-            app_detail = approach_shots[['Player', 'Date', 'Course', 'Hole', 'Starting Distance', 'Starting Location', 'Ending Distance', 'Ending Location', 'Strokes Gained']].copy()
-            app_detail['Date'] = pd.to_datetime(app_detail['Date']).dt.strftime('%m/%d/%Y')
-            app_detail.columns = ['Player', 'Date', 'Course', 'Hole', 'Start Dist', 'Start Lie', 'End Dist', 'End Lie', 'SG']
-            app_detail['Hole'] = app_detail['Hole'].astype(int)
-            app_detail['Start Dist'] = app_detail['Start Dist'].round(0).astype(int)
-            app_detail['End Dist'] = app_detail['End Dist'].round(0).astype(int)
-            app_detail['SG'] = app_detail['SG'].round(2)
-            st.dataframe(app_detail, use_container_width=True, hide_index=True)
+   with tab_approach:
+
+    st.markdown('<p class="section-title">Approach Play</p>', unsafe_allow_html=True)
+
+    # Filter to approach shots only
+    approach_df = filtered_df[filtered_df['Shot Type'] == 'Approach'].copy()
+
+    # Assign hero buckets
+    approach_df['Hero Bucket'] = approach_df['Starting Distance'].apply(approach_bucket)
+
+    # Assign table buckets
+    approach_df['Table Bucket'] = approach_df.apply(approach_bucket_table, axis=1)
+
+    # ------------------------------------------------------------
+    # HERO CARDS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Approach Performance by Distance</p>', unsafe_allow_html=True)
+
+    hero_buckets = ["50–100", "100–150", "150–200", ">200"]
+    cols = st.columns(4)
+
+    for col, bucket in zip(cols, hero_buckets):
+        bucket_df = approach_df[approach_df['Hero Bucket'] == bucket]
+
+        total_sg = bucket_df['Strokes Gained'].sum()
+        sg_per_shot = bucket_df['Strokes Gained'].mean() if len(bucket_df) > 0 else 0
+        prox = bucket_df['Ending Distance'].mean() if len(bucket_df) > 0 else 0
+
+        val_class = "positive" if total_sg > 0 else "negative" if total_sg < 0 else ""
+
+        with col:
+            st.markdown(f"""
+                <div class="hero-stat">
+                    <div class="hero-value {val_class}">{total_sg:.2f}</div>
+                    <div class="hero-label">{bucket} Yards</div>
+                    <div class="hero-sub">SG/Shot: {sg_per_shot:.3f}</div>
+                    <div class="hero-sub">Proximity: {prox:.1f} ft</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # DISTANCE BUCKET TABLE
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Distance Bucket Breakdown</p>', unsafe_allow_html=True)
+
+    table_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
+
+    rows = []
+    for bucket in table_buckets:
+        dfb = approach_df[approach_df['Table Bucket'] == bucket]
+
+        if len(dfb) == 0:
+            rows.append([bucket, 0, 0, 0, 0, 0, 0, 0, 0])
+            continue
+
+        total_sg = dfb['Strokes Gained'].sum()
+        shots = len(dfb)
+        sg_per_shot = dfb['Strokes Gained'].mean()
+        prox = dfb['Ending Distance'].mean()
+
+        green_df = dfb[dfb['Ending Location'] == 'Green']
+        prox_green = green_df['Ending Distance'].mean() if len(green_df) > 0 else 0
+        gir = len(green_df) / shots * 100
+
+        good = (dfb['Strokes Gained'] > 0.5).sum()
+        bad = (dfb['Strokes Gained'] < -0.5).sum()
+
+        rows.append([
+            bucket, total_sg, shots, sg_per_shot, prox, prox_green, gir, good, bad
+        ])
+
+    bucket_table = pd.DataFrame(rows, columns=[
+        "Bucket", "Total SG", "# Shots", "SG/Shot", "Proximity (ft)",
+        "Prox on Green Hit (ft)", "GIR %", "Good Shots", "Bad Shots"
+    ])
+
+    st.dataframe(bucket_table, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------
+    # SCATTER PLOT
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">SG vs Starting Distance</p>', unsafe_allow_html=True)
+
+    fig_scatter = px.scatter(
+        approach_df,
+        x="Starting Distance",
+        y="Strokes Gained",
+        color="Starting Location",
+        hover_data=["Ending Distance", "Ending Location"],
+        color_discrete_map={
+            "Fairway": ODU_GOLD,
+            "Rough": ODU_RED,
+            "Sand": ODU_PURPLE,
+            "Tee": ODU_BLACK
+        }
+    )
+
+    fig_scatter.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        height=400
+    )
+
+    st.plotly_chart(fig_scatter, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # BOXPLOT
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Proximity by Distance Bucket</p>', unsafe_allow_html=True)
+
+    fig_box = px.box(
+        approach_df.dropna(subset=['Hero Bucket']),
+        x="Hero Bucket",
+        y="Ending Distance",
+        color="Starting Location",
+        color_discrete_map={
+            "Fairway": ODU_GOLD,
+            "Rough": ODU_RED,
+            "Sand": ODU_PURPLE,
+            "Tee": ODU_BLACK
+        }
+    )
+
+    fig_box.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        height=400
+    )
+
+    st.plotly_chart(fig_box, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # HEATMAP
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">SG per Shot Heatmap</p>', unsafe_allow_html=True)
+
+    heat_df = approach_df.dropna(subset=['Hero Bucket']).copy()
+    heat_df['Lie'] = heat_df['Starting Location']
+
+    heatmap_data = heat_df.groupby(['Hero Bucket', 'Lie'])['Strokes Gained'].mean().reset_index()
+    heatmap_pivot = heatmap_data.pivot(index='Hero Bucket', columns='Lie', values='Strokes Gained')
+
+    fig_heat = px.imshow(
+        heatmap_pivot,
+        color_continuous_scale='RdYlGn',
+        aspect='auto'
+    )
+
+    fig_heat.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        height=400
+    )
+
+    st.plotly_chart(fig_heat, use_container_width=True)
+
 
 # ============================================================
 # TAB: SHORT GAME
