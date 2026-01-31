@@ -355,7 +355,7 @@ with tab_overview:
             
             # Create label: Mon-YY Course
             date_obj = pd.to_datetime(round_row['Date'])
-            label = f"{date_obj.strftime('%b-%y')} {round_row['Course']}"
+            label = f"{date_obj.strftime('%m/%d/%Y')} {round_row['Course']}"
             
             t5_by_round.append({
                 'Round ID': rid,
@@ -411,7 +411,7 @@ with tab_overview:
         fig_t5_trend.update_yaxes(title_text='Tiger 5 Fails', gridcolor='#e8e8e8', secondary_y=False)
         fig_t5_trend.update_yaxes(title_text='Total Score', showgrid=False, secondary_y=True)
         
-        st.plotly_chart(fig_t5_trend, use_container_width=True)
+        st.plotly_chart(fig_t5_trend, use_container_width=True, config={'displayModeBar': False})
 
     with st.expander("View Tiger 5 Fail Details"):
         for stat_name in tiger5_names:
@@ -461,6 +461,7 @@ with tab_overview:
     sg_by_type['SG/Shot'] = sg_by_type['SG/Shot'].round(3)
     sg_by_type['Shot Type'] = pd.Categorical(sg_by_type['Shot Type'], categories=SHOT_TYPE_ORDER, ordered=True)
     sg_by_type = sg_by_type.sort_values('Shot Type')
+    sg_by_type = sg_by_type[sg_by_type['Shots'] > 0]  # Remove empty shot types
 
     colors = [ODU_RED if x < 0 else ODU_GOLD for x in sg_by_type['Total SG']]
     fig_sg_type = go.Figure(data=[go.Bar(x=sg_by_type['Shot Type'], y=sg_by_type['Total SG'], marker_color=colors, text=sg_by_type['Total SG'].apply(lambda x: f'{x:.2f}'), textposition='outside', textfont=dict(family='Inter', size=12, color='#000000'))])
@@ -475,15 +476,23 @@ with tab_overview:
     # SG Trend Line Graph
     st.markdown('<p class="section-title">Strokes Gained Trend</p>', unsafe_allow_html=True)
     
-    sg_trend = filtered_df[~filtered_df['Shot Type'].isin(['Recovery', 'Other'])].groupby([filtered_df['Date'].dt.date, 'Shot Type'])['Strokes Gained'].sum().reset_index()
-    sg_trend.columns = ['Date', 'Shot Type', 'Total SG']
+    # Create round labels for x-axis
+    round_labels = filtered_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first')
+    ).reset_index()
+    round_labels['Label'] = round_labels.apply(lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}", axis=1)
+    
+    sg_trend = filtered_df[~filtered_df['Shot Type'].isin(['Recovery', 'Other'])].groupby(['Round ID', 'Shot Type'])['Strokes Gained'].sum().reset_index()
+    sg_trend = sg_trend.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    sg_trend = sg_trend.sort_values('Date')
     sg_trend['Shot Type'] = pd.Categorical(sg_trend['Shot Type'], categories=SHOT_TYPE_ORDER, ordered=True)
 
     odu_line_colors = {'Driving': ODU_GOLD, 'Approach': ODU_BLACK, 'Short Game': ODU_PURPLE, 'Putt': ODU_GREEN}
 
-    fig_trend = px.line(sg_trend, x='Date', y='Total SG', color='Shot Type', markers=True, category_orders={'Shot Type': SHOT_TYPE_ORDER}, color_discrete_map=odu_line_colors)
-    fig_trend.update_layout(plot_bgcolor='white', paper_bgcolor='white', font_family='Inter', xaxis_title='', yaxis_title='Total Strokes Gained', yaxis=dict(gridcolor='#e8e8e8', zerolinecolor=ODU_BLACK, zerolinewidth=2), hovermode='x unified', legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1), margin=dict(t=60, b=40, l=60, r=40), height=400)
-    st.plotly_chart(fig_trend, use_container_width=True)
+    fig_trend = px.line(sg_trend, x='Label', y='Strokes Gained', color='Shot Type', markers=True, category_orders={'Shot Type': SHOT_TYPE_ORDER}, color_discrete_map=odu_line_colors)
+    fig_trend.update_layout(plot_bgcolor='white', paper_bgcolor='white', font_family='Inter', xaxis_title='', yaxis_title='Total Strokes Gained', yaxis=dict(gridcolor='#e8e8e8', zerolinecolor=ODU_BLACK, zerolinewidth=2), hovermode='x unified', legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1), margin=dict(t=60, b=80, l=60, r=40), height=400, xaxis=dict(tickangle=-45))
+    st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
 
     # Scoring Distribution
     st.markdown('<p class="section-title">Scoring Distribution</p>', unsafe_allow_html=True)
@@ -619,22 +628,32 @@ with tab_driving:
 
         # Trend
         st.markdown('<p class="section-title">Driving Performance Trend</p>', unsafe_allow_html=True)
-        driving_trend = driving_shots.groupby(driving_shots['Date'].dt.date).agg(SG=('Strokes Gained', 'sum'), Drives=('Shot', 'count'), Fairways=('Ending Location', lambda x: (x == 'Fairway').sum())).reset_index()
+        
+        # Create round labels
+        drive_round_labels = driving_shots.groupby('Round ID').agg(
+            Date=('Date', 'first'),
+            Course=('Course', 'first')
+        ).reset_index()
+        drive_round_labels['Label'] = drive_round_labels.apply(lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}", axis=1)
+        
+        driving_trend = driving_shots.groupby('Round ID').agg(SG=('Strokes Gained', 'sum'), Drives=('Shot', 'count'), Fairways=('Ending Location', lambda x: (x == 'Fairway').sum())).reset_index()
+        driving_trend = driving_trend.merge(drive_round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+        driving_trend = driving_trend.sort_values('Date')
         driving_trend['Fairway %'] = (driving_trend['Fairways'] / driving_trend['Drives'] * 100).round(1)
         
         fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
-        fig_trend.add_trace(go.Bar(x=driving_trend['Date'], y=driving_trend['SG'], name='SG Driving', marker_color=[ODU_RED if x < 0 else ODU_GOLD for x in driving_trend['SG']], opacity=0.8), secondary_y=False)
-        fig_trend.add_trace(go.Scatter(x=driving_trend['Date'], y=driving_trend['Fairway %'], name='Fairway %', mode='lines+markers', line=dict(color=ODU_BLACK, width=3), marker=dict(size=10, color=ODU_BLACK)), secondary_y=True)
-        fig_trend.update_layout(plot_bgcolor='white', paper_bgcolor='white', font_family='Inter', legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1), margin=dict(t=60, b=40, l=60, r=60), height=350, hovermode='x unified')
+        fig_trend.add_trace(go.Bar(x=driving_trend['Label'], y=driving_trend['SG'], name='SG Driving', marker_color=[ODU_RED if x < 0 else ODU_GOLD for x in driving_trend['SG']], opacity=0.8), secondary_y=False)
+        fig_trend.add_trace(go.Scatter(x=driving_trend['Label'], y=driving_trend['Fairway %'], name='Fairway %', mode='lines+markers', line=dict(color=ODU_BLACK, width=3), marker=dict(size=10, color=ODU_BLACK)), secondary_y=True)
+        fig_trend.update_layout(plot_bgcolor='white', paper_bgcolor='white', font_family='Inter', legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1), margin=dict(t=60, b=80, l=60, r=60), height=350, hovermode='x unified', xaxis=dict(tickangle=-45))
         fig_trend.update_yaxes(title_text="Strokes Gained", gridcolor='#e8e8e8', zerolinecolor=ODU_BLACK, zerolinewidth=2, secondary_y=False)
         fig_trend.update_yaxes(title_text="Fairway %", range=[0, 100], showgrid=False, secondary_y=True)
-        st.plotly_chart(fig_trend, use_container_width=True)
+        st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
 
         # Detail Tables
         st.markdown('<p class="section-title">Detailed Data</p>', unsafe_allow_html=True)
         with st.expander(f"📋 All Driving Shots ({num_drives} total)"):
             drive_detail = driving_shots[['Player', 'Date', 'Course', 'Hole', 'Starting Distance', 'Ending Distance', 'Ending Location', 'Penalty', 'Strokes Gained']].copy()
-            drive_detail['Date'] = pd.to_datetime(drive_detail['Date']).dt.strftime('%Y-%m-%d')
+            drive_detail['Date'] = pd.to_datetime(drive_detail['Date']).dt.strftime('%m/%d/%Y')
             drive_detail.columns = ['Player', 'Date', 'Course', 'Hole', 'Distance', 'End Dist', 'Result', 'Penalty', 'SG']
             drive_detail['Hole'] = drive_detail['Hole'].astype(int)
             drive_detail['Distance'] = drive_detail['Distance'].round(0).astype(int)
@@ -645,14 +664,14 @@ with tab_driving:
         if ob_count > 0:
             with st.expander(f"⚠️ OB / Re-Tee Instances ({ob_count} total)"):
                 ob_df = pd.DataFrame(ob_details)
-                ob_df['Date'] = pd.to_datetime(ob_df['Date']).dt.strftime('%Y-%m-%d')
+                ob_df['Date'] = pd.to_datetime(ob_df['Date']).dt.strftime('%m/%d/%Y')
                 ob_df['Hole'] = ob_df['Hole'].astype(int)
                 st.dataframe(ob_df, use_container_width=True, hide_index=True)
         
         if obstruction_count > 0:
             with st.expander(f"🏖️ Obstruction Shots ({obstruction_count} total)"):
                 obs_shots = driving_shots[driving_shots['Ending Location'].isin(['Sand', 'Recovery'])][['Player', 'Date', 'Course', 'Hole', 'Starting Distance', 'Ending Location', 'Strokes Gained']].copy()
-                obs_shots['Date'] = pd.to_datetime(obs_shots['Date']).dt.strftime('%Y-%m-%d')
+                obs_shots['Date'] = pd.to_datetime(obs_shots['Date']).dt.strftime('%m/%d/%Y')
                 obs_shots.columns = ['Player', 'Date', 'Course', 'Hole', 'Distance', 'Result', 'SG']
                 obs_shots['Hole'] = obs_shots['Hole'].astype(int)
                 obs_shots['Distance'] = obs_shots['Distance'].round(0).astype(int)
@@ -673,7 +692,7 @@ with tab_approach:
         
         with st.expander(f"View Approach Shots ({len(approach_shots)} total)"):
             app_detail = approach_shots[['Player', 'Date', 'Course', 'Hole', 'Starting Distance', 'Starting Location', 'Ending Distance', 'Ending Location', 'Strokes Gained']].copy()
-            app_detail['Date'] = pd.to_datetime(app_detail['Date']).dt.strftime('%Y-%m-%d')
+            app_detail['Date'] = pd.to_datetime(app_detail['Date']).dt.strftime('%m/%d/%Y')
             app_detail.columns = ['Player', 'Date', 'Course', 'Hole', 'Start Dist', 'Start Lie', 'End Dist', 'End Lie', 'SG']
             app_detail['Hole'] = app_detail['Hole'].astype(int)
             app_detail['Start Dist'] = app_detail['Start Dist'].round(0).astype(int)
@@ -695,7 +714,7 @@ with tab_short_game:
         
         with st.expander(f"View Short Game Shots ({len(sg_shots)} total)"):
             sg_detail = sg_shots[['Player', 'Date', 'Course', 'Hole', 'Starting Distance', 'Starting Location', 'Ending Distance', 'Ending Location', 'Strokes Gained']].copy()
-            sg_detail['Date'] = pd.to_datetime(sg_detail['Date']).dt.strftime('%Y-%m-%d')
+            sg_detail['Date'] = pd.to_datetime(sg_detail['Date']).dt.strftime('%m/%d/%Y')
             sg_detail.columns = ['Player', 'Date', 'Course', 'Hole', 'Start Dist', 'Start Lie', 'End Dist', 'End Lie', 'SG']
             sg_detail['Hole'] = sg_detail['Hole'].astype(int)
             sg_detail['Start Dist'] = sg_detail['Start Dist'].round(0).astype(int)
@@ -717,7 +736,7 @@ with tab_putting:
         
         with st.expander(f"View All Putts ({len(putt_shots)} total)"):
             putt_detail = putt_shots[['Player', 'Date', 'Course', 'Hole', 'Starting Distance', 'Ending Distance', 'Strokes Gained']].copy()
-            putt_detail['Date'] = pd.to_datetime(putt_detail['Date']).dt.strftime('%Y-%m-%d')
+            putt_detail['Date'] = pd.to_datetime(putt_detail['Date']).dt.strftime('%m/%d/%Y')
             putt_detail.columns = ['Player', 'Date', 'Course', 'Hole', 'Start (ft)', 'End (ft)', 'SG']
             putt_detail['Hole'] = putt_detail['Hole'].astype(int)
             putt_detail['Start (ft)'] = putt_detail['Start (ft)'].round(0).astype(int)
