@@ -60,10 +60,35 @@ st.markdown("""
     .sg-card .card-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: #000000; line-height: 1; }
     .sg-card .card-value.positive { color: #2d6a4f; }
     .sg-card .card-value.negative { color: #E03C31; }
-    
-    section[data-testid="stSidebar"] { background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%); }
-    .sidebar-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; color: #FFC72C; margin-bottom: 0.5rem; padding-bottom: 1rem; border-bottom: 1px solid #333; }
-    .sidebar-label { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; color: #D3AF7E; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; margin-top: 1.25rem; }
+
+    /* Sidebar Main Container */
+section[data-testid="stSidebar"] { 
+    background-color: #1a1c1e; /* Sophisticated Dark Gray */
+    border-right: 1px solid #2d3135; 
+}
+
+/* Sidebar Title */
+.sidebar-title { 
+    font-family: 'Playfair Display', serif; 
+    font-size: 1.4rem; 
+    font-weight: 600; 
+    color: #FFC72C; /* ODU Gold */
+    margin-bottom: 0.5rem; 
+    padding-bottom: 1rem; 
+    border-bottom: 1px solid rgba(211, 175, 126, 0.3); /* Subtle Gold Line */
+}
+
+/* Sidebar Labels */
+.sidebar-label { 
+    font-family: 'Inter', sans-serif; 
+    font-size: 0.75rem; 
+    font-weight: 500; 
+    color: #D3AF7E; /* Metallic Gold */
+    text-transform: uppercase; 
+    letter-spacing: 0.08em; 
+    margin-bottom: 0.5rem; 
+    margin-top: 1.25rem; 
+}
     
     .stDataFrame th { text-align: center !important; background-color: #000000 !important; color: #FFC72C !important; font-family: 'Inter', sans-serif !important; font-weight: 600 !important; font-size: 0.8rem !important; }
     .stDataFrame td { text-align: center !important; font-family: 'Inter', sans-serif !important; font-size: 0.85rem !important; }
@@ -266,7 +291,7 @@ st.markdown(f'<p class="main-subtitle">{len(filtered_df)} shots from {num_rounds
 # ============================================================
 # TABS
 # ============================================================
-tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting = st.tabs(["📊 Overview", "🏌️ Driving", "🎯 Approach", "⛳ Short Game", "🕳️ Putting"])
+tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting = st.tabs(["Overview", "🏌️ Driving", "🎯 Approach", "⛳ Short Game", "🕳️ Putting"])
 
 # ============================================================
 # TAB: OVERVIEW
@@ -276,7 +301,7 @@ with tab_overview:
     
     # Tiger 5 Section
     st.markdown('<p class="section-title">Tiger 5 Performance</p>', unsafe_allow_html=True)
-    tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
+    tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', '2 Short Game', '125yd Bogey']
     
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     for col, stat_name in zip([col1, col2, col3, col4, col5], tiger5_names):
