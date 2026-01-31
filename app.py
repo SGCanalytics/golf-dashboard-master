@@ -770,6 +770,9 @@ with tab_approach:
     # ------------------------------------------------------------
     # HERO CARDS
     # ------------------------------------------------------------
+
+    
+    
     st.markdown('<p class="section-title">Approach Performance by Distance</p>', unsafe_allow_html=True)
 
     hero_buckets = ["50–100", "100–150", "150–200", ">200"]
@@ -793,6 +796,41 @@ with tab_approach:
                     <div class="hero-sub">Proximity: {prox:.1f} ft</div>
                 </div>
             """, unsafe_allow_html=True)
+
+            with col:
+    # Build sparkline data for this bucket
+    spark_df = bucket_df.sort_values("Date")  # ensure chronological
+    spark_values = spark_df["Strokes Gained"].rolling(3).mean()  # smooth a bit
+
+    # Create sparkline
+    fig_spark = px.line(
+        spark_df,
+        y=spark_values,
+        height=60,
+        width=160
+    )
+    fig_spark.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)"
+    )
+    fig_spark.update_traces(line=dict(color="#FFC72C", width=2))
+
+    # Render hero card
+    st.markdown(f"""
+        <div class="hero-stat">
+            <div class="hero-value {val_class}">{total_sg:.2f}</div>
+            <div class="hero-label">{bucket} Yards</div>
+            <div class="hero-sub">SG/Shot: {sg_per_shot:.3f}</div>
+            <div class="hero-sub">Proximity: {prox:.1f} ft</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Sparkline under the card
+    st.plotly_chart(fig_spark, use_container_width=False)
+
 
     # ------------------------------------------------------------
     # BUILD DISTANCE BUCKET TABLE (needed for radars + expander)
