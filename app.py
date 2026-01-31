@@ -858,37 +858,33 @@ with tab_approach:
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">SG per Shot Heatmap</p>', unsafe_allow_html=True)
 
-    # Define desired order
-    bucket_order = ["50–100", "100–150", "150–200", ">200"]
+    # Reverse distance order (longest → shortest)
+    bucket_order = [">200", "150–200", "100–150", "50–100"]
     lie_order = ["Tee", "Fairway", "Rough", "Sand"]
 
-    # Filter to hero buckets only
     heat_df = approach_df.dropna(subset=['Hero Bucket']).copy()
     heat_df['Lie'] = heat_df['Starting Location']
 
-    # Enforce categorical ordering
     heat_df['Hero Bucket'] = pd.Categorical(heat_df['Hero Bucket'], categories=bucket_order, ordered=True)
     heat_df['Lie'] = pd.Categorical(heat_df['Lie'], categories=lie_order, ordered=True)
 
-    # Build pivot table
     heatmap_data = heat_df.groupby(['Hero Bucket', 'Lie'])['Strokes Gained'].mean().reset_index()
     heatmap_pivot = heatmap_data.pivot(index='Hero Bucket', columns='Lie', values='Strokes Gained')
 
-    # Create heatmap
     fig_heat = px.imshow(
-        heatmap_pivot.loc[bucket_order, lie_order],   # enforce order in display
-        color_continuous_scale='RdYlGn',
-        aspect='auto'
-    )
+     heatmap_pivot.loc[bucket_order, lie_order],
+     color_continuous_scale='RdYlGn',
+     aspect='auto'
+)
 
-    fig_heat.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
-        height=400
-    )
+fig_heat.update_layout(
+    plot_bgcolor='white',
+    paper_bgcolor='white',
+    font_family='Inter',
+    height=400
+)
 
-    st.plotly_chart(fig_heat, use_container_width=True)
+st.plotly_chart(fig_heat, use_container_width=True)
 
     # ------------------------------------------------------------
     # APPROACH TREND ANALYSIS
