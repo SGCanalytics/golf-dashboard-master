@@ -910,7 +910,7 @@ with tab_approach:
     use_ma = st.checkbox("Apply Moving Average", value=False)
 
     if use_ma:
-        window = st.selectbox("Moving Average Window", [3, 5,
+        window = st.selectbox("Moving Average Window", [3, 5, 10]
 
 # ============================================================
 # TAB: SHORT GAME
