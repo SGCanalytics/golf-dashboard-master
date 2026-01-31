@@ -910,7 +910,11 @@ with tab_approach:
     use_ma = st.checkbox("Apply Moving Average", value=False)
 
     if use_ma:
-        window = st.selectbox("Moving Average Window", [3, 5, 10]
+        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
+        sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
+        y_col = 'SG_MA'
+    else:
+        y_col = 'Strokes Gained'
 
 # ============================================================
 # TAB: SHORT GAME
