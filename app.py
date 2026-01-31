@@ -854,18 +854,29 @@ with tab_approach:
     st.plotly_chart(fig_box, use_container_width=True)
 
     # ------------------------------------------------------------
-    # HEATMAP
+    # HEATMAP (Ordered Axes)
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">SG per Shot Heatmap</p>', unsafe_allow_html=True)
 
+    # Define desired order
+    bucket_order = ["50–100", "100–150", "150–200", ">200"]
+    lie_order = ["Tee", "Fairway", "Rough", "Sand"]
+
+    # Filter to hero buckets only
     heat_df = approach_df.dropna(subset=['Hero Bucket']).copy()
     heat_df['Lie'] = heat_df['Starting Location']
 
+    # Enforce categorical ordering
+    heat_df['Hero Bucket'] = pd.Categorical(heat_df['Hero Bucket'], categories=bucket_order, ordered=True)
+    heat_df['Lie'] = pd.Categorical(heat_df['Lie'], categories=lie_order, ordered=True)
+
+    # Build pivot table
     heatmap_data = heat_df.groupby(['Hero Bucket', 'Lie'])['Strokes Gained'].mean().reset_index()
     heatmap_pivot = heatmap_data.pivot(index='Hero Bucket', columns='Lie', values='Strokes Gained')
 
+    # Create heatmap
     fig_heat = px.imshow(
-        heatmap_pivot,
+        heatmap_pivot.loc[bucket_order, lie_order],   # enforce order in display
         color_continuous_scale='RdYlGn',
         aspect='auto'
     )
@@ -878,6 +889,60 @@ with tab_approach:
     )
 
     st.plotly_chart(fig_heat, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # APPROACH TREND ANALYSIS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Approach SG Trend by Round</p>', unsafe_allow_html=True)
+
+    # Build round-level SG: Approach
+    round_labels = filtered_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first')
+    ).reset_index()
+
+    round_labels['Label'] = round_labels.apply(
+        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+        axis=1
+    )
+
+    # Sum SG: Approach per round
+    sg_round = approach_df.groupby('Round ID')['Strokes Gained'].sum().reset_index()
+    sg_round = sg_round.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    sg_round = sg_round.sort_values('Date')
+
+    # Moving average toggle
+    use_ma = st.checkbox("Apply Moving Average", value=False)
+
+    if use_ma:
+        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
+        sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
+        y_col = 'SG_MA'
+    else:
+        y_col = 'Strokes Gained'
+
+    # Build trend chart
+    fig_trend = px.line(
+        sg_round,
+        x='Label',
+        y=y_col,
+        markers=True,
+        title="SG: Approach Trend",
+        color_discrete_sequence=[ODU_BLACK]
+    )
+
+    fig_trend.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        xaxis_title='',
+        yaxis_title='Strokes Gained',
+        height=400
+    )
+
+    fig_trend.update_xaxes(tickangle=-45)
+
+    st.plotly_chart(fig_trend, use_container_width=True)
 
 
 # ============================================================
