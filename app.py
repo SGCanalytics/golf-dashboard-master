@@ -874,21 +874,36 @@ with tab_approach:
         fig_radar_sg.update_layout(
             polar=dict(
                 bgcolor="rgba(0,0,0,0)",
-                radialaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C"),
-                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+                radialaxis=dict(
+                    showgrid=True,
+                    gridcolor="#444",
+                    color="#FFC72C",
+
+                # ⭐ Force a gridline at 0.0
+                    tickvals=[sg_min, 0, sg_max],
+                    ticktext=["", "0.0", ""],
+
+                # ⭐ Make the 0.0 ring bold
+                    gridwidth=1,   # default for other rings
             ),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font_family="Inter",
-            font_color="#FFC72C",
-            height=350
-        )
+            angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+        ),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font_family="Inter",
+        font_color="#FFC72C",
+        height=350
+    )
 
-        fig_radar_sg.add_shape( type="circle", xref="paper", yref="paper", x0=0.48, x1=0.52, y0=0.48, y1=0.52, line=dict(color="#FFC72C", width=3) 
-                              )
+    # ⭐ After layout, bold ONLY the 0.0 ring
+    # Plotly draws gridlines in order of tickvals, so the 0.0 ring is index 1
+    fig_radar_sg.update_polars(
+        radialaxis_gridwidth=[1, 4, 1]   # middle ring (0.0) is bold
+    )
 
-        st.plotly_chart(fig_radar_sg, use_container_width=True)
+    st.plotly_chart(fig_radar_sg, use_container_width=True)
 
+    
     # Radar 2 — Proximity
     with col2:
         # Invert proximity so closer = better (farther out on radar)
