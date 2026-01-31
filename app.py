@@ -884,6 +884,9 @@ with tab_approach:
             height=350
         )
 
+        fig_radar_sg.add_shape( type="circle", xref="paper", yref="paper", x0=0.48, x1=0.52, y0=0.48, y1=0.52, line=dict(color="#FFC72C", width=3) 
+                              )
+
         st.plotly_chart(fig_radar_sg, use_container_width=True)
 
     # Radar 2 — Proximity
