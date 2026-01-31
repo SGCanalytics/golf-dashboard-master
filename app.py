@@ -14,7 +14,7 @@ SHOT_TYPE_ORDER = ['Driving', 'Approach', 'Short Game', 'Putt', 'Recovery', 'Oth
 ODU_GOLD, ODU_BLACK, ODU_METALLIC_GOLD, ODU_RED = '#FFC72C', '#000000', '#D3AF7E', '#E03C31'
 
 # ============================================================
-# CSS
+# CUSTOM CSS
 # ============================================================
 st.markdown("""
 <style>
@@ -38,20 +38,20 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# LOGIC FUNCTIONS
+# DATA & LOGIC
 # ============================================================
 def determine_par(distance):
     if distance <= 245: return 3
     elif distance <= 475: return 4
     return 5
 
-def determine_shot_type(start_location, start_distance, par):
-    if start_distance is None: return 'Other'
-    if start_location == 'Green': return 'Putt'
-    if start_location == 'Tee': return 'Approach' if par == 3 else 'Driving'
-    if start_location == 'Recovery': return 'Recovery'
-    if start_distance < 50: return 'Short Game'
-    if start_location in ['Fairway', 'Rough', 'Sand'] and 50 <= start_distance <= 245: return 'Approach'
+def determine_shot_type(start_loc, start_dist, par):
+    if start_dist is None: return 'Other'
+    if start_loc == 'Green': return 'Putt'
+    if start_loc == 'Tee': return 'Approach' if par == 3 else 'Driving'
+    if start_loc == 'Recovery': return 'Recovery'
+    if start_dist < 50: return 'Short Game'
+    if start_loc in ['Fairway', 'Rough', 'Sand'] and 50 <= start_dist <= 245: return 'Approach'
     return 'Other'
 
 def score_to_name(hole_score, par):
@@ -68,11 +68,9 @@ def load_data():
     df['Player'] = df['Player'].str.strip().str.title()
     df['Date'] = pd.to_datetime(df['Date'])
     
-    # Extract Par from Shot 1
     first_shots = df[df['Shot'] == 1].copy()
     first_shots['Par'] = first_shots['Starting Distance'].apply(determine_par)
     
-    # Merge Par back to all shots
     df = df.merge(first_shots[['Round ID', 'Hole', 'Par']], on=['Round ID', 'Hole'], how='left')
     df['Shot Type'] = df.apply(lambda r: determine_shot_type(r['Starting Location'], r['Starting Distance'], r['Par']), axis=1)
     return df
@@ -88,97 +86,30 @@ def build_hole_summary(df):
     return summary
 
 def calculate_tiger5(filtered_df, hole_summary):
-    results = {}
-    # 1. 3 Putts
-    results['3 Putts'] = {'fails': (hole_summary['num_putts'] >= 3).sum(), 'attempts': len(hole_summary)}
-    # 2. Double Bogeys
-    results['Double Bogeys'] = {'fails': (hole_summary['Hole Score'] >= hole_summary['Par'] + 2).sum(), 'attempts': len(hole_summary)}
-    # 3. Bogey on Par 5
+    res = {}
+    res['3 Putts'] = {'fails': (hole_summary['num_putts'] >= 3).sum(), 'attempts': len(hole_summary)}
+    res['Double Bogeys'] = {'fails': (hole_summary['Hole Score'] >= hole_summary['Par'] + 2).sum(), 'attempts': len(hole_summary)}
+    
     p5 = hole_summary[hole_summary['Par'] == 5]
-    results['Bogey on Par 5'] = {'fails': (p5['Hole Score'] >= 6).sum(), 'attempts': len(p5)}
-    # 4. Missed Chip/Pitch
-    sg = filtered_df[filtered_df['Shot Type'] == 'Short Game']
-    sg_fails = sg[sg['Ending Location'] != 'Green'].groupby(['Round ID', 'Hole']).size().count()
-    results['Missed Chip/Pitch'] = {'fails': sg_fails, 'attempts': sg.groupby(['Round ID', 'Hole']).size().count()}
-    # 5. 125yd Bogey
+    res['Bogey on Par 5'] = {'fails': (p5['Hole Score'] >= 6).sum(), 'attempts': len(p5)}
+    
+    sg_shots = filtered_df[filtered_df['Shot Type'] == 'Short Game']
+    sg_fails = sg_shots[sg_shots['Ending Location'] != 'Green'].groupby(['Round ID', 'Hole']).size().count()
+    res['Missed Chip/Pitch'] = {'fails': sg_fails, 'attempts': sg_shots.groupby(['Round ID', 'Hole']).size().count()}
+    
     app_125 = filtered_df[(filtered_df['Starting Distance'] <= 125) & (filtered_df['Shot Type'] == 'Approach')]
     app_125_merged = app_125.merge(hole_summary[['Round ID', 'Hole', 'Hole Score']], on=['Round ID', 'Hole'])
     app_125_fails = (app_125_merged['Hole Score'] > app_125_merged['Par']).sum()
-    results['125yd Bogey'] = {'fails': app_125_fails, 'attempts': len(app_125_merged.drop_duplicates(['Round ID', 'Hole']))}
+    res['125yd Bogey'] = {'fails': app_125_fails, 'attempts': len(app_125_merged.drop_duplicates(['Round ID', 'Hole']))}
 
-    total_att = sum(r['attempts'] for r in results.values())
-    total_f = sum(r['fails'] for r in results.values())
+    total_att = sum(r['attempts'] for r in res.values())
+    total_f = sum(r['fails'] for r in res.values())
     grit = (total_att - total_f) / total_att * 100 if total_att > 0 else 0
-    return results, grit
+    return res, grit
 
 # ============================================================
-# DATA EXECUTION
+# PROCESSING
 # ============================================================
 df_raw = load_data()
 
-st.sidebar.title("ODU Golf Filters")
-selected_players = st.sidebar.multiselect("Select Player(s)", options=sorted(df_raw['Player'].unique()), default=df_raw['Player'].unique())
-date_range = st.sidebar.date_input("Date Range", value=(df_raw['Date'].min(), df_raw['Date'].max()))
-benchmark = st.sidebar.selectbox("Goal Benchmark (SG/Round)", options=["PGA Tour (0.0)", "Scratch Golfer (-2.0)", "10 Handicap (-5.0)"])
-benchmark_val = float(benchmark.split('(')[1].split(')')[0])
-
-filtered_df = df_raw[(df_raw['Player'].isin(selected_players)) & (df_raw['Date'].dt.date >= date_range[0]) & (df_raw['Date'].dt.date <= date_range[1])]
-hole_summary = build_hole_summary(filtered_df)
-tiger5_results, current_grit = calculate_tiger5(filtered_df, hole_summary)
-
-# Player Specific Baseline
-baseline_df = df_raw[df_raw['Player'].isin(selected_players)]
-baseline_hole_summary = build_hole_summary(baseline_df)
-_, baseline_grit = calculate_tiger5(baseline_df, baseline_hole_summary)
-
-# ============================================================
-# 1. TIGER 5 DISCIPLINE (TOP)
-# ============================================================
-st.markdown('<h1 class="main-title">ODU Golf Command Center</h1>', unsafe_allow_html=True)
-st.markdown('<p class="section-header">Tiger 5 Discipline</p>', unsafe_allow_html=True)
-t_cols = st.columns(6)
-t5_names = ['3 Putts', 'Double Bogeys', 'Bogey on Par 5', 'Missed Chip/Pitch', '125yd Bogey']
-
-for i, name in enumerate(t5_names):
-    res = tiger5_results.get(name, {'fails': 0})
-    card_style = "t5-fail" if res['fails'] > 0 else "t5-success"
-    with t_cols[i]:
-        st.markdown(f'<div class="tiger5-card {card_style}"><div class="t5-title">{name}</div><div class="t5-value">{int(res["fails"])}</div></div>', unsafe_allow_html=True)
-with t_cols[5]:
-    st.markdown(f'<div class="tiger5-card" style="background:linear-gradient(135deg,#FFC72C,#CC8A00);color:black;"><div class="t5-title">Grit Index</div><div class="t5-value">{current_grit:.0f}%</div></div>', unsafe_allow_html=True)
-
-with st.expander("🚨 View Tiger 5 Failure Details", expanded=False):
-    # Quick filter for holes with issues
-    bad_holes = hole_summary[(hole_summary['num_putts'] >= 3) | (hole_summary['Hole Score'] >= hole_summary['Par'] + 2)]
-    if not bad_holes.empty:
-        st.dataframe(bad_holes[['Player', 'Date', 'Course', 'Hole', 'Par', 'Hole Score', 'num_putts']], use_container_width=True, hide_index=True)
-    else:
-        st.success("No discipline failures found in the current selection!")
-
-# ============================================================
-# 2. KEY SG METRICS
-# ============================================================
-st.markdown('<p class="section-header">Key Performance Metrics</p>', unsafe_allow_html=True)
-m1, m2, m3, m4 = st.columns(4)
-
-total_sg = filtered_df['Strokes Gained'].sum()
-sg_tee_to_green = filtered_df[filtered_df['Starting Location'] != 'Green']['Strokes Gained'].sum()
-sg_putting = filtered_df[filtered_df['Shot Type'] == 'Putt']['Strokes Gained'].sum()
-sg_putt_4_10 = filtered_df[(filtered_df['Shot Type'] == 'Putt') & (filtered_df['Starting Distance'] >= 4) & (filtered_df['Starting Distance'] <= 10)]['Strokes Gained'].sum()
-
-m1.metric("Total SG", f"{total_sg:.2f}")
-m2.metric("SG Tee to Green", f"{sg_tee_to_green:.2f}")
-m3.metric("SG Putting (All)", f"{sg_putting:.2f}")
-m4.metric("SG Putting (4-10ft)", f"{sg_putt_4_10:.2f}")
-
-# ============================================================
-# 3. SG ANALYSIS & GROUPED SHOT LOGS
-# ============================================================
-st.markdown('<p class="section-header">Shot Type Analytics</p>', unsafe_allow_html=True)
-sg_type = filtered_df.groupby('Shot Type')['Strokes Gained'].sum().reindex(SHOT_TYPE_ORDER).fillna(0).reset_index()
-fig_sg = px.bar(sg_type, x='Shot Type', y='Strokes Gained', color='Strokes Gained', color_continuous_scale=[ODU_RED, ODU_METALLIC_GOLD, ODU_GOLD], color_continuous_midpoint=0)
-fig_sg.add_hline(y=benchmark_val/4, line_dash="dot", line_color="blue", annotation_text="Benchmark Target")
-
-c1, c2 = st.columns([2, 1])
-with c1: st.plotly_chart(fig_sg, use_container_width=True)
-with c2: st.table(sg_
+st.sidebar.
