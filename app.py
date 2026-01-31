@@ -14,7 +14,7 @@ SHOT_TYPE_ORDER = ['Driving', 'Approach', 'Short Game', 'Putt', 'Recovery', 'Oth
 ODU_GOLD, ODU_BLACK, ODU_METALLIC_GOLD, ODU_RED = '#FFC72C', '#000000', '#D3AF7E', '#E03C31'
 
 # ============================================================
-# REFINED CSS
+# REFINED CSS - FIXED ALIGNMENT
 # ============================================================
 st.markdown("""
 <style>
@@ -26,7 +26,7 @@ st.markdown("""
     /* Center Aligned Tiger 5 Cards */
     .tiger5-card {
         display: flex; flex-direction: column; justify-content: center; align-items: center;
-        border-radius: 10px; padding: 10px; height: 130px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 10px; padding: 10px; height: 135px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .t5-success { background: #000000; border: 3px solid #FFC72C; color: #FFC72C; }
     .t5-fail { background: #E03C31; border: 3px solid #E03C31; color: white; }
@@ -34,8 +34,15 @@ st.markdown("""
     .t5-value { font-family: 'Roboto Slab', serif; font-size: 2.2rem; font-weight: 700; line-height: 1; }
     .t5-label { font-size: 0.7rem; opacity: 0.8; text-transform: uppercase; }
 
-    /* Centering Dataframes */
-    .stDataFrame, [data-testid="stTable"] { margin: auto; display: flex; justify-content: center; }
+    /* Centering Dataframes and Tables */
+    .stDataFrame, [data-testid="stTable"], .centered-table { 
+        margin: auto; 
+        display: flex; 
+        justify-content: center; 
+    }
+    
+    /* Ensure table text is centered */
+    [data-testid="stTable"] td { text-align: center !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -94,13 +101,13 @@ def calculate_tiger5(filtered_df, hole_summary):
     # 3. Bogey on Par 5
     p5 = hole_summary[hole_summary['Par'] == 5]
     results['Bogey on Par 5'] = {'fails': (p5['Hole Score'] >= 6).sum(), 'attempts': len(p5)}
-    # 4. Missed Chip/Pitch (Short Game ending off green)
+    # 4. Missed Chip/Pitch
     sg = filtered_df[filtered_df['Shot Type'] == 'Short Game']
     sg_fails = sg[sg['Ending Location'] != 'Green'].groupby(['Round ID', 'Hole']).size().count()
     results['Missed Chip/Pitch'] = {'fails': sg_fails, 'attempts': sg.groupby(['Round ID', 'Hole']).size().count()}
-    # 5. 125yd Bogey
+    # 5. 125yd Bogey (FIXED: removed Par from merge to avoid KeyError)
     app_125 = filtered_df[(filtered_df['Starting Distance'] <= 125) & (filtered_df['Shot Type'] == 'Approach')]
-    app_125_merged = app_125.merge(hole_summary[['Round ID', 'Hole', 'Hole Score', 'Par']], on=['Round ID', 'Hole'])
+    app_125_merged = app_125.merge(hole_summary[['Round ID', 'Hole', 'Hole Score']], on=['Round ID', 'Hole'])
     app_125_fails = (app_125_merged['Hole Score'] > app_125_merged['Par']).sum()
     results['125yd Bogey'] = {'fails': app_125_fails, 'attempts': len(app_125_merged.drop_duplicates(['Round ID', 'Hole']))}
 
@@ -121,12 +128,12 @@ date_range = st.sidebar.date_input("Date Range", value=(df_raw['Date'].min(), df
 benchmark = st.sidebar.selectbox("Goal Benchmark (SG/Round)", options=["PGA Tour (0.0)", "Scratch Golfer (-2.0)", "10 Handicap (-5.0)"])
 benchmark_val = float(benchmark.split('(')[1].split(')')[0])
 
-# Filter logic
+# Filter current view
 filtered_df = df_raw[(df_raw['Player'].isin(selected_players)) & (df_raw['Date'].dt.date >= date_range[0]) & (df_raw['Date'].dt.date <= date_range[1])]
 hole_summary = build_hole_summary(filtered_df)
 tiger5_results, current_grit = calculate_tiger5(filtered_df, hole_summary)
 
-# Baseline Logic: Filter ALL data for only the SELECTED players (ignores date filter)
+# Baseline for Trend: Filter ALL data for only the SELECTED players
 baseline_df = df_raw[df_raw['Player'].isin(selected_players)]
 baseline_hole_summary = build_hole_summary(baseline_df)
 _, baseline_grit = calculate_tiger5(baseline_df, baseline_hole_summary)
@@ -159,31 +166,36 @@ for i, name in enumerate(['3 Putts', 'Double Bogeys', 'Bogey on Par 5', 'Missed 
 with t_cols[5]:
     st.markdown(f'<div class="tiger5-card" style="background:linear-gradient(135deg,#FFC72C,#CC8A00);color:black;"><div class="t5-title">Success Rate</div><div class="t5-value">{current_grit:.0f}%</div><div class="t5-label">Grit Index</div></div>', unsafe_allow_html=True)
 
-# Tabs
-tab_sg, tab_scoring, tab_raw = st.tabs(["📊 Strokes Gained Analysis", "🎯 Scoring", "📋 Shot Logs"])
+# Tabs for Analytics
+tab_sg, tab_scoring, tab_raw = st.tabs(["📊 Strokes Gained Analysis", "🎯 Scoring Distribution", "📋 Raw Shot Logs"])
 
 with tab_sg:
     sg_type = filtered_df.groupby('Shot Type')['Strokes Gained'].sum().reindex(SHOT_TYPE_ORDER).fillna(0).reset_index()
     fig_sg = px.bar(sg_type, x='Shot Type', y='Strokes Gained', color='Strokes Gained', 
                     color_continuous_scale=[ODU_RED, ODU_METALLIC_GOLD, ODU_GOLD], color_continuous_midpoint=0)
     
-    # Add Goal Line (Divide benchmark by 4 as a rough estimate per category)
+    # Add Goal Line (Estimated 1/4 of round goal per category)
     target_per_cat = benchmark_val / 4
     fig_sg.add_hline(y=target_per_cat, line_dash="dot", line_color="blue", annotation_text=f"Target: {target_per_cat:.2f}")
     
     c1, c2 = st.columns([2, 1])
-    c1.plotly_chart(fig_sg, use_container_width=True)
-    c2.write("### SG Efficiency Table")
-    c2.table(sg_type.style.format({'Strokes Gained': '{:.2f}'}).set_properties(**{'text-align': 'center'}))
+    with c1:
+        st.plotly_chart(fig_sg, use_container_width=True)
+    with c2:
+        st.write("### Shot Type Performance")
+        st.table(sg_type.set_index('Shot Type').style.format('{:.2f}'))
 
 with tab_scoring:
     c1, c2 = st.columns(2)
     with c1:
         dist = hole_summary['Score Name'].value_counts()
-        st.plotly_chart(px.pie(names=dist.index, values=dist.values, color_discrete_sequence=[ODU_GOLD, ODU_BLACK, ODU_METALLIC_GOLD, ODU_RED]), use_container_width=True)
+        fig_pie = px.pie(names=dist.index, values=dist.values, color_discrete_sequence=[ODU_GOLD, ODU_BLACK, ODU_METALLIC_GOLD, ODU_RED])
+        st.plotly_chart(fig_pie, use_container_width=True)
     with c2:
-        st.write("### Stats by Par")
-        st.dataframe(hole_summary.groupby('Par')['Hole Score'].mean().reset_index().style.format('{:.2f}'), hide_index=True)
+        st.write("### Scoring Averages by Par")
+        avg_stats = hole_summary.groupby('Par')['Hole Score'].mean().reset_index()
+        st.table(avg_stats.set_index('Par').style.format('{:.2f}'))
 
 with tab_raw:
-    st.dataframe(filtered_df, use_container_width=True)
+    with st.expander("Click to view full shot logs"):
+        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
