@@ -1158,7 +1158,7 @@ with tab_putting:
     # ---- HERO CARD METRICS ----
     # 1. Total SG Putting
     total_sg_putting = putting_df["Strokes Gained"].sum()
-    sg_per_round = total_sg_putting / putting_df["Roundid"].nunique()
+    sg_per_round = total_sg_putting / putting_df["Round id"].nunique()
 
     # 2. Make % (4–5 ft)
     mask_4_5 = (putting_df["Starting Distance"] >= 4) & (putting_df["Starting Distance"] <= 5)
