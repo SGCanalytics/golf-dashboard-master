@@ -859,7 +859,6 @@ with tab_approach:
     col1, col2, col3 = st.columns(3)
 
     # Radar 1 — SG per Shot
-    
     with col1:
         fig_radar_sg = px.line_polar(
             radar_df,
@@ -872,16 +871,16 @@ with tab_approach:
         )
         fig_radar_sg.update_traces(fill='toself')
 
+        # Force a tick at 0.0 so the ring exists
         fig_radar_sg.update_layout(
             polar=dict(
                 bgcolor="rgba(0,0,0,0)",
                 radialaxis=dict(
                     showgrid=True,
-                    gridcolor=["#444", "#FFC72C", "#444"],   # ⭐ middle ring = bold gold
-                    gridwidth=[1, 4, 1],                    # ⭐ middle ring = thick
-                    tickvals=[sg_min, 0, sg_max],           # force 0.0 ring
-                    ticktext=["", "0.0", ""],
-                    color="#FFC72C"
+                    gridcolor="#444",
+                    color="#FFC72C",
+                    tickvals=[sg_min, 0, sg_max],
+                    ticktext=["", "0.0", ""]
                 ),
                 angularaxis=dict(
                     showgrid=True,
@@ -896,8 +895,19 @@ with tab_approach:
             height=350
         )
 
-    st.plotly_chart(fig_radar_sg, use_container_width=True)
+    # ⭐ Bold 0.0 ring using a polar-sector shape
+        fig_radar_sg.add_shape(
+            type="path",
+            path="M 0 0 L 1 0 A 1 1 0 1 1 -1 0 Z",
+            xref="paper",
+            yref="paper",
+            line=dict(color="#FFC72C", width=4),
+            layer="below"
+        )
 
+        st.plotly_chart(fig_radar_sg, use_container_width=True)
+
+    
     
     # Radar 2 — Proximity
     with col2:
