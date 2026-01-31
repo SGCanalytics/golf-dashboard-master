@@ -1163,7 +1163,7 @@ with tab_putting:
     # 2. Make % (4–5 ft)
     mask_4_5 = (putting_df["Starting Distance"] >= 4) & (putting_df["Starting Distance"] <= 5)
     attempts_4_5 = mask_4_5.sum()
-    makes_4_5 = (mask_4_5 & (putting_df["Putts"] == 1)).sum()
+    makes_4_5 = (mask_4_5 & (putting_df["score"] == 1)).sum()
     make_pct_4_5 = (makes_4_5 / attempts_4_5 * 100) if attempts_4_5 > 0 else 0
 
     # 3. SG: 5–10 ft
@@ -1172,7 +1172,7 @@ with tab_putting:
     sg_5_10_per = sg_5_10 / mask_5_10.sum() if mask_5_10.sum() > 0 else 0
 
     # 4. Number of 3-putts
-    three_putts = (putting_df["Putts"] >= 3).sum()
+    three_putts = (putting_df["score"] >= 3).sum()
     three_putt_pct = three_putts / putting_df["Hole"].nunique() * 100
 
     # 5. Lag Misses (>5 ft)
@@ -1245,9 +1245,9 @@ with tab_putting:
 
     # Aggregate
     agg = putting_df.groupby("Distance Bin").agg(
-        one_putt=("Putts", lambda x: (x == 1).sum()),
-        two_putt=("Putts", lambda x: (x == 2).sum()),
-        three_putt=("Putts", lambda x: (x >= 3).sum()),
+        one_putt=("score", lambda x: (x == 1).sum()),
+        two_putt=("score", lambda x: (x == 2).sum()),
+        three_putt=("score", lambda x: (x >= 3).sum()),
         sg=("Strokes Gained", "sum")
     ).reset_index()
 
@@ -1287,7 +1287,7 @@ with tab_putting:
     st.markdown('<p class="section-title">Make % by Distance</p>', unsafe_allow_html=True)
 
     make_table = putting_df.groupby("Distance Bin").agg(
-        Attempts=("Putts", "count"),
+        Attempts=("Ptts", "count"),
         Makes=("Putts", lambda x: (x == 1).sum())
     )
     make_table["Make %"] = (make_table["Makes"] / make_table["Attempts"] * 100).round(1)
@@ -1336,7 +1336,7 @@ with tab_putting:
 
     clutch_mask = (putting_df["Putt Type"] == "Birdie") & (putting_df["Starting Distance"] <= 10)
     clutch_attempts = clutch_mask.sum()
-    clutch_makes = (clutch_mask & (putting_df["Putts"] == 1)).sum()
+    clutch_makes = (clutch_mask & (putting_df["score"] == 1)).sum()
     clutch_index = clutch_makes / clutch_attempts * 100 if clutch_attempts > 0 else 0
 
     st.markdown(f"""
