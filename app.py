@@ -301,6 +301,118 @@ with tab_overview:
             </div>
         ''', unsafe_allow_html=True)
 
+    # Tiger 5 Trend Chart (Stacked Bar + Score Line)
+    with st.expander("View Tiger 5 Trend by Round"):
+        # Calculate Tiger 5 failures by round
+        round_info = filtered_df.groupby('Round ID').agg(
+            Date=('Date', 'first'),
+            Course=('Course', 'first')
+        ).reset_index()
+        
+        # Build hole summary by round for Tiger 5 calculations
+        t5_by_round = []
+        for _, round_row in round_info.iterrows():
+            rid = round_row['Round ID']
+            round_holes = hole_summary[hole_summary['Round ID'] == rid]
+            round_shots = filtered_df[filtered_df['Round ID'] == rid]
+            
+            # 3 Putts
+            three_putts = (round_holes['num_putts'] >= 3).sum()
+            
+            # Double Bogey
+            dbl_bogey = (round_holes['Hole Score'] >= round_holes['Par'] + 2).sum()
+            
+            # Par 5 Bogey
+            par5_holes = round_holes[round_holes['Par'] == 5]
+            par5_bogey = (par5_holes['Hole Score'] >= 6).sum()
+            
+            # Missed Green (short game not ending on green)
+            sg_shots = round_shots[round_shots['Shot Type'] == 'Short Game']
+            if len(sg_shots) > 0:
+                sg_shots_missed = sg_shots[sg_shots['Ending Location'] != 'Green']
+                missed_green_holes = sg_shots_missed[['Hole']].drop_duplicates()
+                missed_green = len(missed_green_holes)
+            else:
+                missed_green = 0
+            
+            # 125yd Bogey
+            approach_125 = round_shots[
+                (round_shots['Starting Distance'] <= 125) & 
+                (round_shots['Starting Location'] != 'Recovery') &
+                (((round_shots['Shot'] == 3) & (round_shots['Par'] == 5)) | 
+                 ((round_shots['Shot'] == 2) & (round_shots['Par'] == 4)) | 
+                 ((round_shots['Shot'] == 1) & (round_shots['Par'] == 3)))
+            ]
+            if len(approach_125) > 0:
+                approach_holes = approach_125[['Hole']].drop_duplicates()
+                approach_with_score = approach_holes.merge(round_holes[['Hole', 'Hole Score', 'Par']], on='Hole')
+                bogey_125 = (approach_with_score['Hole Score'] > approach_with_score['Par']).sum()
+            else:
+                bogey_125 = 0
+            
+            # Total score for round
+            total_score = round_holes['Hole Score'].sum()
+            
+            # Create label: Mon-YY Course
+            date_obj = pd.to_datetime(round_row['Date'])
+            label = f"{date_obj.strftime('%b-%y')} {round_row['Course']}"
+            
+            t5_by_round.append({
+                'Round ID': rid,
+                'Label': label,
+                'Date': date_obj,
+                '3 Putts': three_putts,
+                'Double Bogey': dbl_bogey,
+                'Par 5 Bogey': par5_bogey,
+                'Missed Green': missed_green,
+                '125yd Bogey': bogey_125,
+                'Total Score': total_score
+            })
+        
+        t5_df = pd.DataFrame(t5_by_round).sort_values('Date')
+        t5_df['Total Fails'] = t5_df['3 Putts'] + t5_df['Double Bogey'] + t5_df['Par 5 Bogey'] + t5_df['Missed Green'] + t5_df['125yd Bogey']
+        
+        # Create stacked bar chart with score line
+        fig_t5_trend = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        t5_categories = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
+        t5_colors = [ODU_RED, ODU_DARK_GOLD, ODU_METALLIC_GOLD, ODU_PURPLE, ODU_BLACK]
+        
+        for cat, color in zip(t5_categories, t5_colors):
+            fig_t5_trend.add_trace(
+                go.Bar(name=cat, x=t5_df['Label'], y=t5_df[cat], marker_color=color),
+                secondary_y=False
+            )
+        
+        fig_t5_trend.add_trace(
+            go.Scatter(
+                name='Total Score',
+                x=t5_df['Label'],
+                y=t5_df['Total Score'],
+                mode='lines+markers',
+                line=dict(color=ODU_GOLD, width=3),
+                marker=dict(size=10, color=ODU_GOLD, line=dict(color=ODU_BLACK, width=2))
+            ),
+            secondary_y=True
+        )
+        
+        fig_t5_trend.update_layout(
+            barmode='stack',
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_family='Inter',
+            legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5),
+            margin=dict(t=60, b=80, l=60, r=60),
+            height=400,
+            hovermode='x unified'
+        )
+        
+        fig_t5_trend.update_xaxes(title_text='', tickangle=-45)
+        fig_t5_trend.update_yaxes(title_text='Tiger 5 Fails', gridcolor='#e8e8e8', secondary_y=False)
+        fig_t5_trend.update_yaxes(title_text='Total Score', showgrid=False, secondary_y=True)
+        
+        st.plotly_chart(fig_t5_trend, use_container_width=True)
+
     with st.expander("View Tiger 5 Fail Details"):
         for stat_name in tiger5_names:
             detail = tiger5_results[stat_name]
