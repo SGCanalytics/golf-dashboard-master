@@ -891,33 +891,7 @@ with tab_approach:
 
     st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # ------------------------------------------------------------
-    # BOXPLOT
-    # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Proximity by Distance Bucket</p>', unsafe_allow_html=True)
-
-    fig_box = px.box(
-        approach_df.dropna(subset=['Hero Bucket']),
-        x="Hero Bucket",
-        y="Ending Distance",
-        color="Starting Location",
-        color_discrete_map={
-            "Fairway": ODU_GOLD,
-            "Rough": ODU_RED,
-            "Sand": ODU_PURPLE,
-            "Tee": ODU_BLACK
-        }
-    )
-
-    fig_box.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
-        height=400
-    )
-
-    st.plotly_chart(fig_box, use_container_width=True)
-
+    
     # ------------------------------------------------------------
     # HEATMAP (Ordered Axes)
     # ------------------------------------------------------------
@@ -951,36 +925,60 @@ with tab_approach:
 
     st.plotly_chart(fig_heat, use_container_width=True)
 
-    # ------------------------------------------------------------
-    # APPROACH TREND ANALYSIS
-    # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Approach SG Trend by Round</p>', unsafe_allow_html=True)
+# ------------------------------------------------------------
+# APPROACH TREND ANALYSIS
+# ------------------------------------------------------------
+st.markdown('<p class="section-title">Approach SG Trend by Round</p>', unsafe_allow_html=True)
 
-    # Build round-level SG: Approach
-    round_labels = filtered_df.groupby('Round ID').agg(
-        Date=('Date', 'first'),
-        Course=('Course', 'first')
-    ).reset_index()
+# Build round-level SG: Approach
+round_labels = filtered_df.groupby('Round ID').agg(
+    Date=('Date', 'first'),
+    Course=('Course', 'first')
+).reset_index()
 
-    round_labels['Label'] = round_labels.apply(
-        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
-        axis=1
-    )
+round_labels['Label'] = round_labels.apply(
+    lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+    axis=1
+)
 
-    # Sum SG: Approach per round
-    sg_round = approach_df.groupby('Round ID')['Strokes Gained'].sum().reset_index()
-    sg_round = sg_round.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
-    sg_round = sg_round.sort_values('Date')
+# Sum SG: Approach per round
+sg_round = approach_df.groupby('Round ID')['Strokes Gained'].sum().reset_index()
+sg_round = sg_round.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+sg_round = sg_round.sort_values('Date')
 
-    # Moving average toggle
-    use_ma = st.checkbox("Apply Moving Average", value=False)
+# Moving average toggle
+use_ma = st.checkbox("Apply Moving Average", value=False)
 
-    if use_ma:
-        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
-        sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
-        y_col = 'SG_MA'
-    else:
-        y_col = 'Strokes Gained'
+if use_ma:
+    window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
+    sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
+    y_col = 'SG_MA'
+else:
+    y_col = 'Strokes Gained'
+
+# Build trend chart
+fig_trend = px.line(
+    sg_round,
+    x='Label',
+    y=y_col,
+    markers=True,
+    title="SG: Approach Trend",
+    color_discrete_sequence=[ODU_BLACK]
+)
+
+fig_trend.update_layout(
+    plot_bgcolor='white',
+    paper_bgcolor='white',
+    font_family='Inter',
+    xaxis_title='',
+    yaxis_title='Strokes Gained',
+    height=400
+)
+
+fig_trend.update_xaxes(tickangle=-45)
+
+st.plotly_chart(fig_trend, use_container_width=True)
+
 
 # ============================================================
 # TAB: SHORT GAME
