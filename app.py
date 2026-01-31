@@ -23,70 +23,43 @@ ODU_PURPLE = '#753BBD'
 ODU_GREEN = '#2d6a4f'
 
 # ============================================================
-# CUSTOM CSS - UPDATED SIDEBAR & FILTER COLORS
+# CUSTOM CSS - REPLACING ONLY THE STYLE SECTION
 # ============================================================
 st.markdown(f"""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@300;400;500;600&family=Roboto:wght@300;400;700&display=swap');
-
-    /* Premium Sidebar Container */
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+    
+    /* 1. DARK GRAY SIDEBAR */
     section[data-testid="stSidebar"] {{ 
-        background-color: #1a1c1e; 
+        background-color: #1a1c1e !important; 
         border-right: 1px solid #2d3135; 
     }}
-
-    /* Sidebar Title */
-    .sidebar-title {{ 
-        font-family: 'Playfair Display', serif; 
-        font-size: 1.4rem; 
-        font-weight: 600; 
-        color: {ODU_GOLD}; 
-        margin-bottom: 0.5rem; 
-        padding-bottom: 1rem; 
-        border-bottom: 1px solid rgba(211, 175, 126, 0.3); 
-    }}
-
-    /* Sidebar Label */
-    .sidebar-label {{ 
-        font-family: 'Inter', sans-serif; 
-        font-size: 0.75rem; 
-        font-weight: 500; 
-        color: {ODU_METALLIC_GOLD}; 
-        text-transform: uppercase; 
-        letter-spacing: 0.08em; 
-        margin-bottom: 0.5rem; 
-        margin-top: 1.25rem; 
-    }}
-
-    /* Fix for Multi-select "Red" text - Forces ODU Gold */
+    
+    /* 2. ODU GOLD FILTER TAGS (Fixes the "Red" color) */
     span[data-baseweb="tag"] {{
         background-color: {ODU_GOLD} !important;
         color: {ODU_BLACK} !important;
     }}
-    
-    /* Overall App Font */
-    html, body, [class*="st-"] {{
+
+    /* 3. SIDEBAR TEXT STYLING */
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] label {{
+        color: #e0e0e0 !important;
         font-family: 'Inter', sans-serif;
     }}
+
+    /* THE REST OF YOUR EXISTING DASHBOARD STYLES */
+    .stApp {{ background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%); }}
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
     
-    .main-title {{
-        font-family: 'Playfair Display', serif;
-        font-size: 3rem;
-        font-weight: 700;
-        color: {ODU_BLACK};
-        margin-bottom: 0rem;
-    }}
+    h1, h2, h3 {{ font-family: 'Playfair Display', Georgia, serif !important; letter-spacing: -0.02em; }}
+    .main-title {{ font-family: 'Playfair Display', Georgia, serif; font-size: 2.8rem; font-weight: 700; color: #000000; margin-bottom: 0.25rem; }}
+    .main-subtitle {{ font-family: 'Inter', sans-serif; font-size: 1rem; color: #666666; font-weight: 400; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 3px solid #FFC72C; }}
+    .section-title {{ font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 600; color: #000000; margin: 2.5rem 0 1.5rem 0; padding-bottom: 0.75rem; border-bottom: 2px solid #FFC72C; }}
     
-    .section-title {{
-        font-family: 'Playfair Display', serif;
-        font-size: 1.8rem;
-        font-weight: 600;
-        color: {ODU_BLACK};
-        border-bottom: 2px solid {ODU_GOLD};
-        padding-bottom: 5px;
-        margin-top: 2rem;
-        margin-bottom: 1.5rem;
-    }}
+    /* Tiger Card Styles stay the same as your app-4.py */
+    .tiger-card-success {{ background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #FFC72C; margin-bottom: 1rem; }}
+    .tiger-card-fail {{ background: linear-gradient(135deg, #E03C31 0%, #c93028 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: none; margin-bottom: 1rem; }}
 </style>
 """, unsafe_allow_html=True)
 
