@@ -853,7 +853,7 @@ with tab_approach:
 
     # Fixed scales
     sg_min, sg_max = -0.5, 0.5
-    prox_min, prox_max = 0, 60
+    prox_min, prox_max = 0, 45
     gir_min, gir_max = 0, 100
 
     col1, col2, col3 = st.columns(3)
@@ -870,12 +870,20 @@ with tab_approach:
             color_discrete_sequence=[ODU_GOLD]
         )
         fig_radar_sg.update_traces(fill='toself')
+
         fig_radar_sg.update_layout(
-            polar=dict(bgcolor="white"),
-            paper_bgcolor="white",
+            polar=dict(
+                bgcolor="rgba(0,0,0,0)",
+                radialaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C"),
+                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+            ),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             font_family="Inter",
+            font_color="#FFC72C",
             height=350
         )
+
         st.plotly_chart(fig_radar_sg, use_container_width=True)
 
     # Radar 2 — Proximity
