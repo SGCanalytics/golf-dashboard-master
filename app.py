@@ -911,15 +911,12 @@ with tab_approach:
     
     # Radar 2 — Proximity
     with col2:
-        # Invert proximity so closer = better
-        radar_df["Proximity_Inverted"] = prox_max - radar_df["Proximity"]
-
         fig_radar_prox = px.line_polar(
             radar_df,
-            r="Proximity_Inverted",
+            r="Proximity",
             theta="Bucket",
             line_close=True,
-            range_r=[0, prox_max],   # 0 = worst, 60 = best (inverted)
+            range_r=[prox_max, prox_min],  # flip scale: closer = farther out
             title="Proximity (Closer = Better)",
             color_discrete_sequence=[ODU_BLACK]
         )
@@ -931,7 +928,9 @@ with tab_approach:
                 radialaxis=dict(
                     showgrid=True,
                     gridcolor="#444",
-                    color="#FFC72C"
+                    color="#FFC72C",
+                    tickvals=[0, 30, 60],
+                    ticktext=["0", "30", "60"]
                 ),
                 angularaxis=dict(
                     showgrid=True,
