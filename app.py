@@ -61,34 +61,9 @@ st.markdown("""
     .sg-card .card-value.positive { color: #2d6a4f; }
     .sg-card .card-value.negative { color: #E03C31; }
 
-    /* Sidebar Main Container */
-section[data-testid="stSidebar"] { 
-    background-color: #1a1c1e; /* Sophisticated Dark Gray */
-    border-right: 1px solid #2d3135; 
-}
-
-/* Sidebar Title */
-.sidebar-title { 
-    font-family: 'Playfair Display', serif; 
-    font-size: 1.4rem; 
-    font-weight: 600; 
-    color: #FFC72C; /* ODU Gold */
-    margin-bottom: 0.5rem; 
-    padding-bottom: 1rem; 
-    border-bottom: 1px solid rgba(211, 175, 126, 0.3); /* Subtle Gold Line */
-}
-
-/* Sidebar Labels */
-.sidebar-label { 
-    font-family: 'Inter', sans-serif; 
-    font-size: 0.75rem; 
-    font-weight: 500; 
-    color: #D3AF7E; /* Metallic Gold */
-    text-transform: uppercase; 
-    letter-spacing: 0.08em; 
-    margin-bottom: 0.5rem; 
-    margin-top: 1.25rem; 
-}
+    section[data-testid="stSidebar"] { background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%); }
+    .sidebar-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; color: #FFC72C; margin-bottom: 0.5rem; padding-bottom: 1rem; border-bottom: 1px solid #333; }
+    .sidebar-label { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; color: #D3AF7E; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; margin-top: 1.25rem; }
     
     .stDataFrame th { text-align: center !important; background-color: #000000 !important; color: #FFC72C !important; font-family: 'Inter', sans-serif !important; font-weight: 600 !important; font-size: 0.8rem !important; }
     .stDataFrame td { text-align: center !important; font-family: 'Inter', sans-serif !important; font-size: 0.85rem !important; }
@@ -392,7 +367,7 @@ with tab_overview:
     sg_trend.columns = ['Date', 'Shot Type', 'Total SG']
     sg_trend['Shot Type'] = pd.Categorical(sg_trend['Shot Type'], categories=SHOT_TYPE_ORDER, ordered=True)
 
-    odu_line_colors = {'Driving': ODU_GOLD, 'Approach': ODU_BLACK, 'Short Game': ODU_DARK_GOLD, 'Putt': ODU_METALLIC_GOLD, 'Recovery': ODU_RED, 'Other': ODU_PURPLE}
+    odu_line_colors = {'Driving': ODU_GOLD, 'Approach': ODU_BLACK, 'Short Game': ODU_DARK_GOLD, 'Putt': ODU_METALLIC_GOLD}
 
     fig_trend = px.line(sg_trend, x='Date', y='Total SG', color='Shot Type', markers=True, category_orders={'Shot Type': SHOT_TYPE_ORDER}, color_discrete_map=odu_line_colors)
     fig_trend.update_layout(plot_bgcolor='white', paper_bgcolor='white', font_family='Inter', xaxis_title='', yaxis_title='Total Strokes Gained', yaxis=dict(gridcolor='#e8e8e8', zerolinecolor=ODU_BLACK, zerolinewidth=2), hovermode='x unified', legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1), margin=dict(t=60, b=40, l=60, r=40), height=400)
