@@ -767,10 +767,8 @@ with tab_approach:
     # Assign table buckets
     approach_df['Table Bucket'] = approach_df.apply(approach_bucket_table, axis=1)
 
-
-
-        # ------------------------------------------------------------
-    # HERO CARDS (with micro sparklines)
+    # ------------------------------------------------------------
+    # HERO CARDS
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Approach Performance by Distance</p>', unsafe_allow_html=True)
 
@@ -778,7 +776,7 @@ with tab_approach:
     cols = st.columns(4)
 
     for col, bucket in zip(cols, hero_buckets):
-        bucket_df = approach_df[approach_df['Hero Bucket'] == bucket].copy()
+        bucket_df = approach_df[approach_df['Hero Bucket'] == bucket]
 
         total_sg = bucket_df['Strokes Gained'].sum() if len(bucket_df) > 0 else 0
         sg_per_shot = bucket_df['Strokes Gained'].mean() if len(bucket_df) > 0 else 0
@@ -787,29 +785,6 @@ with tab_approach:
         val_class = "positive" if total_sg > 0 else "negative" if total_sg < 0 else ""
 
         with col:
-            # Build sparkline only if we have data
-            if len(bucket_df) > 0 and 'Date' in bucket_df.columns:
-                bucket_df = bucket_df.sort_values("Date")
-                spark_values = bucket_df["Strokes Gained"].rolling(3).mean()
-
-                fig_spark = px.line(
-                    bucket_df,
-                    y=spark_values,
-                    height=60,
-                    width=160
-                )
-                fig_spark.update_layout(
-                    margin=dict(l=0, r=0, t=0, b=0),
-                    xaxis=dict(visible=False),
-                    yaxis=dict(visible=False),
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)"
-                )
-                fig_spark.update_traces(line=dict(color="#FFC72C", width=2))
-            else:
-                fig_spark = None
-
-            # Hero card
             st.markdown(f"""
                 <div class="hero-stat">
                     <div class="hero-value {val_class}">{total_sg:.2f}</div>
@@ -818,10 +793,6 @@ with tab_approach:
                     <div class="hero-sub">Proximity: {prox:.1f} ft</div>
                 </div>
             """, unsafe_allow_html=True)
-
-            # Sparkline under the card (if available)
-            if fig_spark is not None:
-                st.plotly_chart(fig_spark, use_container_width=False)
 
     # ------------------------------------------------------------
     # BUILD DISTANCE BUCKET TABLE (needed for radars + expander)
