@@ -126,6 +126,11 @@ st.markdown("""
     margin-top: 0.25rem;
 }
 
+.hero-stat:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0 18px rgba(255, 199, 44, 0.45);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
     
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
