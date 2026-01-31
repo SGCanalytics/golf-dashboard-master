@@ -11,7 +11,7 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZ8-dHrvrfl8YQnRS
 
 st.set_page_config(page_title="ODU Golf Analytics", layout="wide")
 
-SHOT_TYPE_ORDER = ['Driving', 'Approach', 'Short Game', 'Putt']
+SHOT_TYPE_ORDER = ['Driving', 'Approach', 'Short Game', 'Putt', 'Recovery', 'Other']
 
 # ODU Colors
 ODU_GOLD = '#FFC72C'
@@ -343,7 +343,7 @@ with tab_overview:
     # SG by Shot Type
     st.markdown('<p class="section-title">Performance by Shot Type</p>', unsafe_allow_html=True)
     
-    sg_by_type = filtered_df[~filtered_df['Shot Type'].isin(['Recovery', 'Other'])].groupby('Shot Type')['Strokes Gained'].agg(Total_SG='sum', Num_Shots='count', SG_per_Shot='mean').reset_index()
+    sg_by_type = filtered_df.groupby('Shot Type')['Strokes Gained'].agg(Total_SG='sum', Num_Shots='count', SG_per_Shot='mean').reset_index()
     sg_by_type.columns = ['Shot Type', 'Total SG', 'Shots', 'SG/Shot']
     sg_by_type['Total SG'] = sg_by_type['Total SG'].round(2)
     sg_by_type['SG/Shot'] = sg_by_type['SG/Shot'].round(3)
@@ -367,7 +367,7 @@ with tab_overview:
     sg_trend.columns = ['Date', 'Shot Type', 'Total SG']
     sg_trend['Shot Type'] = pd.Categorical(sg_trend['Shot Type'], categories=SHOT_TYPE_ORDER, ordered=True)
 
-    odu_line_colors = {'Driving': ODU_GOLD, 'Approach': ODU_BLACK, 'Short Game': ODU_DARK_GOLD, 'Putt': ODU_METALLIC_GOLD}
+    odu_line_colors = {'Driving': ODU_GOLD, 'Approach': ODU_BLACK, 'Short Game': ODU_PURPLE, 'Putt': ODU_GREEN}
 
     fig_trend = px.line(sg_trend, x='Date', y='Total SG', color='Shot Type', markers=True, category_orders={'Shot Type': SHOT_TYPE_ORDER}, color_discrete_map=odu_line_colors)
     fig_trend.update_layout(plot_bgcolor='white', paper_bgcolor='white', font_family='Inter', xaxis_title='', yaxis_title='Total Strokes Gained', yaxis=dict(gridcolor='#e8e8e8', zerolinecolor=ODU_BLACK, zerolinewidth=2), hovermode='x unified', legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1), margin=dict(t=60, b=40, l=60, r=40), height=400)
