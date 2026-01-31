@@ -11,7 +11,7 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZ8-dHrvrfl8YQnRS
 
 st.set_page_config(page_title="ODU Golf Analytics", layout="wide")
 
-SHOT_TYPE_ORDER = ['Driving', 'Approach', 'Short Game', 'Putt', 'Recovery', 'Other']
+SHOT_TYPE_ORDER = ['Driving', 'Approach', 'Short Game', 'Putt']
 
 # ODU Colors
 ODU_GOLD = '#FFC72C'
@@ -343,7 +343,7 @@ with tab_overview:
     # SG by Shot Type
     st.markdown('<p class="section-title">Performance by Shot Type</p>', unsafe_allow_html=True)
     
-    sg_by_type = filtered_df.groupby('Shot Type')['Strokes Gained'].agg(Total_SG='sum', Num_Shots='count', SG_per_Shot='mean').reset_index()
+    sg_by_type = filtered_df[~filtered_df['Shot Type'].isin(['Recovery', 'Other'])].groupby('Shot Type')['Strokes Gained'].agg(Total_SG='sum', Num_Shots='count', SG_per_Shot='mean').reset_index()
     sg_by_type.columns = ['Shot Type', 'Total SG', 'Shots', 'SG/Shot']
     sg_by_type['Total SG'] = sg_by_type['Total SG'].round(2)
     sg_by_type['SG/Shot'] = sg_by_type['SG/Shot'].round(3)
@@ -363,7 +363,7 @@ with tab_overview:
     # SG Trend Line Graph
     st.markdown('<p class="section-title">Strokes Gained Trend</p>', unsafe_allow_html=True)
     
-    sg_trend = filtered_df.groupby([filtered_df['Date'].dt.date, 'Shot Type'])['Strokes Gained'].sum().reset_index()
+    sg_trend = filtered_df[~filtered_df['Shot Type'].isin(['Recovery', 'Other'])].groupby([filtered_df['Date'].dt.date, 'Shot Type'])['Strokes Gained'].sum().reset_index()
     sg_trend.columns = ['Date', 'Shot Type', 'Total SG']
     sg_trend['Shot Type'] = pd.Categorical(sg_trend['Shot Type'], categories=SHOT_TYPE_ORDER, ordered=True)
 
