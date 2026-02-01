@@ -838,40 +838,38 @@ def build_coachs_corner(
     putting_df,
     approach_df
 ):
-   
     """
     Build all insights for the Coach's Corner tab.
-    
-    
-    Returns a dict with:
-        - strengths
-        - weaknesses
-        - tiger5_risks
-        - putting_flags
-        - approach_dispersion
-        - practice_priorities
+
+    Returns:
+        dict containing:
+            - strengths
+            - weaknesses
+            - tiger5_risks
+            - putting_flags
+            - approach_dispersion
+            - practice_priorities
     """
     sg_breakdown = sg_category_breakdown(df)
     tiger5_profile = tiger5_risk_profile(tiger5_results)
     putting_flags = putting_red_flags(putting_df)
     approach_disp = approach_dispersion_summary(approach_df)
-    
+
     priorities = generate_practice_priorities(
         sg_breakdown,
         tiger5_profile,
         putting_flags,
         approach_disp
-    ):
+    )
 
     return {
-        'strengths': sg_breakdown[:2],       # top 2 SG categories
-        'weaknesses': sg_breakdown[-2:],     # bottom 2 SG categories
+        'strengths': sg_breakdown[:2],
+        'weaknesses': sg_breakdown[-2:],
         'tiger5_risks': tiger5_profile,
         'putting_flags': putting_flags,
         'approach_dispersion': approach_disp,
         'practice_priorities': priorities
     }
-
 # ============================================================
 # MAIN APP — WIRING ENGINES INTO TABS
 # ============================================================
