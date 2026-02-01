@@ -1542,11 +1542,366 @@ with tab_driving:
 # TAB: APPROACH
 # ============================================================
 with tab_approach:
-    # Keep your existing layout.
-    # Use:
-    #   approach_metrics = approach_hero_metrics(approach_df)
-    #   approach_table_df = approach_table(approach_df)
-    #   approach_trend_df = approach_sg_trend(approach_df)
+    st.markdown('<p class="section-title">Approach Play</p>', unsafe_allow_html=True)
+
+    # Filter to approach shots only
+    approach_df = filtered_df[filtered_df['Shot Type'] == 'Approach'].copy()
+
+    # Assign hero buckets
+    approach_df['Hero Bucket'] = approach_df['Starting Distance'].apply(approach_bucket)
+
+    # Assign table buckets
+    approach_df['Table Bucket'] = approach_df.apply(approach_bucket_table, axis=1)
+
+    # ------------------------------------------------------------
+    # HERO CARDS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Approach Performance by Distance</p>', unsafe_allow_html=True)
+
+    hero_buckets = ["50–100", "100–150", "150–200", ">200"]
+    cols = st.columns(4)
+
+    for col, bucket in zip(cols, hero_buckets):
+        bucket_df = approach_df[approach_df['Hero Bucket'] == bucket]
+
+        total_sg = bucket_df['Strokes Gained'].sum() if len(bucket_df) > 0 else 0
+        sg_per_shot = bucket_df['Strokes Gained'].mean() if len(bucket_df) > 0 else 0
+        prox = bucket_df['Ending Distance'].mean() if len(bucket_df) > 0 else 0
+
+        val_class = "positive" if total_sg > 0 else "negative" if total_sg < 0 else ""
+
+        with col:
+            st.markdown(f"""
+                <div class="hero-stat">
+                    <div class="hero-value {val_class}">{total_sg:.2f}</div>
+                    <div class="hero-label">{bucket} Yards</div>
+                    <div class="hero-sub">SG/Shot: {sg_per_shot:.3f}</div>
+                    <div class="hero-sub">Proximity: {prox:.1f} ft</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # BUILD DISTANCE BUCKET TABLE (needed for radars + expander)
+    # ------------------------------------------------------------
+    table_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
+
+    rows = []
+    for bucket in table_buckets:
+        dfb = approach_df[approach_df['Table Bucket'] == bucket]
+
+        if len(dfb) == 0:
+            rows.append([bucket, 0, 0, 0, 0, 0, 0, 0, 0])
+            continue
+
+        total_sg = dfb['Strokes Gained'].sum()
+        shots = len(dfb)
+        sg_per_shot = dfb['Strokes Gained'].mean()
+        prox = dfb['Ending Distance'].mean()
+
+        green_df = dfb[dfb['Ending Location'] == 'Green']
+        prox_green = green_df['Ending Distance'].mean() if len(green_df) > 0 else 0
+        gir = len(green_df) / shots * 100
+
+        good = (dfb['Strokes Gained'] > 0.5).sum()
+        bad = (dfb['Strokes Gained'] < -0.5).sum()
+
+        rows.append([
+            bucket, total_sg, shots, sg_per_shot, prox, prox_green, gir, good, bad
+        ])
+
+    bucket_table = pd.DataFrame(rows, columns=[
+        "Bucket", "Total SG", "# Shots", "SG/Shot", "Proximity (ft)",
+        "Prox on Green Hit (ft)", "GIR %", "Good Shots", "Bad Shots"
+    ])
+
+    # ------------------------------------------------------------
+    # RADAR CHARTS (SG/Shot, Proximity, GIR%)
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Approach Profile by Distance Bucket</p>', unsafe_allow_html=True)
+
+    radar_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
+
+    radar_rows = []
+    for bucket in radar_buckets:
+        dfb = approach_df[approach_df['Table Bucket'] == bucket]
+
+        if len(dfb) == 0:
+            radar_rows.append([bucket, 0, 0, 0])
+            continue
+
+        sg_per_shot = dfb['Strokes Gained'].mean()
+        prox = dfb['Ending Distance'].mean()
+        gir = (dfb['Ending Location'] == 'Green').mean() * 100
+
+        radar_rows.append([bucket, sg_per_shot, prox, gir])
+
+    radar_df = pd.DataFrame(radar_rows, columns=["Bucket", "SG/Shot", "Proximity", "GIR%"])
+
+    # Fixed scales
+    sg_min, sg_max = -0.5, 0.5
+    prox_min, prox_max = 0, 45
+    gir_min, gir_max = 0, 100
+
+    col1, col2, col3 = st.columns(3)
+
+    # Radar 1 — SG per Shot
+    with col1:
+        fig_radar_sg = px.line_polar(
+            radar_df,
+            r="SG/Shot",
+            theta="Bucket",
+            line_close=True,
+            range_r=[sg_min, sg_max],
+            title="SG per Shot",
+            color_discrete_sequence=[ODU_GOLD]
+        )
+        fig_radar_sg.update_traces(fill='toself')
+
+        # Force a tick at 0.0 so the ring exists
+        fig_radar_sg.update_layout(
+            polar=dict(
+                bgcolor="rgba(0,0,0,0)",
+                radialaxis=dict(
+                    showgrid=True,
+                    gridcolor="#444",
+                    color="#FFC72C",
+                    tickvals=[sg_min, 0, sg_max],
+                    ticktext=["", "0.0", ""]
+                ),
+                angularaxis=dict(
+                    showgrid=True,
+                    gridcolor="#444",
+                    color="#FFC72C"
+                )
+            ),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font_family="Inter",
+            font_color="#FFC72C",
+            height=350
+        )
+
+    # ⭐ Bold 0.0 ring using a polar-sector shape
+        fig_radar_sg.add_shape(
+            type="path",
+            path="M 0 0 L 1 0 A 1 1 0 1 1 -1 0 Z",
+            xref="paper",
+            yref="paper",
+            line=dict(color="#FFC72C", width=4),
+            layer="below"
+        )
+
+        st.plotly_chart(fig_radar_sg, use_container_width=True)
+
+    
+    
+    # Radar 2 — Proximity
+    with col2:
+        fig_radar_prox = px.line_polar(
+            radar_df,
+            r="Proximity",
+            theta="Bucket",
+            line_close=True,
+            range_r=[prox_max, prox_min],  # flip scale: closer = farther out
+            title="Proximity (Closer = Better)",
+            color_discrete_sequence=[ODU_BLACK]
+        )
+        fig_radar_prox.update_traces(fill='toself')
+
+        fig_radar_prox.update_layout(
+            polar=dict(
+                bgcolor="rgba(0,0,0,0)",
+                radialaxis=dict(
+                    showgrid=True,
+                    gridcolor="#444",
+                    color="#FFC72C",
+                    tickvals=[0, 30, 60],
+                    ticktext=["0", "30", "60"]
+                ),
+                angularaxis=dict(
+                    showgrid=True,
+                    gridcolor="#444",
+                    color="#FFC72C"
+                )
+            ),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font_family="Inter",
+            font_color="#FFC72C",
+            height=350
+        )
+
+        st.plotly_chart(fig_radar_prox, use_container_width=True)
+
+    # Radar 3 — GIR %
+    with col3:
+        fig_radar_gir = px.line_polar(
+            radar_df,
+            r="GIR%",
+            theta="Bucket",
+            line_close=True,
+            range_r=[gir_min, gir_max],
+            title="GIR %",
+            color_discrete_sequence=[ODU_GREEN]
+        )
+        fig_radar_gir.update_traces(fill='toself')
+
+        fig_radar_gir.update_layout(
+            polar=dict(
+                bgcolor="rgba(0,0,0,0)",
+                radialaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C"),
+                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+            ),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font_family="Inter",
+            font_color="#FFC72C",
+            height=350
+        )
+
+        st.plotly_chart(fig_radar_gir, use_container_width=True)
+
+    # Collapsible table
+    with st.expander("View Full Distance Bucket Table"):
+        st.dataframe(bucket_table, use_container_width=True, hide_index=True)
+
+    # ------------------------------------------------------------
+    # SCATTER PLOT
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">SG vs Starting Distance</p>', unsafe_allow_html=True)
+
+    fig_scatter = px.scatter(
+        approach_df,
+        x="Starting Distance",
+        y="Strokes Gained",
+        color="Starting Location",
+        hover_data=["Ending Distance", "Ending Location"],
+        color_discrete_map={
+            "Fairway": ODU_GOLD,
+            "Rough": ODU_RED,
+            "Sand": ODU_PURPLE,
+            "Tee": ODU_BLACK
+        }
+    )
+
+    fig_scatter.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        height=400
+    )
+
+    st.plotly_chart(fig_scatter, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # BOXPLOT
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Proximity by Distance Bucket</p>', unsafe_allow_html=True)
+
+    fig_box = px.box(
+        approach_df.dropna(subset=['Hero Bucket']),
+        x="Hero Bucket",
+        y="Ending Distance",
+        color="Starting Location",
+        color_discrete_map={
+            "Fairway": ODU_GOLD,
+            "Rough": ODU_RED,
+            "Sand": ODU_PURPLE,
+            "Tee": ODU_BLACK
+        }
+    )
+
+    fig_box.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        height=400
+    )
+
+    st.plotly_chart(fig_box, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # HEATMAP (Ordered Axes)
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">SG per Shot Heatmap</p>', unsafe_allow_html=True)
+
+    bucket_order = [">200", "150–200", "100–150", "50–100"]
+    lie_order = ["Tee", "Fairway", "Rough", "Sand"]
+
+    heat_df = approach_df.dropna(subset=['Hero Bucket']).copy()
+    heat_df['Lie'] = heat_df['Starting Location']
+
+    heat_df['Hero Bucket'] = pd.Categorical(heat_df['Hero Bucket'], categories=bucket_order, ordered=True)
+    heat_df['Lie'] = pd.Categorical(heat_df['Lie'], categories=lie_order, ordered=True)
+
+    heatmap_data = heat_df.groupby(['Hero Bucket', 'Lie'])['Strokes Gained'].mean().reset_index()
+    heatmap_pivot = heatmap_data.pivot(index='Hero Bucket', columns='Lie', values='Strokes Gained')
+
+    fig_heat = px.imshow(
+        heatmap_pivot.loc[bucket_order, lie_order],
+        color_continuous_scale='RdYlGn',
+        aspect='auto'
+    )
+
+    fig_heat.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        height=400
+    )
+
+    st.plotly_chart(fig_heat, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # APPROACH TREND ANALYSIS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Approach SG Trend by Round</p>', unsafe_allow_html=True)
+
+    round_labels = filtered_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first')
+    ).reset_index()
+
+    round_labels['Label'] = round_labels.apply(
+        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+        axis=1
+    )
+
+    sg_round = approach_df.groupby('Round ID')['Strokes Gained'].sum().reset_index()
+    sg_round = sg_round.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    sg_round = sg_round.sort_values('Date')
+
+    use_ma = st.checkbox("Apply Moving Average", value=False)
+
+    if use_ma:
+        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
+        sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
+        y_col = 'SG_MA'
+    else:
+        y_col = 'Strokes Gained'
+
+    fig_trend = px.line(
+        sg_round,
+        x='Label',
+        y=y_col,
+        markers=True,
+        title="SG: Approach Trend",
+        color_discrete_sequence=[ODU_BLACK]
+    )
+
+    fig_trend.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        xaxis_title='',
+        yaxis_title='Strokes Gained',
+        height=400
+    )
+
+    fig_trend.update_xaxes(tickangle=-45)
+
+    st.plotly_chart(fig_trend, use_container_width=True)
+
     st.write("Use approach_df, approach_hero_metrics, approach_table, approach_sg_trend in your existing layout.")
 
 # ============================================================
