@@ -637,6 +637,10 @@ def putting_clutch_index(putting_df):
 # ============================================================
 
 # ============================================================
+# SEGMENT 4A — DRIVING + APPROACH ENGINE
+# ============================================================
+
+# ============================================================
 # DRIVING ENGINE
 # ============================================================
 
@@ -662,7 +666,232 @@ def driving_summary(driving_df, num_rounds):
     """
     Compute driving metrics:
         - SG Driving
+        - Fairway %
+        - Miss Left %
+        - Miss Right %
+        - Avg Distance (if available)
     """
+    metrics = {
+        'sg_driving': 0.0,
+        'fairway_pct': "-",
+        'miss_left_pct': "-",
+        'miss_right_pct': "-",
+        'avg_distance': "-"
+    }
+
+    if driving_df.empty or num_rounds == 0:
+        return metrics
+
+    metrics['sg_driving'] = driving_df['Strokes Gained'].sum()
+
+    attempts = len(driving_df)
+    metrics['fairway_pct'] = fmt_pct(driving_df['Fairway Hit'].sum(), attempts)
+    metrics['miss_left_pct'] = fmt_pct(driving_df['Miss Left'].sum(), attempts)
+    metrics['miss_right_pct'] = fmt_pct(driving_df['Miss Right'].sum(), attempts)
+
+    if 'Starting Distance' in driving_df.columns:
+        metrics['avg_distance'] = f"{driving_df['Starting Distance'].mean():.1f} ft"
+
+    return metrics
+
+
+# ============================================================
+# APPROACH ENGINE
+# ============================================================
+
+def approach_bucket(dist):
+    """Return hero bucket for approach shots."""
+    if dist < 50:
+        return None
+    if 50 <= dist < 100:
+        return "50–100"
+    if 100 <= dist < 150:
+        return "100–150"
+    if 150 <= dist < 200:
+        return "150–200"
+    return ">200"
+
+
+def approach_bucket_table(row):
+    """Return table bucket for approach shots (lie‑restricted)."""
+    dist = row['Starting Distance']
+    lie = row['Starting Location']
+
+    if lie not in ['Fairway', 'Rough', 'Sand']:
+        return None
+
+    if dist < 50:
+        return None
+    if 50 <= dist < 75:
+        return "50–75"
+    if 75 <= dist < 100:
+        return "75–100"
+    if 100 <= dist < 125:
+        return "100–125"
+    if 125 <= dist < 150:
+        return "125–150"
+    if 150 <= dist < 175:
+        return "150–175"
+    if 175 <= dist < 200:
+        return "175–200"
+    return "200+"
+
+
+def build_approach_df(df):
+    """
+    Return an approach-only DataFrame with consistent columns.
+    Approach = Shot Type == 'Approach'
+    """
+    approach_df = df[df['Shot Type'] == 'Approach'].copy()
+
+    if approach_df.empty:
+        return approach_df
+
+    approach_df['Hero Bucket'] = approach_bucket(approach_df['Starting Distance'])
+    approach_df['Hero Bucket'] = approach_df['Starting Distance'].apply(approach_bucket)
+    approach_df['Table Bucket'] = approach_df.apply(approach_bucket_table, axis=1)
+
+    return approach_df
+
+
+def approach_hero_metrics(approach_df):
+    """
+    Compute hero card metrics for each distance bucket:
+        - Total SG
+        - SG per Shot
+        - Avg Proximity
+    """
+    buckets = ["50–100", "100–150", "150–200", ">200"]
+    results = {b: {'total_sg': 0, 'sg_per_shot': 0, 'avg_prox': "-"} for b in buckets}
+
+    if approach_df.empty:
+        return results
+
+    for b in buckets:
+        subset = approach_df[approach_df['Hero Bucket'] == b]
+        if subset.empty:
+            continue
+
+        total_sg = subset['Strokes Gained'].sum()
+        shots = len(subset)
+        avg_prox = subset['Ending Distance'].mean()
+
+        results[b] = {
+            'total_sg': total_sg,
+            'sg_per_shot': total_sg / shots if shots > 0 else 0,
+            'avg_prox': f"{avg_prox:.1f} ft"
+        }
+
+    return results
+
+
+def approach_table(approach_df):
+    """
+    Build approach table grouped by lie‑restricted buckets.
+    """
+    if approach_df.empty:
+        return pd.DataFrame(columns=['Bucket', 'Shots', 'Avg Proximity', 'Total SG', 'SG/Shot'])
+
+    grouped = approach_df.groupby('Table Bucket').agg(
+        Shots=('Strokes Gained', 'count'),
+        Avg_Proximity=('Ending Distance', 'mean'),
+        Total_SG=('Strokes Gained', 'sum')
+    ).reset_index()
+
+    grouped['SG/Shot'] = grouped['Total_SG'] / grouped['Shots']
+    grouped['Avg_Proximity'] = grouped['Avg_Proximity'].apply(lambda x: f"{x:.1f} ft")
+    grouped.rename(columns={'Table Bucket': 'Bucket'}, inplace=True)
+
+    return grouped
+
+
+def approach_sg_trend(approach_df):
+    """
+    SG Approach per round for trendline chart.
+    """
+    if approach_df.empty:
+        return pd.DataFrame(columns=['Round ID', 'Date', 'Course', 'SG Approach'])
+
+    grouped = approach_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first'),
+        SG_Approach=('Strokes Gained', 'sum')
+    ).reset_index()
+
+    grouped['Date'] = pd.to_datetime(grouped['Date'])
+    grouped = grouped.sort_values('Date')
+
+    return grouped
+
+# ============================================================
+# SEGMENT 4B — SHORT GAME ENGINE
+# ============================================================
+
+def build_short_game_df(df):
+    """
+    Return a short-game-only DataFrame.
+    Short Game = Shot Type == 'Short Game'
+    """
+    sg_df = df[df['Shot Type'] == 'Short Game'].copy()
+
+    if sg_df.empty:
+        return sg_df
+
+    sg_df['Missed Green'] = (sg_df['Ending Location'] != 'Green').astype(int)
+    sg_df['Proximity'] = sg_df['Ending Distance']
+
+    return sg_df
+
+
+def short_game_summary(sg_df):
+    """
+    Compute short game metrics:
+        - Total SG
+        - SG per Shot
+        - Avg Proximity
+        - Missed Green %
+    """
+    metrics = {
+        'total_sg': 0.0,
+        'sg_per_shot': 0.0,
+        'avg_prox': "-",
+        'miss_green_pct': "-"
+    }
+
+    if sg_df.empty:
+        return metrics
+
+    total_sg = sg_df['Strokes Gained'].sum()
+    shots = len(sg_df)
+    avg_prox = sg_df['Proximity'].mean()
+    miss_pct = fmt_pct(sg_df['Missed Green'].sum(), shots)
+
+    metrics['total_sg'] = total_sg
+    metrics['sg_per_shot'] = total_sg / shots if shots > 0 else 0
+    metrics['avg_prox'] = f"{avg_prox:.1f} ft"
+    metrics['miss_green_pct'] = miss_pct
+
+    return metrics
+
+
+def short_game_sg_trend(sg_df):
+    """
+    SG Short Game per round for trendline chart.
+    """
+    if sg_df.empty:
+        return pd.DataFrame(columns=['Round ID', 'Date', 'Course', 'SG Short Game'])
+
+    grouped = sg_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first'),
+        SG_SG=('Strokes Gained', 'sum')
+    ).reset_index()
+
+    grouped['Date'] = pd.to_datetime(grouped['Date'])
+    grouped = grouped.sort_values('Date')
+
+    return grouped
+
 # ============================================================
 # SEGMENT 5 — COACH'S CORNER ENGINE
 # ============================================================
