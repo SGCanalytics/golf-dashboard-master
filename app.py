@@ -861,7 +861,7 @@ def build_coachs_corner(
         tiger5_profile,
         putting_flags,
         approach_disp
-    )
+    ):
 
     return {
         'strengths': sg_breakdown[:2],       # top 2 SG categories
