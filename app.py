@@ -747,12 +747,13 @@ def build_approach_df(df):
     if approach_df.empty:
         return approach_df
 
-    approach_df['Hero Bucket'] = approach_bucket(approach_df['Starting Distance'])
+    # Correct: apply bucket function row-by-row
     approach_df['Hero Bucket'] = approach_df['Starting Distance'].apply(approach_bucket)
+
+    # Table bucket also applied row-by-row
     approach_df['Table Bucket'] = approach_df.apply(approach_bucket_table, axis=1)
 
     return approach_df
-
 
 def approach_hero_metrics(approach_df):
     """
