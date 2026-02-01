@@ -1299,67 +1299,81 @@ st.markdown(
 )
 
 # ============================================================
-# TABS (ADDS COACH'S CORNER)
+# SEGMENT 6 — UI LAYOUT (TABS)
 # ============================================================
+
 tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
-    ["📊 Overview", "🏌️ Driving", "🎯 Approach", "⛳ Short Game", "🕳️ Putting", "📋 Coach's Corner"]
+    ["Overview", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
 )
 
 # ============================================================
-# TAB: OVERVIEW
+# TAB: OVERVIEW (REBUILT, CLEAN, ENGINE-POWERED)
 # ============================================================
 with tab_overview:
-    # ---------- TIGER 5 CARDS ----------
-    st.markdown('<p class="section-title">Tiger 5 Performance</p>', unsafe_allow_html=True)
-    tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
 
+    # ------------------------------------------------------------
+    # TIGER 5 SUMMARY (ENGINE-POWERED)
+    # ------------------------------------------------------------
+    tiger5_results, total_tiger5_fails, grit_score = calculate_tiger5(filtered_df, hole_summary)
+
+    st.markdown('<p class="section-title">Tiger 5 Performance</p>', unsafe_allow_html=True)
+
+    tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
     col1, col2, col3, col4, col5, col6 = st.columns(6)
+
+    # Tiger 5 Cards
     for col, stat_name in zip([col1, col2, col3, col4, col5], tiger5_names):
         fails = int(tiger5_results[stat_name]['fails'])
         attempts = int(tiger5_results[stat_name]['attempts'])
+        card_class = "tiger-card-fail" if fails > 0 else "tiger-card-success"
+
         with col:
-            card_class = "tiger-card-fail" if fails > 0 else "tiger-card-success"
-            st.markdown(f'''
+            st.markdown(f"""
                 <div class="{card_class}">
                     <div class="card-label">{stat_name}</div>
                     <div class="card-value">{fails}</div>
                     <div class="card-unit">of {attempts}</div>
                 </div>
-            ''', unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
+    # Grit Score Card
     with col6:
-        st.markdown(f'''
+        st.markdown(f"""
             <div class="grit-card">
                 <div class="card-label">Grit Score</div>
                 <div class="card-value">{grit_score:.1f}%</div>
                 <div class="card-unit">success rate</div>
             </div>
-        ''', unsafe_allow_html=True)
+        , unsafe_allow_html=True)
 
-    # ---------- TIGER 5 TREND CHART ----------
+    # ------------------------------------------------------------
+    # TIGER 5 TREND CHART (ENGINE-POWERED)
+    # ------------------------------------------------------------
     with st.expander("View Tiger 5 Trend by Round"):
-        if not t5_round_df.empty:
-            fig_t5_trend = make_subplots(specs=[[{"secondary_y": True}]])
+        t5_df = tiger5_by_round(filtered_df, hole_summary)
+
+        if not t5_df.empty:
+            fig_t5 = make_subplots(specs=[[{"secondary_y": True}]])
 
             t5_categories = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
             t5_colors = [ODU_RED, ODU_DARK_GOLD, ODU_METALLIC_GOLD, ODU_PURPLE, ODU_BLACK]
 
             for cat, color in zip(t5_categories, t5_colors):
-                fig_t5_trend.add_trace(
+                fig_t5.add_trace(
                     go.Bar(
                         name=cat,
-                        x=t5_round_df['Label'],
-                        y=t5_round_df[cat],
+                        x=t5_df['Label'],
+                        y=t5_df[cat],
                         marker_color=color
                     ),
                     secondary_y=False
                 )
 
-            fig_t5_trend.add_trace(
+            fig_t5.add_trace(
                 go.Scatter(
                     name='Total Score',
-                    x=t5_round_df['Label'],
-                    y=t5_round_df['Total Score'],
+                    x=t5_df['Label'],
+                    y=t5_df['Total Score'],
                     mode='lines+markers',
                     line=dict(color=ODU_GOLD, width=3),
                     marker=dict(size=10, color=ODU_GOLD, line=dict(color=ODU_BLACK, width=2))
@@ -1367,50 +1381,39 @@ with tab_overview:
                 secondary_y=True
             )
 
-            fig_t5_trend.update_layout(
+            fig_t5.update_layout(
                 barmode='stack',
                 plot_bgcolor='white',
                 paper_bgcolor='white',
                 font_family='Inter',
-                legend=dict(
-                    orientation='h',
-                    yanchor='bottom',
-                    y=1.02,
-                    xanchor='center',
-                    x=0.5
-                ),
+                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='center', x=0.5),
                 margin=dict(t=60, b=80, l=60, r=60),
                 height=400,
                 hovermode='x unified'
             )
 
-            fig_t5_trend.update_xaxes(title_text='', tickangle=-45)
-            fig_t5_trend.update_yaxes(
-                title_text='Tiger 5 Fails',
-                gridcolor='#e8e8e8',
-                secondary_y=False
-            )
-            fig_t5_trend.update_yaxes(
-                title_text='Total Score',
-                showgrid=False,
-                secondary_y=True
-            )
+            fig_t5.update_xaxes(tickangle=-45)
+            fig_t5.update_yaxes(title_text='Tiger 5 Fails', gridcolor='#e8e8e8', secondary_y=False)
+            fig_t5.update_yaxes(title_text='Total Score', showgrid=False, secondary_y=True)
 
-            st.plotly_chart(fig_t5_trend, use_container_width=True, config={'displayModeBar': False})
-        else:
-            st.info("No rounds available for Tiger 5 trend.")
+            st.plotly_chart(fig_t5, use_container_width=True, config={'displayModeBar': False})
 
-    # ---------- TIGER 5 FAIL DETAILS ----------
+    # ------------------------------------------------------------
+    # TIGER 5 FAIL DETAILS
+    # ------------------------------------------------------------
     with st.expander("View Tiger 5 Fail Details"):
         for stat_name in tiger5_names:
             detail = tiger5_results[stat_name]
-            if detail['fails'] > 0 and not detail['detail_holes'].empty:
+            if detail['fails'] > 0:
                 st.markdown(f"**{stat_name}** ({int(detail['fails'])} fails)")
-                for idx, row in detail['detail_holes'].iterrows():
+
+                for _, row in detail['detail_holes'].iterrows():
                     st.caption(
                         f"{row['Player']} | {row['Date']} | {row['Course']} | "
                         f"Hole {row['Hole']} (Par {int(row['Par'])}) | Score: {int(row['Hole Score'])}"
                     )
+
+                    # Show shot-level detail
                     if stat_name == '3 Putts':
                         shots = filtered_df[
                             (filtered_df['Player'] == row['Player']) &
@@ -1424,96 +1427,82 @@ with tab_overview:
                             (filtered_df['Player'] == row['Player']) &
                             (filtered_df['Round ID'] == row['Round ID']) &
                             (filtered_df['Hole'] == row['Hole'])
-                        ][['Shot', 'Starting Distance', 'Starting Location',
-                           'Ending Distance', 'Ending Location', 'Strokes Gained']].copy()
+                        ][['Shot', 'Starting Distance', 'Starting Location', 'Ending Distance', 'Ending Location', 'Strokes Gained']].copy()
                         shots.columns = ['Shot', 'Start', 'Lie', 'End', 'Result', 'SG']
+
                     shots['SG'] = shots['SG'].round(2)
                     st.dataframe(shots, use_container_width=True, hide_index=True)
+
                 st.divider()
 
-    # ---------- SG SUMMARY ----------
+    # ------------------------------------------------------------
+    # SG SUMMARY CARDS
+    # ------------------------------------------------------------
     st.markdown('<p class="section-title">Strokes Gained Summary</p>', unsafe_allow_html=True)
 
     total_sg = filtered_df['Strokes Gained'].sum()
     sg_per_round = total_sg / num_rounds if num_rounds > 0 else 0
     sg_tee_to_green = filtered_df[filtered_df['Shot Type'] != 'Putt']['Strokes Gained'].sum()
 
-    putts_over_30 = filtered_df[
-        (filtered_df['Shot Type'] == 'Putt') &
-        (filtered_df['Starting Distance'] > 30)
-    ]
+    putts_over_30 = filtered_df[(filtered_df['Shot Type'] == 'Putt') & (filtered_df['Starting Distance'] > 30)]
     sg_putts_over_30 = putts_over_30['Strokes Gained'].sum()
 
-    putts_5_10 = filtered_df[
-        (filtered_df['Shot Type'] == 'Putt') &
-        (filtered_df['Starting Distance'] >= 5) &
-        (filtered_df['Starting Distance'] <= 10)
-    ]
+    putts_5_10 = filtered_df[(filtered_df['Shot Type'] == 'Putt') &
+                             (filtered_df['Starting Distance'] >= 5) &
+                             (filtered_df['Starting Distance'] <= 10)]
     sg_putts_5_10 = putts_5_10['Strokes Gained'].sum()
 
-    col1, col2, col3, col4, col5 = st.columns(5)
     metrics = [
         ('Total SG', total_sg),
         ('SG / Round', sg_per_round),
         ('SG Tee to Green', sg_tee_to_green),
         ('SG Putting >30ft', sg_putts_over_30),
-        ('SG Putts 5-10ft', sg_putts_5_10)
+        ('SG Putts 5–10ft', sg_putts_5_10)
     ]
+
+    col1, col2, col3, col4, col5 = st.columns(5)
     for col, (label, val) in zip([col1, col2, col3, col4, col5], metrics):
         with col:
             val_class = sg_value_class(val)
-            st.markdown(
-                f'''<div class="sg-card">
-                        <div class="card-label">{label}</div>
-                        <div class="card-value {val_class}">{val:.2f}</div>
-                    </div>''',
-                unsafe_allow_html=True
-            )
+            st.markdown(f"""
+                <div class="sg-card">
+                    <div class="card-label">{label}</div>
+                    <div class="card-value {val_class}">{val:.2f}</div>
+                </div>
+            """, unsafe_allow_html=True)
 
-    # ---------- SG BY SHOT TYPE ----------
+    # ------------------------------------------------------------
+    # SG BY SHOT TYPE (BAR + TABLE)
+    # ------------------------------------------------------------
     st.markdown('<p class="section-title">Performance by Shot Type</p>', unsafe_allow_html=True)
 
     sg_by_type = filtered_df.groupby('Shot Type')['Strokes Gained'].agg(
         Total_SG='sum',
-        Num_Shots='count',
+        Shots='count',
         SG_per_Shot='mean'
     ).reset_index()
 
-    sg_by_type.columns = ['Shot Type', 'Total SG', 'Shots', 'SG/Shot']
-    sg_by_type['Total SG'] = sg_by_type['Total SG'].round(2)
-    sg_by_type['SG/Shot'] = sg_by_type['SG/Shot'].round(3)
-    sg_by_type['Shot Type'] = pd.Categorical(
-        sg_by_type['Shot Type'],
-        categories=SHOT_TYPE_ORDER,
-        ordered=True
-    )
-    sg_by_type = sg_by_type.sort_values('Shot Type')
+    sg_by_type['Total_SG'] = sg_by_type['Total_SG'].round(2)
+    sg_by_type['SG_per_Shot'] = sg_by_type['SG_per_Shot'].round(3)
     sg_by_type = sg_by_type[sg_by_type['Shots'] > 0]
 
-    colors = [ODU_RED if x < 0 else ODU_GOLD for x in sg_by_type['Total SG']]
+    colors = [ODU_RED if x < 0 else ODU_GOLD for x in sg_by_type['Total_SG']]
+
     fig_sg_type = go.Figure(
-        data=[
-            go.Bar(
-                x=sg_by_type['Shot Type'],
-                y=sg_by_type['Total SG'],
-                marker_color=colors,
-                text=sg_by_type['Total SG'].apply(lambda x: f'{x:.2f}'),
-                textposition='outside',
-                textfont=dict(family='Inter', size=12, color='#000000')
-            )
-        ]
+        data=[go.Bar(
+            x=sg_by_type['Shot Type'],
+            y=sg_by_type['Total_SG'],
+            marker_color=colors,
+            text=sg_by_type['Total_SG'].apply(lambda x: f'{x:.2f}'),
+            textposition='outside'
+        )]
     )
+
     fig_sg_type.update_layout(
         plot_bgcolor='white',
         paper_bgcolor='white',
         font_family='Inter',
-        yaxis=dict(
-            title='Total Strokes Gained',
-            gridcolor='#e8e8e8',
-            zerolinecolor=ODU_BLACK,
-            zerolinewidth=2
-        ),
-        xaxis=dict(title=''),
+        yaxis=dict(title='Total Strokes Gained', gridcolor='#e8e8e8'),
         margin=dict(t=40, b=40, l=60, r=40),
         height=400
     )
@@ -1523,10 +1512,147 @@ with tab_overview:
         st.plotly_chart(fig_sg_type, use_container_width=True)
     with col_table:
         st.dataframe(
-            sg_by_type[['Shot Type', 'Shots', 'SG/Shot']],
+            sg_by_type[['Shot Type', 'Shots', 'SG_per_Shot']],
             use_container_width=True,
-            hide_index=True
+            hide_index=True,
+            height=400
         )
+
+    # ------------------------------------------------------------
+    # SG TREND LINE
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Strokes Gained Trend</p>', unsafe_allow_html=True)
+
+    round_labels = filtered_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first')
+    ).reset_index()
+
+    round_labels['Label'] = round_labels.apply(
+        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+        axis=1
+    )
+
+    sg_trend = filtered_df[
+        ~filtered_df['Shot Type'].isin(['Recovery', 'Other'])
+    ].groupby(['Round ID', 'Shot Type'])['Strokes Gained'].sum().reset_index()
+
+    sg_trend = sg_trend.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    sg_trend = sg_trend.sort_values('Date')
+
+    odu_line_colors = {
+        'Driving': ODU_GOLD,
+        'Approach': ODU_BLACK,
+        'Short Game': ODU_PURPLE,
+        'Putt': ODU_GREEN
+    }
+
+    fig_trend = px.line(
+        sg_trend,
+        x='Label',
+        y='Strokes Gained',
+        color='Shot Type',
+        markers=True,
+        color_discrete_map=odu_line_colors
+    )
+
+    fig_trend.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        yaxis=dict(title='Total Strokes Gained', gridcolor='#e8e8e8'),
+        hovermode='x unified',
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+        margin=dict(t=60, b=80, l=60, r=40),
+        height=400
+    )
+
+    fig_trend.update_xaxes(tickangle=-45)
+
+    st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
+
+    # ------------------------------------------------------------
+    # SCORING DISTRIBUTION
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Scoring Distribution</p>', unsafe_allow_html=True)
+
+    score_order = ['Eagle', 'Birdie', 'Par', 'Bogey', 'Double or Worse']
+    overall_dist = hole_summary['Score Name'].value_counts().reindex(score_order, fill_value=0)
+
+    fig_pie = go.Figure(
+        data=[go.Pie(
+            labels=overall_dist.index,
+            values=overall_dist.values,
+            hole=0.5,
+            marker_colors=[ODU_PURPLE, ODU_GOLD, ODU_METALLIC_GOLD, ODU_DARK_GOLD, ODU_RED],
+            textinfo='percent+label'
+        )]
+    )
+
+    fig_pie.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        showlegend=False,
+        margin=dict(t=40, b=40, l=40, r=40),
+        height=400
+    )
+
+    col_chart, col_metrics = st.columns([2, 1])
+    with col_chart:
+        st.plotly_chart(fig_pie, use_container_width=True)
+
+    with col_metrics:
+        st.markdown("**Average Score by Par**")
+        avg_by_par = hole_summary.groupby('Par')['Hole Score'].mean()
+        sg_by_par = hole_summary.groupby('Par')['total_sg'].sum()
+
+        for par in [3, 4, 5]:
+            if par in avg_by_par.index:
+                st.markdown(
+                    f"""
+                    <div class="par-score-card">
+                        <span class="par-label">Par {par}</span>
+                        <span class="par-value">{avg_by_par[par]:.2f}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        st.markdown("**Total SG by Par**")
+        for par in [3, 4, 5]:
+            if par in sg_by_par.index:
+                sg_val = sg_by_par[par]
+                border_color = ODU_GREEN if sg_val >= 0 else ODU_RED
+
+                st.markdown(
+                    f"""
+                    <div class="par-score-card" style="border-left-color: {border_color};">
+                        <span class="par-label">Par {par}</span>
+                        <span class="par-value" style="color: {border_color};">{sg_val:+.2f}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+    # ------------------------------------------------------------
+    # RAW DATA EXPANDERS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Data</p>', unsafe_allow_html=True)
+
+    with st.expander("View Raw Shot Data"):
+        st.dataframe(filtered_df, use_container_width=True)
+
+    with st.expander("View Hole Summary"):
+        display_hole_summary = hole_summary[
+            ['Player', 'Course', 'Hole', 'Par', 'Hole Score', 'num_penalties', 'num_putts', 'Score Name']
+        ].copy()
+
+        display_hole_summary.columns = [
+            'Player', 'Course', 'Hole', 'Par', 'Score', 'Penalties', 'Putts', 'Result'
+        ]
+
+        st.dataframe(display_hole_summary, use_container_width=True, hide_index=True)
+
 
 # ============================================================
 # TAB: DRIVING
