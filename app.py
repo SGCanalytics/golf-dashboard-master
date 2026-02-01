@@ -841,7 +841,7 @@ def build_coachs_corner(
    
     """
     Build all insights for the Coach's Corner tab.
-    """
+    
     
     Returns a dict with:
         - strengths
@@ -855,12 +855,12 @@ def build_coachs_corner(
     tiger5_profile = tiger5_risk_profile(tiger5_results)
     putting_flags = putting_red_flags(putting_df)
     approach_disp = approach_dispersion_summary(approach_df)
+    
     priorities = generate_practice_priorities(
         sg_breakdown,
         tiger5_profile,
         putting_flags,
         approach_disp
-    """
     )
 
     return {
