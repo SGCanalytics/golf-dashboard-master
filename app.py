@@ -662,7 +662,7 @@ def driving_summary(driving_df, num_rounds):
     """
     Compute driving metrics:
         - SG Driving
-
+    """
 # ============================================================
 # SEGMENT 5 — COACH'S CORNER ENGINE
 # ============================================================
@@ -860,6 +860,7 @@ def build_coachs_corner(
         tiger5_profile,
         putting_flags,
         approach_disp
+    """
     )
 
     return {
