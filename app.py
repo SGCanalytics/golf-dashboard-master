@@ -838,8 +838,11 @@ def build_coachs_corner(
     putting_df,
     approach_df
 ):
+   
     """
     Build all insights for the Coach's Corner tab.
+    """
+    
     Returns a dict with:
         - strengths
         - weaknesses
