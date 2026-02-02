@@ -204,7 +204,9 @@ def putting_clutch_index(putting_df):
 
     return made_close['Strokes Gained'].mean()
 
-
+######################
+#AI Narative
+########################
 def putting_narrative(results):
     sg = results.get("total_sg_putting", 0)
     make_4_5 = results.get("make_pct_4_5", "-")
