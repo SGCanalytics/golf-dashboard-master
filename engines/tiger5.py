@@ -45,10 +45,7 @@ def _t5_par5_bogey(hole_summary):
 
 
 def _t5_missed_green_short_game(df, hole_summary):
-    """
-    Missed Green: any short game shot (Shot Type == 'Short Game')
-    that does NOT end on the green, counted per hole.
-    """
+    """Missed Green: any short game shot not ending on the green."""
     sg_shots = df[df['Shot Type'] == 'Short Game'].copy()
     if sg_shots.empty:
         return 0, 0, sg_shots
@@ -77,16 +74,7 @@ def _t5_missed_green_short_game(df, hole_summary):
 
 
 def _t5_approach_125_bogey(df, hole_summary):
-    """
-    125yd Bogey:
-    - Starting Distance <= 125
-    - Not Recovery
-    - 'Scoring shot' based on par:
-        * Par 5: Shot 3
-        * Par 4: Shot 2
-        * Par 3: Shot 1
-    - Fail if Hole Score > Par
-    """
+    """125yd Bogey: scoring shot inside 125yd that results in bogey or worse."""
     cond = (
         (df['Starting Distance'] <= 125) &
         (df['Starting Location'] != 'Recovery') &
@@ -118,10 +106,10 @@ def _t5_approach_125_bogey(df, hole_summary):
 
 
 # ============================================================
-# MASTER TIGER 5 CALCULATOR
+# MASTER TIGER 5 CALCULATOR (RENAMED FOR APP.PY)
 # ============================================================
 
-def calculate_tiger5(df, hole_summary):
+def build_tiger5_results(df, hole_summary):
     """
     Returns:
         - results: dict of each Tiger 5 category with attempts, fails, detail_holes
@@ -154,7 +142,7 @@ def calculate_tiger5(df, hole_summary):
         'detail_holes': d_p5
     }
 
-    # Missed Green (Short Game)
+    # Missed Green
     a_mg, f_mg, d_mg = _t5_missed_green_short_game(df, hole_summary)
     results['Missed Green'] = {
         'attempts': a_mg,
@@ -187,14 +175,7 @@ def calculate_tiger5(df, hole_summary):
 # ============================================================
 
 def tiger5_by_round(df, hole_summary):
-    """
-    Build per-round Tiger 5 breakdown + total score.
-    Returns DataFrame with:
-        Round ID, Label, Date,
-        3 Putts, Double Bogey, Par 5 Bogey,
-        Missed Green, 125yd Bogey,
-        Total Score, Total Fails
-    """
+    """Per-round Tiger 5 breakdown."""
     round_info = df.groupby('Round ID').agg(
         Date=('Date', 'first'),
         Course=('Course', 'first')
@@ -210,7 +191,6 @@ def tiger5_by_round(df, hole_summary):
         round_df = df[df['Round ID'] == rid]
         round_holes = hole_summary[hole_summary['Round ID'] == rid]
 
-        # Reuse Tiger 5 logic per round
         a_3p, f_3p, _ = _t5_three_putts(round_holes)
         a_db, f_db, _ = _t5_double_bogey(round_holes)
         a_p5, f_p5, _ = _t5_par5_bogey(round_holes)
@@ -244,4 +224,3 @@ def tiger5_by_round(df, hole_summary):
         )
 
     return t5_df
-
