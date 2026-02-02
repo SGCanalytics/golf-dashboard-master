@@ -18,7 +18,7 @@ def score_to_name(hole_score, par):
     return 'Double or Worse'
 
 
-def build_hole_summary(df):
+def build_hole_summary(filtered_df):
     """
     Compute per-hole summary used across multiple engines:
     - Tiger 5
