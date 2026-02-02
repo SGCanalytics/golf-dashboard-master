@@ -1422,32 +1422,3 @@ with tab_putting:
 
 with tab_coach:
     coachs_corner_tab(coachs_corner_results)
-
-# ============================================================
-# SEGMENT 6 — UI LAYOUT (TABS)
-# ============================================================
-
-tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
-    ["Overview", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
-)
-
-# ============================================================
-# TAB: OVERVIEW
-# ============================================================
-
-def overview_tab(filtered_df, hole_summary, num_rounds,
-                 driving_results, approach_results,
-                 short_game_results, putting_results,
-                 tiger5_results):
-
-
-def overview_tab(
-    filtered_df,
-    hole_summary,
-    num_rounds,
-    driving_results,
-    approach_results,
-    short_game_results,
-    putting_results,
-    tiger5_results
-):
