@@ -20,50 +20,6 @@ def score_to_name(score, par):
         return "Double Bogey"
     return "Triple+"
 
-# ------------------------------------------------------------
-# NORMALIZE LIE TYPE
-# ------------------------------------------------------------
-def normalize_lie(lie):
-    if not isinstance(lie, str):
-        return "Unknown"
-
-    lie = lie.strip().lower()
-
-    mapping = {
-        "fairway": "Fairway",
-        "fw": "Fairway",
-        "first cut": "Rough",
-        "rough": "Rough",
-        "rf": "Rough",
-        "fringe": "Rough",
-        "sand": "Sand",
-        "bunker": "Sand",
-        "trap": "Sand",
-        "recovery": "Recovery",
-        "trees": "Recovery",
-        "punchout": "Recovery",
-        "green": "Green",
-        "putting green": "Green",
-        "tee": "Tee",
-        "tee box": "Tee"
-    }
-
-    return mapping.get(lie, "Unknown")
-
-# ------------------------------------------------------------
-# DETERMINE SHOT TYPE (if needed)
-# ------------------------------------------------------------
-def determine_shot_type(row):
-    dist = row.get("Starting Distance", 0)
-    loc = row.get("Starting Location", "")
-
-    if loc == "Tee":
-        return "Driving"
-    if dist > 50:
-        return "Approach"
-    if dist <= 50 and loc != "Green":
-        return "Short Game"
-    return "Putt"
 
 # ------------------------------------------------------------
 # DISTANCE BUCKETS
