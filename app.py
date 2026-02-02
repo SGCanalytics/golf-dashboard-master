@@ -1328,23 +1328,24 @@ with tab_overview:
         card_class = "tiger-card-fail" if fails > 0 else "tiger-card-success"
 
         with col:
-            st.markdown(f"""
+            st.markdown(f'''
                 <div class="{card_class}">
                     <div class="card-label">{stat_name}</div>
                     <div class="card-value">{fails}</div>
                     <div class="card-unit">of {attempts}</div>
                 </div>
-            """, unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
 
     # Grit Score Card
     with col6:
-        st.markdown(f"""
+        grit_html = f'''
             <div class="grit-card">
                 <div class="card-label">Grit Score</div>
                 <div class="card-value">{grit_score:.1f}%</div>
                 <div class="card-unit">success rate</div>
             </div>
-        , unsafe_allow_html=True)
+        '''
+        st.markdown(grit_html, unsafe_allow_html=True)
 
     # ------------------------------------------------------------
     # TIGER 5 TREND CHART (ENGINE-POWERED)
