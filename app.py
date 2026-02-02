@@ -147,6 +147,14 @@ st.markdown("""
 # HELPER FUNCTIONS
 # ============================================================
 
+def determine_par(distance):
+    if distance >= 525:
+        return 5
+    elif distance >= 240:
+        return 4
+    else:
+        return 3
+
 def sg_value_class(val):
     """CSS class for SG color coding."""
     if val > 0:
