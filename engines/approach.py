@@ -93,6 +93,9 @@ def approach_engine(filtered_df, num_rounds):
 
     return results
 
+################################
+# AI Narative
+##############################
 def approach_narrative(results):
     sg = results.get("sg_per_round", 0)
     buckets = results.get("bucket_sg", {})
