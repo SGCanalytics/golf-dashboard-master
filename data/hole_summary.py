@@ -4,6 +4,14 @@ import pandas as pd
 # HOLE SUMMARY ENGINE — CENTRALIZED
 # ============================================================
 
+def determine_par(distance):
+    if distance >= 525:
+        return 5
+    elif distance >= 240:
+        return 4
+    else:
+        return 3
+
 def score_to_name(hole_score, par):
     """Convert numeric score vs par into a label."""
     diff = hole_score - par
