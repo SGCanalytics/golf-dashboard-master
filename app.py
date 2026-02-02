@@ -164,19 +164,17 @@ def fmt_pr(count, rounds):
     return f"{count/rounds:.1f}" if rounds > 0 else "-"
 
 # ============================================================
-# DATA LOADING — CLEANED & CONSOLIDATED
+# DATA LOADING
 # ============================================================
 
 @st.cache_data(ttl=300)
 def load_data():
     df = pd.read_csv(SHEET_URL)
 
-    # Clean strings
     df['Player'] = df['Player'].str.strip().str.title()
     df['Course'] = df['Course'].str.strip().str.title()
     df['Tournament'] = df['Tournament'].str.strip().str.title()
 
-    # Compute par from first shot
     first_shots = df[df['Shot'] == 1].copy()
     first_shots['Par'] = first_shots['Starting Distance'].apply(determine_par)
 
@@ -186,112 +184,16 @@ def load_data():
         how='left'
     )
 
-    # Unique shot ID
     df['Shot ID'] = (
         df['Round ID'] +
         '-H' + df['Hole'].astype(str) +
         '-S' + df['Shot'].astype(str)
     )
 
+    df['Date'] = pd.to_datetime(df['Date'])
+
     return df
 
-# ============================================================
-# MAIN APP — WIRING ENGINES INTO TABS
-# ============================================================
-
-# ---------- LOAD DATA ----------
-df = load_data()
-
-# ---------- SIDEBAR FILTERS ----------
-with st.sidebar:
-    st.markdown('<p class="sidebar-title">ODU Golf</p>', unsafe_allow_html=True)
-    st.markdown('<p class="sidebar-label">Filters</p>', unsafe_allow_html=True)
-
-    players = st.multiselect(
-        "Player",
-        options=sorted(df['Player'].unique()),
-        default=df['Player'].unique(),
-        label_visibility="collapsed"
-    )
-
-    st.markdown('<p class="sidebar-label">Course</p>', unsafe_allow_html=True)
-    courses = st.multiselect(
-        "Course",
-        options=sorted(df['Course'].unique()),
-        default=df['Course'].unique(),
-        label_visibility="collapsed"
-    )
-
-    st.markdown('<p class="sidebar-label">Tournament</p>', unsafe_allow_html=True)
-    tournaments = st.multiselect(
-        "Tournament",
-        options=sorted(df['Tournament'].unique()),
-        default=df['Tournament'].unique(),
-        label_visibility="collapsed"
-    )
-
-    df['Date'] = pd.to_datetime(df['Date'])
-    min_date, max_date = df['Date'].min().date(), df['Date'].max().date()
-
-    st.markdown('<p class="sidebar-label">Date Range</p>', unsafe_allow_html=True)
-    date_range = st.date_input(
-        "Date Range",
-        value=(min_date, max_date),
-        min_value=min_date,
-        max_value=max_date,
-        label_visibility="collapsed"
-    )
-
-# ---------- APPLY FILTERS ----------
-filtered_df = df[
-    (df['Player'].isin(players)) &
-    (df['Course'].isin(courses)) &
-    (df['Tournament'].isin(tournaments)) &
-    (df['Date'].dt.date >= date_range[0]) &
-    (df['Date'].dt.date <= date_range[1])
-].copy()
-
-# ---------- HOLE SUMMARY ----------
-hole_summary = build_hole_summary(filtered_df)
-num_rounds = filtered_df['Round ID'].nunique()
-
-# ---------- ENGINE CALLS ----------
-driving_results = driving_engine(filtered_df, num_rounds)
-approach_results = approach_engine(filtered_df, num_rounds)
-short_game_results = short_game_engine(filtered_df, num_rounds)
-
-putting_results = putting_hero_metrics(
-    filtered_df[filtered_df['Shot Type'] == 'Putt'],
-    num_rounds
-)
-
-# ---------- TIGER 5 ----------
-tiger5_results, total_tiger5_fails, grit_score = calculate_tiger5(filtered_df, hole_summary)
-
-# ---------- COACH'S CORNER ----------
-coachs_corner_data = build_coachs_corner(
-    filtered_df,
-    tiger5_results,
-    putting_results,
-    approach_results
-)
-
-# ============================================================
-# HEADER
-# ============================================================
-st.markdown('<p class="main-title">ODU Golf Analytics</p>', unsafe_allow_html=True)
-st.markdown(
-    f'<p class="main-subtitle">{len(filtered_df)} shots from {num_rounds} rounds</p>',
-    unsafe_allow_html=True
-)
-
-# ============================================================
-# SEGMENT 6 — UI LAYOUT (TABS)
-# ============================================================
-
-tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
-    ["Overview", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
-)
 
 # ============================================================
 # TAB: OVERVIEW
@@ -1410,4 +1312,142 @@ def coachs_corner_tab(cc):
     for p in cc["practice_priorities"]:
         st.markdown(f"- {p}")
 
+# ============================================================
+# MAIN APP — CONTROLLER
+# ============================================================
 
+df = load_data()
+
+# ---------- SIDEBAR FILTERS ----------
+with st.sidebar:
+    st.markdown('<p class="sidebar-title">ODU Golf</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sidebar-label">Filters</p>', unsafe_allow_html=True)
+
+    players = st.multiselect(
+        "Player",
+        options=sorted(df['Player'].unique()),
+        default=df['Player'].unique(),
+        label_visibility="collapsed"
+    )
+
+    st.markdown('<p class="sidebar-label">Course</p>', unsafe_allow_html=True)
+    courses = st.multiselect(
+        "Course",
+        options=sorted(df['Course'].unique()),
+        default=df['Course'].unique(),
+        label_visibility="collapsed"
+    )
+
+    st.markdown('<p class="sidebar-label">Tournament</p>', unsafe_allow_html=True)
+    tournaments = st.multiselect(
+        "Tournament",
+        options=sorted(df['Tournament'].unique()),
+        default=df['Tournament'].unique(),
+        label_visibility="collapsed"
+    )
+
+    min_date, max_date = df['Date'].min().date(), df['Date'].max().date()
+
+    st.markdown('<p class="sidebar-label">Date Range</p>', unsafe_allow_html=True)
+    date_range = st.date_input(
+        "Date Range",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date,
+        label_visibility="collapsed"
+    )
+
+# ---------- APPLY FILTERS ----------
+filtered_df = df[
+    (df['Player'].isin(players)) &
+    (df['Course'].isin(courses)) &
+    (df['Tournament'].isin(tournaments)) &
+    (df['Date'].dt.date >= date_range[0]) &
+    (df['Date'].dt.date <= date_range[1])
+].copy()
+
+num_rounds = filtered_df['Round ID'].nunique()
+
+# ---------- HOLE SUMMARY ----------
+hole_summary = build_hole_summary(filtered_df)
+
+# ---------- ENGINE CALLS ----------
+driving_results = driving_engine(filtered_df, num_rounds)
+approach_results = approach_engine(filtered_df, num_rounds)
+short_game_results = short_game_engine(filtered_df, num_rounds)
+putting_results = putting_engine(filtered_df, num_rounds)
+
+tiger5_results, total_tiger5_fails, grit_score = calculate_tiger5(filtered_df, hole_summary)
+
+coachs_corner_results = coachs_corner_engine(
+    filtered_df,
+    tiger5_results,
+    driving_results,
+    approach_results,
+    putting_results,
+    short_game_results
+)
+
+# ============================================================
+# TABS
+# ============================================================
+
+tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
+    ["Overview", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
+)
+
+with tab_overview:
+    overview_tab(
+        filtered_df,
+        hole_summary,
+        num_rounds,
+        driving_results,
+        approach_results,
+        short_game_results,
+        putting_results,
+        tiger5_results
+    )
+
+with tab_driving:
+    driving_tab(driving_results, num_rounds)
+
+with tab_approach:
+    approach_tab(approach_results, num_rounds)
+
+with tab_short_game:
+    short_game_tab(short_game_results, num_rounds)
+
+with tab_putting:
+    putting_tab(putting_results, num_rounds)
+
+with tab_coach:
+    coachs_corner_tab(coachs_corner_results)
+
+# ============================================================
+# SEGMENT 6 — UI LAYOUT (TABS)
+# ============================================================
+
+tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
+    ["Overview", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
+)
+
+# ============================================================
+# TAB: OVERVIEW
+# ============================================================
+
+def overview_tab(filtered_df, hole_summary, num_rounds,
+                 driving_results, approach_results,
+                 short_game_results, putting_results,
+                 tiger5_results):
+
+
+def overview_tab(
+    filtered_df,
+    hole_summary,
+    num_rounds,
+    driving_results,
+    approach_results,
+    short_game_results,
+    putting_results,
+    tiger5_results
+):
