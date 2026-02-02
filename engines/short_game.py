@@ -4,7 +4,7 @@ import pandas as pd
 # SHORT GAME ENGINE
 # ============================================================
 
-def short_game_engine(filtered_df, num_rounds):
+def build_short_game_results(filtered_df, num_rounds):
     """
     Compute all short game analytics for the Short Game tab.
 
