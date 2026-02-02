@@ -93,3 +93,28 @@ def approach_engine(filtered_df, num_rounds):
 
     return results
 
+def approach_narrative(results):
+    sg = results.get("sg_per_round", 0)
+    buckets = results.get("bucket_sg", {})
+    green_hits = results.get("green_hit_count", 0)
+    green_misses = results.get("green_miss_count", 0)
+
+    lines = ["Approach Performance:"]
+
+    if sg > 0.25:
+        lines.append(f"- Excellent approach play, gaining {sg:.2f} strokes per round.")
+    elif sg > 0:
+        lines.append(f"- Slightly positive approach SG at {sg:.2f} per round.")
+    else:
+        lines.append(f"- Losing strokes on approach ({sg:.2f} per round).")
+
+    lines.append(f"- Greens hit: {green_hits}, Misses: {green_misses}.")
+
+    if buckets:
+        best_bucket = max(buckets, key=buckets.get)
+        worst_bucket = min(buckets, key=buckets.get)
+        lines.append(f"- Best distance: {best_bucket}.")
+        lines.append(f"- Needs work: {worst_bucket}.")
+
+    return "\n".join(lines)
+
