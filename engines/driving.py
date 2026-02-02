@@ -123,7 +123,9 @@ def driving_engine(filtered_df, num_rounds):
     }
 
     return results
-
+########################################
+#AI Narative
+######################################
 def driving_narrative(results):
     sg = results.get("driving_sg_per_round", 0)
     fairway = results.get("fairway", 0)
