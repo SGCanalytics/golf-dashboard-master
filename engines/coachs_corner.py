@@ -5,16 +5,6 @@ import pandas as pd
 # ============================================================
 
 def _strengths_from_sg(sg_dict):
-    """
-    Identify strengths based on SG per round.
-    sg_dict example:
-        {
-            "Driving": sg_per_round,
-            "Approach": sg_per_round,
-            "Short Game": sg_per_round,
-            "Putting": sg_per_round
-        }
-    """
     strengths = []
     for category, value in sg_dict.items():
         if value > 0.25:
@@ -25,9 +15,6 @@ def _strengths_from_sg(sg_dict):
 
 
 def _weaknesses_from_sg(sg_dict):
-    """
-    Identify weaknesses based on SG per round.
-    """
     weaknesses = []
     for category, value in sg_dict.items():
         if value < -0.25:
@@ -38,11 +25,6 @@ def _weaknesses_from_sg(sg_dict):
 
 
 def _practice_priorities(strengths, weaknesses, tiger5_fails):
-    """
-    Generate practice priorities based on:
-        - SG weaknesses
-        - Tiger 5 failures
-    """
     priorities = []
 
     # SG weaknesses
@@ -53,16 +35,12 @@ def _practice_priorities(strengths, weaknesses, tiger5_fails):
     # Tiger 5
     if tiger5_fails.get("3 Putts", 0) > 0:
         priorities.append("Reduce 3-putts — improve lag putting and short-range consistency.")
-
     if tiger5_fails.get("Double Bogey", 0) > 0:
         priorities.append("Limit big numbers — improve decision-making and recovery shots.")
-
     if tiger5_fails.get("Par 5 Bogey", 0) > 0:
         priorities.append("Par 5 scoring — improve layup strategy and wedge control.")
-
     if tiger5_fails.get("Missed Green", 0) > 0:
         priorities.append("Short game reliability — improve contact and trajectory control.")
-
     if tiger5_fails.get("125yd Bogey", 0) > 0:
         priorities.append("Scoring clubs — tighten dispersion inside 125 yards.")
 
@@ -70,9 +48,6 @@ def _practice_priorities(strengths, weaknesses, tiger5_fails):
 
 
 def _narrative_summary(strengths, weaknesses, priorities, grit_score):
-    """
-    Generate a coach-style narrative summary.
-    """
     summary = []
 
     summary.append("Overall Performance:")
@@ -102,10 +77,10 @@ def _narrative_summary(strengths, weaknesses, priorities, grit_score):
 
 
 # ============================================================
-# MASTER COACH'S CORNER ENGINE
+# MASTER COACH'S CORNER ENGINE (RENAMED FOR APP.PY)
 # ============================================================
 
-def coachs_corner_engine(
+def build_coachs_corner(
     driving_results,
     approach_results,
     short_game_results,
@@ -115,23 +90,6 @@ def coachs_corner_engine(
 ):
     """
     Combine all engines into a single coaching insight package.
-
-    Inputs:
-        - driving_results: dict from driving_engine()
-        - approach_results: dict from approach_engine()
-        - short_game_results: dict from short_game_engine()
-        - putting_results: dict from putting_hero_metrics()
-        - tiger5_results: dict of Tiger 5 categories
-        - grit_score: float
-
-    Returns:
-        dict with:
-            - strengths
-            - weaknesses
-            - practice_priorities
-            - narrative_summary
-            - sg_summary
-            - tiger5_summary
     """
 
     # SG per round summary
@@ -142,17 +100,13 @@ def coachs_corner_engine(
         "Putting": putting_results.get("total_sg_putting", 0)
     }
 
-    # Strengths & Weaknesses
     strengths = _strengths_from_sg(sg_summary)
     weaknesses = _weaknesses_from_sg(sg_summary)
 
-    # Tiger 5 fails summary
     tiger5_fails = {k: v['fails'] for k, v in tiger5_results.items()}
 
-    # Practice priorities
     priorities = _practice_priorities(strengths, weaknesses, tiger5_fails)
 
-    # Narrative summary
     narrative = _narrative_summary(strengths, weaknesses, priorities, grit_score)
 
     return {
