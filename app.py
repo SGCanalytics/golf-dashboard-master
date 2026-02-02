@@ -143,10 +143,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-
 # ============================================================
-# HELPER FUNCTIONS — CLEANED & CONSOLIDATED
+# HELPER FUNCTIONS
 # ============================================================
 
 def determine_par(distance):
@@ -746,11 +744,7 @@ def putting_clutch_index(putting_df):
     return clutch
 
 # ============================================================
-# SEGMENT 4 — DRIVING / APPROACH / SHORT GAME ENGINES
-# ============================================================
-
-# ============================================================
-# SEGMENT 4A — DRIVING + APPROACH ENGINE
+# SEGMENT 4 — DRIVING
 # ============================================================
 
 def driving_engine(filtered_df, num_rounds):
@@ -884,7 +878,7 @@ def driving_engine(filtered_df, num_rounds):
     }
 
 # ============================================================
-# APPROACH ENGINE (Unified + UI-ready)
+# Segment 5: APPROACH ENGINE (Unified + UI-ready)
 # ============================================================
 
 def approach_engine(filtered_df):
@@ -1033,7 +1027,7 @@ def approach_engine(filtered_df):
     }
 
 # ============================================================
-# SHORT GAME ENGINE
+# Segment 6: SHORT GAME ENGINE
 # ============================================================
 
 def sg_bucket(dist):
@@ -1157,7 +1151,7 @@ def short_game_engine(filtered_df):
 
 
 # ============================================================
-# PUTTING ENGINE
+# Segment 7 PUTTING ENGINE
 # ============================================================
 
 def putting_bucket(dist):
@@ -1315,7 +1309,7 @@ def putting_engine(filtered_df):
     }
 
 # ============================================================
-# COACH'S CORNER ENGINE (engine-powered)
+# Segment 8: COACH'S CORNER ENGINE (engine-powered)
 # ============================================================
 
 def classify_light(row):
