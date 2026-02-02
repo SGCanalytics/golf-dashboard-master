@@ -204,3 +204,24 @@ def putting_clutch_index(putting_df):
 
     return made_close['Strokes Gained'].mean()
 
+
+def putting_narrative(results):
+    sg = results.get("total_sg_putting", 0)
+    make_4_5 = results.get("make_pct_4_5", "-")
+    three_putts = results.get("three_putts_per_round", "-")
+    lag_misses = results.get("lag_misses_per_round", "-")
+
+    lines = ["Putting Performance:"]
+
+    if sg > 0.25:
+        lines.append(f"- Excellent putting, gaining {sg:.2f} strokes per round.")
+    elif sg > 0:
+        lines.append(f"- Slightly positive SG putting at {sg:.2f}.")
+    else:
+        lines.append(f"- Losing strokes on the greens ({sg:.2f}).")
+
+    lines.append(f"- Make % from 4–5 ft: {make_4_5}.")
+    lines.append(f"- 3-putts per round: {three_putts}.")
+    lines.append(f"- Lag misses per round: {lag_misses}.")
+
+    return "\n".join(lines)
