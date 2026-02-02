@@ -98,3 +98,26 @@ def short_game_engine(filtered_df, num_rounds):
     }
 
     return results
+
+def short_game_narrative(results):
+    sg = results.get("sg_per_round", 0)
+    attempts = results.get("up_and_down_attempts", 0)
+    successes = results.get("up_and_down_successes", 0)
+    pct = results.get("up_and_down_pct", "-")
+    penalties = results.get("penalty_count", 0)
+
+    lines = ["Short Game Performance:"]
+
+    if sg > 0.25:
+        lines.append(f"- Strong short game, gaining {sg:.2f} strokes per round.")
+    elif sg > 0:
+        lines.append(f"- Slightly positive SG around the green at {sg:.2f}.")
+    else:
+        lines.append(f"- Losing strokes around the green ({sg:.2f}).")
+
+    lines.append(f"- Up & Down: {successes}/{attempts} ({pct}).")
+
+    if penalties > 0:
+        lines.append(f"- {penalties} penalties from short game shots.")
+
+    return "\n".join(lines)
