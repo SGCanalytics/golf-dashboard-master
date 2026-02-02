@@ -753,60 +753,135 @@ def putting_clutch_index(putting_df):
 # SEGMENT 4A — DRIVING + APPROACH ENGINE
 # ============================================================
 
-# ============================================================
-# DRIVING ENGINE
-# ============================================================
+def driving_engine(filtered_df, num_rounds):
+    """Compute all driving analytics for the Driving tab."""
 
-def build_driving_df(df):
-    """
-    Return a driving-only DataFrame with consistent columns.
-    Driving = Shot Type == 'Driving'
-    """
-    driving_df = df[df['Shot Type'] == 'Driving'].copy()
+    # Filter to driving shots
+    df = filtered_df[filtered_df['Shot Type'] == 'Driving'].copy()
+    num_drives = len(df)
 
-    if driving_df.empty:
-        return driving_df
+    if num_drives == 0:
+        return {"num_drives": 0}
 
-    # Normalize lie categories for accuracy
-    driving_df['Fairway Hit'] = (driving_df['Ending Location'] == 'Fairway').astype(int)
-    driving_df['Miss Left'] = (driving_df['Ending Location'].isin(['Left Rough', 'Left Trees', 'Left Sand'])).astype(int)
-    driving_df['Miss Right'] = (driving_df['Ending Location'].isin(['Right Rough', 'Right Trees', 'Right Sand'])).astype(int)
+    # -----------------------------
+    # BASIC SG METRICS
+    # -----------------------------
+    driving_sg = df['Strokes Gained'].sum()
+    driving_sg_per_round = driving_sg / num_rounds if num_rounds > 0 else 0
 
-    return driving_df
+    # -----------------------------
+    # ENDING LOCATION COUNTS
+    # -----------------------------
+    end_loc_counts = df['Ending Location'].value_counts()
+    fairway = end_loc_counts.get('Fairway', 0)
+    rough = end_loc_counts.get('Rough', 0)
+    sand = end_loc_counts.get('Sand', 0)
+    recovery = end_loc_counts.get('Recovery', 0)
+    green = end_loc_counts.get('Green', 0)
 
+    # -----------------------------
+    # PENALTIES
+    # -----------------------------
+    penalty_count = len(df[df['Penalty'] == 'Yes'])
 
-def driving_summary(driving_df, num_rounds):
-    """
-    Compute driving metrics:
-        - SG Driving
-        - Fairway %
-        - Miss Left %
-        - Miss Right %
-        - Avg Distance (if available)
-    """
-    metrics = {
-        'sg_driving': 0.0,
-        'fairway_pct': "-",
-        'miss_left_pct': "-",
-        'miss_right_pct': "-",
-        'avg_distance': "-"
+    # -----------------------------
+    # OB DETECTION (RE-TEE)
+    # -----------------------------
+    ob_count = 0
+    ob_details = []
+
+    drive_holes = df[['Player', 'Round ID', 'Hole', 'Course', 'Date']].drop_duplicates()
+
+    for _, row in drive_holes.iterrows():
+        hole_shots = filtered_df[
+            (filtered_df['Player'] == row['Player']) &
+            (filtered_df['Round ID'] == row['Round ID']) &
+            (filtered_df['Hole'] == row['Hole'])
+        ].sort_values('Shot')
+
+        # Re-tee detection
+        if len(hole_shots) >= 2:
+            if hole_shots.iloc[0]['Starting Location'] == 'Tee' and hole_shots.iloc[1]['Starting Location'] == 'Tee':
+                ob_count += 1
+                ob_details.append({
+                    'Player': row['Player'],
+                    'Date': row['Date'],
+                    'Course': row['Course'],
+                    'Hole': row['Hole']
+                })
+
+    # -----------------------------
+    # RATES
+    # -----------------------------
+    obstruction_count = sand + recovery
+    obstruction_pct = (obstruction_count / num_drives * 100) if num_drives > 0 else 0
+
+    penalty_total = penalty_count + ob_count
+    penalty_rate_pct = (penalty_total / num_drives * 100) if num_drives > 0 else 0
+
+    fairway_pct = (fairway / num_drives * 100) if num_drives > 0 else 0
+
+    # -----------------------------
+    # SG BY RESULT
+    # -----------------------------
+    sg_by_result = (
+        df.groupby('Ending Location')['Strokes Gained']
+        .agg(['sum', 'count', 'mean'])
+        .reset_index()
+        .rename(columns={'sum': 'Total SG', 'count': 'Shots', 'mean': 'SG/Shot'})
+    )
+
+    # -----------------------------
+    # TREND DATA
+    # -----------------------------
+    round_labels = df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first')
+    ).reset_index()
+
+    round_labels['Label'] = round_labels.apply(
+        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+        axis=1
+    )
+
+    trend = df.groupby('Round ID').agg(
+        SG=('Strokes Gained', 'sum'),
+        Drives=('Shot', 'count'),
+        Fairways=('Ending Location', lambda x: (x == 'Fairway').sum())
+    ).reset_index()
+
+    trend = trend.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    trend = trend.sort_values('Date')
+    trend['Fairway %'] = (trend['Fairways'] / trend['Drives'] * 100).round(1)
+
+    # -----------------------------
+    # RETURN EVERYTHING CLEANLY
+    # -----------------------------
+    return {
+        "df": df,
+        "num_drives": num_drives,
+        "driving_sg": driving_sg,
+        "driving_sg_per_round": driving_sg_per_round,
+
+        "fairway": fairway,
+        "rough": rough,
+        "sand": sand,
+        "recovery": recovery,
+        "green": green,
+
+        "fairway_pct": fairway_pct,
+        "obstruction_count": obstruction_count,
+        "obstruction_pct": obstruction_pct,
+
+        "penalty_count": penalty_count,
+        "ob_count": ob_count,
+        "penalty_total": penalty_total,
+        "penalty_rate_pct": penalty_rate_pct,
+
+        "ob_details": ob_details,
+        "sg_by_result": sg_by_result,
+        "trend": trend,
     }
-
-    if driving_df.empty or num_rounds == 0:
-        return metrics
-
-    metrics['sg_driving'] = driving_df['Strokes Gained'].sum()
-
-    attempts = len(driving_df)
-    metrics['fairway_pct'] = fmt_pct(driving_df['Fairway Hit'].sum(), attempts)
-    metrics['miss_left_pct'] = fmt_pct(driving_df['Miss Left'].sum(), attempts)
-    metrics['miss_right_pct'] = fmt_pct(driving_df['Miss Right'].sum(), attempts)
-
-    if 'Starting Distance' in driving_df.columns:
-        metrics['avg_distance'] = f"{driving_df['Starting Distance'].mean():.1f} ft"
-
-    return metrics
-
 
 # ============================================================
 # APPROACH ENGINE
@@ -1307,7 +1382,7 @@ tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach 
 )
 
 # ============================================================
-# TAB: OVERVIEW (REBUILT, CLEAN, ENGINE-POWERED)
+# TAB: OVERVIEW
 # ============================================================
 with tab_overview:
 
@@ -1656,14 +1731,332 @@ with tab_overview:
 
 
 # ============================================================
-# TAB: DRIVING
+# TAB: DRIVING 
 # ============================================================
 with tab_driving:
-    # Here you can keep your existing driving layout.
-    # Replace any ad-hoc groupbys with:
-    #   driving_metrics = driving_summary(driving_df, num_rounds)
-    # and use driving_df directly for tables/plots.
-    st.write("Use driving_df and driving_summary(driving_df, num_rounds) in your existing layout.")
+
+    drive = driving_engine(filtered_df, num_rounds)
+
+    if drive["num_drives"] == 0:
+        st.warning("No driving data available for the selected filters.")
+        st.stop()
+
+    # ------------------------------------------------------------
+    # HERO CARDS
+    # ------------------------------------------------------------
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value" style="color: {'#2d6a4f' if drive['driving_sg'] >= 0 else '#E03C31'};">
+                    {drive['driving_sg']:+.2f}
+                </div>
+                <div class="hero-label">Total SG Driving</div>
+                <div class="hero-sub">{drive['driving_sg_per_round']:+.2f} per round</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col2:
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: #FFC72C;">
+                <div class="hero-value">{drive['fairway_pct']:.0f}%</div>
+                <div class="hero-label">Fairways Hit</div>
+                <div class="hero-sub">{drive['fairway']} of {drive['num_drives']} drives</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        color = '#E03C31' if drive['obstruction_pct'] > 10 else '#FFC72C'
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {color};">
+                <div class="hero-value" style="color: {color};">{drive['obstruction_pct']:.1f}%</div>
+                <div class="hero-label">Obstruction Rate</div>
+                <div class="hero-sub">Sand + Recovery</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col4:
+        color = '#E03C31' if drive['penalty_rate_pct'] > 5 else '#FFC72C'
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {color};">
+                <div class="hero-value" style="color: {color};">{drive['penalty_total']}</div>
+                <div class="hero-label">Penalties + OB</div>
+                <div class="hero-sub">{drive['penalty_rate_pct']:.1f}% of drives</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # ------------------------------------------------------------
+    # LANDING LOCATION DONUT + TABLE
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Where Are Your Drives Landing?</p>', unsafe_allow_html=True)
+
+    col_viz, col_table = st.columns([1, 1])
+
+    with col_viz:
+        labels = ['Fairway', 'Rough', 'Sand', 'Recovery', 'Green']
+        values = [
+            drive['fairway'], drive['rough'], drive['sand'],
+            drive['recovery'], drive['green']
+        ]
+        colors = [ODU_GOLD, ODU_DARK_GOLD, ODU_METALLIC_GOLD, ODU_RED, ODU_GREEN]
+
+        chart_data = [(l, v, c) for l, v, c in zip(labels, values, colors) if v > 0]
+
+        fig_donut = go.Figure(
+            data=[
+                go.Pie(
+                    labels=[d[0] for d in chart_data],
+                    values=[d[1] for d in chart_data],
+                    hole=0.6,
+                    marker_colors=[d[2] for d in chart_data],
+                    textinfo='label+percent',
+                    textposition='outside',
+                    textfont=dict(family='Inter', size=12),
+                    pull=[0.02] * len(chart_data)
+                )
+            ]
+        )
+
+        fig_donut.update_layout(
+            showlegend=False,
+            margin=dict(t=40, b=40, l=40, r=40),
+            height=400,
+            annotations=[
+                dict(
+                    text=f'<b>{drive["num_drives"]}</b><br>Drives',
+                    x=0.5, y=0.5,
+                    font=dict(family='Playfair Display', size=24, color='#000'),
+                    showarrow=False
+                )
+            ]
+        )
+
+        st.plotly_chart(fig_donut, use_container_width=True)
+
+    with col_table:
+        st.markdown(
+            f"""
+            <table class="driving-table">
+                <tr><th style="text-align: left;">Metric</th><th>#</th><th>%</th><th>Per Round</th></tr>
+
+                <tr class="row-primary">
+                    <td><strong>Driving</strong></td>
+                    <td><strong>{drive['num_drives']}</strong></td>
+                    <td>-</td>
+                    <td><strong>{drive['num_drives']/num_rounds:.1f}</strong></td>
+                </tr>
+
+                <tr class="row-header"><td colspan="4">Ending Location</td></tr>
+
+                <tr><td class="indent">Fairway</td><td>{drive['fairway']}</td><td>{fmt_pct(drive['fairway'], drive['num_drives'])}</td><td>{fmt_pr(drive['fairway'], num_rounds)}</td></tr>
+                <tr><td class="indent">Rough</td><td>{drive['rough']}</td><td>{fmt_pct(drive['rough'], drive['num_drives'])}</td><td>{fmt_pr(drive['rough'], num_rounds)}</td></tr>
+                <tr><td class="indent">Sand</td><td>{drive['sand']}</td><td>{fmt_pct(drive['sand'], drive['num_drives'])}</td><td>{fmt_pr(drive['sand'], num_rounds)}</td></tr>
+                <tr><td class="indent">Recovery</td><td>{drive['recovery']}</td><td>{fmt_pct(drive['recovery'], drive['num_drives'])}</td><td>{fmt_pr(drive['recovery'], num_rounds)}</td></tr>
+
+                <tr class="row-highlight">
+                    <td><strong>Obstruction Rate</strong></td>
+                    <td><strong>{drive['obstruction_count']}</strong></td>
+                    <td><strong>{fmt_pct(drive['obstruction_count'], drive['num_drives'])}</strong></td>
+                    <td><strong>{fmt_pr(drive['obstruction_count'], num_rounds)}</strong></td>
+                </tr>
+
+                <tr class="row-header"><td colspan="4">Penalties</td></tr>
+
+                <tr><td class="indent">Penalty Strokes</td><td>{drive['penalty_count']}</td><td>{fmt_pct(drive['penalty_count'], drive['num_drives'])}</td><td>{fmt_pr(drive['penalty_count'], num_rounds)}</td></tr>
+                <tr><td class="indent">OB (Re-Tee)</td><td>{drive['ob_count']}</td><td>{fmt_pct(drive['ob_count'], drive['num_drives'])}</td><td>{fmt_pr(drive['ob_count'], num_rounds)}</td></tr>
+
+                <tr class="{ 'row-danger' if drive['penalty_total'] > 0 else 'row-highlight' }">
+                    <td><strong>Penalty Rate</strong></td>
+                    <td><strong>{drive['penalty_total']}</strong></td>
+                    <td><strong>{fmt_pct(drive['penalty_total'], drive['num_drives'])}</strong></td>
+                    <td><strong>{fmt_pr(drive['penalty_total'], num_rounds)}</strong></td>
+                </tr>
+            </table>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # ------------------------------------------------------------
+    # SG BY RESULT
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Strokes Gained by Result</p>', unsafe_allow_html=True)
+
+    sg_df = drive["sg_by_result"].sort_values("Total SG", ascending=True)
+    colors_bar = [ODU_RED if x < 0 else ODU_GOLD for x in sg_df['Total SG']]
+
+    fig_sg_result = go.Figure(
+        data=[
+            go.Bar(
+                y=sg_df['Result'],
+                x=sg_df['Total SG'],
+                orientation='h',
+                marker_color=colors_bar,
+                text=sg_df['Total SG'].apply(lambda x: f'{x:+.2f}'),
+                textposition='outside',
+                textfont=dict(family='Inter', size=12, color='#000')
+            )
+        ]
+    )
+
+    fig_sg_result.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        xaxis=dict(
+            title='Strokes Gained',
+            gridcolor='#e8e8e8',
+            zerolinecolor=ODU_BLACK,
+            zerolinewidth=2
+        ),
+        yaxis=dict(title=''),
+        margin=dict(t=20, b=40, l=100, r=80),
+        height=250
+    )
+
+    st.plotly_chart(fig_sg_result, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # DRIVING TREND
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Driving Performance Trend</p>', unsafe_allow_html=True)
+
+    trend = drive["trend"]
+
+    fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
+
+    fig_trend.add_trace(
+        go.Bar(
+            x=trend['Label'],
+            y=trend['SG'],
+            name='SG Driving',
+            marker_color=[ODU_RED if x < 0 else ODU_GOLD for x in trend['SG']],
+            opacity=0.8
+        ),
+        secondary_y=False
+    )
+
+    fig_trend.add_trace(
+        go.Scatter(
+            x=trend['Label'],
+            y=trend['Fairway %'],
+            name='Fairway %',
+            mode='lines+markers',
+            line=dict(color=ODU_BLACK, width=3),
+            marker=dict(size=10, color=ODU_BLACK)
+        ),
+        secondary_y=True
+    )
+
+    fig_trend.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='right',
+            x=1
+        ),
+        margin=dict(t=60, b=80, l=60, r=60),
+        height=350,
+        hovermode='x unified',
+        xaxis=dict(tickangle=-45)
+    )
+
+    fig_trend.update_yaxes(
+        title_text="Strokes Gained",
+        gridcolor='#e8e8e8',
+        zerolinecolor=ODU_BLACK,
+        zerolinewidth=2,
+        secondary_y=False
+    )
+
+    fig_trend.update_yaxes(
+        title_text="Fairway %",
+        range=[0, 100],
+        showgrid=False,
+        secondary_y=True
+    )
+
+    st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
+
+    # ------------------------------------------------------------
+    # DETAIL TABLES
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Detailed Data</p>', unsafe_allow_html=True)
+
+    with st.expander(f"📋 All Driving Shots ({drive['num_drives']} total)"):
+
+        detail = drive["df"][[
+            'Player', 'Date', 'Course', 'Hole',
+            'Starting Distance', 'Ending Distance',
+            'Ending Location', 'Penalty', 'Strokes Gained'
+        ]].copy()
+
+        detail['Date'] = pd.to_datetime(detail['Date']).dt.strftime('%m/%d/%Y')
+
+        detail.columns = [
+            'Player', 'Date', 'Course', 'Hole',
+            'Distance', 'End Dist', 'Result', 'Penalty', 'SG'
+        ]
+
+        detail['Hole'] = detail['Hole'].astype(int)
+        detail['Distance'] = detail['Distance'].round(0).astype(int)
+        detail['End Dist'] = detail['End Dist'].round(0).astype(int)
+        detail['SG'] = detail['SG'].round(2)
+
+        st.dataframe(
+            detail.sort_values(['Date', 'Hole'], ascending=[False, True]),
+            use_container_width=True,
+            hide_index=True
+        )
+
+    if drive['ob_count'] > 0:
+        with st.expander(f"⚠️ OB / Re-Tee Instances ({drive['ob_count']} total)"):
+
+            ob_df = pd.DataFrame(drive['ob_details'])
+            ob_df['Date'] = pd.to_datetime(ob_df['Date']).dt.strftime('%m/%d/%Y')
+            ob_df['Hole'] = ob_df['Hole'].astype(int)
+
+            st.dataframe(ob_df, use_container_width=True, hide_index=True)
+
+    if drive['obstruction_count'] > 0:
+        with st.expander(f"🏖️ Obstruction Shots ({drive['obstruction_count']} total)"):
+
+            obs = drive["df"][
+                drive["df"]['Ending Location'].isin(['Sand', 'Recovery'])
+            ][[
+                'Player', 'Date', 'Course', 'Hole',
+                'Starting Distance', 'Ending Location', 'Strokes Gained'
+            ]].copy()
+
+            obs['Date'] = pd.to_datetime(obs['Date']).dt.strftime('%m/%d/%Y')
+
+            obs.columns = [
+                'Player', 'Date', 'Course', 'Hole',
+                'Distance', 'Result', 'SG'
+            ]
+
+            obs['Hole'] = obs['Hole'].astype(int)
+            obs['Distance'] = obs['Distance'].round(0).astype(int)
+            obs['SG'] = obs['SG'].round(2)
+
+            st.dataframe(obs, use_container_width=True, hide_index=True)
+
 
 # ============================================================
 # TAB: APPROACH
