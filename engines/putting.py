@@ -4,7 +4,7 @@ import pandas as pd
 # PUTTING ENGINE 
 # ============================================================
 
-def build_putting_df(df):
+def build_putting_results(filtered_df, num_rounds):
     """
     Return a putting-only DataFrame with consistent, ready-to-use columns.
     Assumes:
