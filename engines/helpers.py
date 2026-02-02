@@ -4,24 +4,6 @@
 # ============================================================
 
 # ------------------------------------------------------------
-# SCORE → NAME
-# ------------------------------------------------------------
-def score_to_name(score, par):
-    diff = score - par
-    if diff <= -2:
-        return "Eagle or Better"
-    if diff == -1:
-        return "Birdie"
-    if diff == 0:
-        return "Par"
-    if diff == 1:
-        return "Bogey"
-    if diff == 2:
-        return "Double Bogey"
-    return "Triple+"
-
-
-# ------------------------------------------------------------
 # DISTANCE BUCKETS
 # ------------------------------------------------------------
 def bucket_distance(dist):
