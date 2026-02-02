@@ -884,364 +884,742 @@ def driving_engine(filtered_df, num_rounds):
     }
 
 # ============================================================
-# APPROACH ENGINE
+# APPROACH ENGINE (Unified + UI-ready)
 # ============================================================
 
-def approach_bucket(dist):
-    """Return hero bucket for approach shots."""
-    if dist < 50:
-        return None
-    if 50 <= dist < 100:
-        return "50–100"
-    if 100 <= dist < 150:
-        return "100–150"
-    if 150 <= dist < 200:
-        return "150–200"
-    return ">200"
+def approach_engine(filtered_df):
+    """Compute all approach analytics for the Approach tab."""
 
+    # ------------------------------------------------------------
+    # 1. Filter + Buckets
+    # ------------------------------------------------------------
+    df = filtered_df[filtered_df['Shot Type'] == 'Approach'].copy()
 
-def approach_bucket_table(row):
-    """Return table bucket for approach shots (lie‑restricted)."""
-    dist = row['Starting Distance']
-    lie = row['Starting Location']
+    if df.empty:
+        return {"df": df, "empty": True}
 
-    if lie not in ['Fairway', 'Rough', 'Sand']:
-        return None
+    df['Hero Bucket'] = df['Starting Distance'].apply(approach_bucket)
+    df['Table Bucket'] = df.apply(approach_bucket_table, axis=1)
 
-    if dist < 50:
-        return None
-    if 50 <= dist < 75:
-        return "50–75"
-    if 75 <= dist < 100:
-        return "75–100"
-    if 100 <= dist < 125:
-        return "100–125"
-    if 125 <= dist < 150:
-        return "125–150"
-    if 150 <= dist < 175:
-        return "150–175"
-    if 175 <= dist < 200:
-        return "175–200"
-    return "200+"
+    # ------------------------------------------------------------
+    # 2. HERO METRICS
+    # ------------------------------------------------------------
+    hero_buckets = ["50–100", "100–150", "150–200", ">200"]
+    hero_metrics = {}
 
+    for b in hero_buckets:
+        subset = df[df['Hero Bucket'] == b]
 
-def build_approach_df(df):
-    """
-    Return an approach-only DataFrame with consistent columns.
-    Approach = Shot Type == 'Approach'
-    """
-    approach_df = df[df['Shot Type'] == 'Approach'].copy()
-
-    if approach_df.empty:
-        return approach_df
-
-    # Correct: apply bucket function row-by-row
-    approach_df['Hero Bucket'] = approach_df['Starting Distance'].apply(approach_bucket)
-
-    # Table bucket also applied row-by-row
-    approach_df['Table Bucket'] = approach_df.apply(approach_bucket_table, axis=1)
-
-    return approach_df
-
-def approach_hero_metrics(approach_df):
-    """
-    Compute hero card metrics for each distance bucket:
-        - Total SG
-        - SG per Shot
-        - Avg Proximity
-    """
-    buckets = ["50–100", "100–150", "150–200", ">200"]
-    results = {b: {'total_sg': 0, 'sg_per_shot': 0, 'avg_prox': "-"} for b in buckets}
-
-    if approach_df.empty:
-        return results
-
-    for b in buckets:
-        subset = approach_df[approach_df['Hero Bucket'] == b]
         if subset.empty:
+            hero_metrics[b] = {
+                "total_sg": 0,
+                "sg_per_shot": 0,
+                "prox": 0
+            }
             continue
 
-        total_sg = subset['Strokes Gained'].sum()
-        shots = len(subset)
-        avg_prox = subset['Ending Distance'].mean()
-
-        results[b] = {
-            'total_sg': total_sg,
-            'sg_per_shot': total_sg / shots if shots > 0 else 0,
-            'avg_prox': f"{avg_prox:.1f} ft"
+        hero_metrics[b] = {
+            "total_sg": subset['Strokes Gained'].sum(),
+            "sg_per_shot": subset['Strokes Gained'].mean(),
+            "prox": subset['Ending Distance'].mean()
         }
 
-    return results
+    # ------------------------------------------------------------
+    # 3. DISTANCE BUCKET TABLE (for expanders + radars)
+    # ------------------------------------------------------------
+    table_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
+    table_rows = []
 
+    for bucket in table_buckets:
+        dfb = df[df['Table Bucket'] == bucket]
 
-def approach_table(approach_df):
-    """
-    Build approach table grouped by lie‑restricted buckets.
-    """
-    if approach_df.empty:
-        return pd.DataFrame(columns=['Bucket', 'Shots', 'Avg Proximity', 'Total SG', 'SG/Shot'])
+        if dfb.empty:
+            table_rows.append([bucket, 0, 0, 0, 0, 0, 0, 0, 0])
+            continue
 
-    grouped = approach_df.groupby('Table Bucket').agg(
-        Shots=('Strokes Gained', 'count'),
-        Avg_Proximity=('Ending Distance', 'mean'),
-        Total_SG=('Strokes Gained', 'sum')
-    ).reset_index()
+        total_sg = dfb['Strokes Gained'].sum()
+        shots = len(dfb)
+        sg_per_shot = dfb['Strokes Gained'].mean()
+        prox = dfb['Ending Distance'].mean()
 
-    grouped['SG/Shot'] = grouped['Total_SG'] / grouped['Shots']
-    grouped['Avg_Proximity'] = grouped['Avg_Proximity'].apply(lambda x: f"{x:.1f} ft")
-    grouped.rename(columns={'Table Bucket': 'Bucket'}, inplace=True)
+        green_df = dfb[dfb['Ending Location'] == 'Green']
+        prox_green = green_df['Ending Distance'].mean() if len(green_df) > 0 else 0
+        gir = (len(green_df) / shots * 100) if shots > 0 else 0
 
-    return grouped
+        good = (dfb['Strokes Gained'] > 0.5).sum()
+        bad = (dfb['Strokes Gained'] < -0.5).sum()
 
+        table_rows.append([
+            bucket, total_sg, shots, sg_per_shot, prox,
+            prox_green, gir, good, bad
+        ])
 
-def approach_sg_trend(approach_df):
-    """
-    SG Approach per round for trendline chart.
-    """
-    if approach_df.empty:
-        return pd.DataFrame(columns=['Round ID', 'Date', 'Course', 'SG Approach'])
+    bucket_table = pd.DataFrame(table_rows, columns=[
+        "Bucket", "Total SG", "# Shots", "SG/Shot", "Proximity (ft)",
+        "Prox on Green Hit (ft)", "GIR %", "Good Shots", "Bad Shots"
+    ])
 
-    grouped = approach_df.groupby('Round ID').agg(
+    # ------------------------------------------------------------
+    # 4. RADAR METRICS
+    # ------------------------------------------------------------
+    radar_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
+    radar_rows = []
+
+    for bucket in radar_buckets:
+        dfb = df[df['Table Bucket'] == bucket]
+
+        if dfb.empty:
+            radar_rows.append([bucket, 0, 0, 0])
+            continue
+
+        sg_per_shot = dfb['Strokes Gained'].mean()
+        prox = dfb['Ending Distance'].mean()
+        gir = (dfb['Ending Location'] == 'Green').mean() * 100
+
+        radar_rows.append([bucket, sg_per_shot, prox, gir])
+
+    radar_df = pd.DataFrame(radar_rows, columns=["Bucket", "SG/Shot", "Proximity", "GIR%"])
+
+    # ------------------------------------------------------------
+    # 5. HEATMAP DATA
+    # ------------------------------------------------------------
+    bucket_order = [">200", "150–200", "100–150", "50–100"]
+    lie_order = ["Tee", "Fairway", "Rough", "Sand"]
+
+    heat_df = df.dropna(subset=['Hero Bucket']).copy()
+    heat_df['Lie'] = heat_df['Starting Location']
+
+    heat_df['Hero Bucket'] = pd.Categorical(heat_df['Hero Bucket'], categories=bucket_order, ordered=True)
+    heat_df['Lie'] = pd.Categorical(heat_df['Lie'], categories=lie_order, ordered=True)
+
+    heatmap_data = heat_df.groupby(['Hero Bucket', 'Lie'])['Strokes Gained'].mean().reset_index()
+    heatmap_pivot = heatmap_data.pivot(index='Hero Bucket', columns='Lie', values='Strokes Gained')
+
+    # ------------------------------------------------------------
+    # 6. TREND DATA
+    # ------------------------------------------------------------
+    round_labels = filtered_df.groupby('Round ID').agg(
         Date=('Date', 'first'),
-        Course=('Course', 'first'),
-        SG_Approach=('Strokes Gained', 'sum')
+        Course=('Course', 'first')
     ).reset_index()
 
-    grouped['Date'] = pd.to_datetime(grouped['Date'])
-    grouped = grouped.sort_values('Date')
+    round_labels['Label'] = round_labels.apply(
+        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+        axis=1
+    )
 
-    return grouped
+    trend_df = df.groupby('Round ID')['Strokes Gained'].sum().reset_index()
+    trend_df = trend_df.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    trend_df = trend_df.sort_values('Date')
 
-# ============================================================
-# SEGMENT 4B — SHORT GAME ENGINE
-# ============================================================
+    # ------------------------------------------------------------
+    # 7. SCATTER DATA
+    # ------------------------------------------------------------
+    scatter_df = df.copy()
 
-def build_short_game_df(df):
-    """
-    Return a short-game-only DataFrame.
-    Short Game = Shot Type == 'Short Game'
-    """
-    sg_df = df[df['Shot Type'] == 'Short Game'].copy()
-
-    if sg_df.empty:
-        return sg_df
-
-    sg_df['Missed Green'] = (sg_df['Ending Location'] != 'Green').astype(int)
-    sg_df['Proximity'] = sg_df['Ending Distance']
-
-    return sg_df
-
-
-def short_game_summary(sg_df):
-    """
-    Compute short game metrics:
-        - Total SG
-        - SG per Shot
-        - Avg Proximity
-        - Missed Green %
-    """
-    metrics = {
-        'total_sg': 0.0,
-        'sg_per_shot': 0.0,
-        'avg_prox': "-",
-        'miss_green_pct': "-"
+    # ------------------------------------------------------------
+    # RETURN EVERYTHING
+    # ------------------------------------------------------------
+    return {
+        "empty": False,
+        "df": df,
+        "hero_metrics": hero_metrics,
+        "bucket_table": bucket_table,
+        "radar_df": radar_df,
+        "heatmap_pivot": heatmap_pivot,
+        "trend_df": trend_df,
+        "scatter_df": scatter_df,
+        "round_labels": round_labels
     }
 
-    if sg_df.empty:
-        return metrics
+# ============================================================
+# SHORT GAME ENGINE
+# ============================================================
 
-    total_sg = sg_df['Strokes Gained'].sum()
-    shots = len(sg_df)
-    avg_prox = sg_df['Proximity'].mean()
-    miss_pct = fmt_pct(sg_df['Missed Green'].sum(), shots)
-
-    metrics['total_sg'] = total_sg
-    metrics['sg_per_shot'] = total_sg / shots if shots > 0 else 0
-    metrics['avg_prox'] = f"{avg_prox:.1f} ft"
-    metrics['miss_green_pct'] = miss_pct
-
-    return metrics
+def sg_bucket(dist):
+    """Distance bucket for short game shots."""
+    if dist <= 10:
+        return "0–10"
+    if 10 < dist <= 20:
+        return "10–20"
+    if 20 < dist <= 30:
+        return "20–30"
+    return "30–50"   # No 50+ bucket
 
 
-def short_game_sg_trend(sg_df):
-    """
-    SG Short Game per round for trendline chart.
-    """
-    if sg_df.empty:
-        return pd.DataFrame(columns=['Round ID', 'Date', 'Course', 'SG Short Game'])
+def short_game_engine(filtered_df):
+    """Compute all short game analytics for the Short Game tab."""
 
-    grouped = sg_df.groupby('Round ID').agg(
+    df = filtered_df[filtered_df['Shot Type'] == 'Short Game'].copy()
+
+    if df.empty:
+        return {"empty": True}
+
+    # ------------------------------------------------------------
+    # 1. Buckets + Flags
+    # ------------------------------------------------------------
+    df['SG Bucket'] = df['Starting Distance'].apply(sg_bucket)
+    df['Green Hit'] = df['Ending Location'] == 'Green'
+    df['Leave Dist'] = df['Ending Distance']
+
+    # Shots inside 8 ft
+    df['Inside 8ft'] = df['Ending Distance'] <= 8
+
+    # ------------------------------------------------------------
+    # 2. HERO METRICS
+    # ------------------------------------------------------------
+
+    # SG: Around the Green
+    total_sg = df['Strokes Gained'].sum()
+
+    # Shots inside 8 ft (Fairway + Rough)
+    fr_df = df[df['Starting Location'].isin(['Fairway', 'Rough'])]
+    inside_8_fr = fr_df['Inside 8ft'].sum()
+
+    # Shots inside 8 ft (Sand)
+    sand_df = df[df['Starting Location'] == 'Sand']
+    inside_8_sand = sand_df['Inside 8ft'].sum()
+
+    # Avg proximity
+    avg_prox = df['Ending Distance'].mean()
+
+    hero_metrics = {
+        "sg_total": total_sg,
+        "inside_8_fr": inside_8_fr,
+        "inside_8_sand": inside_8_sand,
+        "avg_proximity": avg_prox
+    }
+
+    # ------------------------------------------------------------
+    # 3. DISTANCE × LIE TABLE
+    # ------------------------------------------------------------
+    distance_buckets = ["0–10", "10–20", "20–30", "30–50"]
+    lie_types = ["Fairway", "Rough", "Sand"]
+
+    rows = []
+
+    for bucket in distance_buckets:
+        for lie in lie_types:
+            dfb = df[(df['SG Bucket'] == bucket) & (df['Starting Location'] == lie)]
+
+            if dfb.empty:
+                rows.append([bucket, lie, 0, 0, 0, 0, 0])
+                continue
+
+            attempts = len(dfb)
+            sg_total = dfb['Strokes Gained'].sum()
+            sg_per = sg_total / attempts
+            prox = dfb['Ending Distance'].mean()
+            green_hits = dfb['Green Hit'].sum()
+
+            rows.append([
+                bucket, lie, attempts, sg_total, sg_per, prox, green_hits
+            ])
+
+    distance_lie_table = pd.DataFrame(rows, columns=[
+        "Bucket", "Lie", "Attempts", "SG Total", "SG/Shot",
+        "Avg Proximity", "Green Hits"
+    ])
+
+    # ------------------------------------------------------------
+    # 4. TREND DATA
+    # ------------------------------------------------------------
+    round_labels = filtered_df.groupby('Round ID').agg(
         Date=('Date', 'first'),
-        Course=('Course', 'first'),
-        SG_SG=('Strokes Gained', 'sum')
+        Course=('Course', 'first')
     ).reset_index()
 
-    grouped['Date'] = pd.to_datetime(grouped['Date'])
-    grouped = grouped.sort_values('Date')
+    round_labels['Label'] = round_labels.apply(
+        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+        axis=1
+    )
 
-    return grouped
+    trend_df = df.groupby('Round ID').agg(
+        SG=('Strokes Gained', 'sum'),
+        Inside8=('Inside 8ft', 'sum'),
+        Attempts=('Inside 8ft', 'count')
+    ).reset_index()
+
+    trend_df['Inside8 %'] = trend_df['Inside8'] / trend_df['Attempts'] * 100
+    trend_df = trend_df.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    trend_df = trend_df.sort_values('Date')
+
+    # ------------------------------------------------------------
+    # RETURN EVERYTHING
+    # ------------------------------------------------------------
+    return {
+        "empty": False,
+        "df": df,
+        "hero_metrics": hero_metrics,
+        "distance_lie_table": distance_lie_table,
+        "trend_df": trend_df
+    }
+
 
 # ============================================================
-# SEGMENT 5 — COACH'S CORNER ENGINE
+# PUTTING ENGINE
 # ============================================================
 
-def sg_category_breakdown(df):
-    """
-    Compute SG totals by shot type:
-        Driving, Approach, Short Game, Putting
-    Returns a sorted list of (category, total_sg).
-    """
+def putting_bucket(dist):
+    """Distance bucket for putting."""
+    if dist <= 3:
+        return "0–3"
+    if 4 <= dist <= 10:
+        return "4–10"
+    if 11 <= dist <= 20:
+        return "11–20"
+    if 21 <= dist <= 30:
+        return "21–30"
+    return "31+"
+
+
+def putting_engine(filtered_df):
+    """Compute all putting analytics for the Putting tab."""
+
+    df = filtered_df[filtered_df['Shot Type'] == 'Putting'].copy()
+
     if df.empty:
+        return {"empty": True}
+
+    # ------------------------------------------------------------
+    # 1. Buckets + Flags
+    # ------------------------------------------------------------
+    df['Putt Bucket'] = df['Starting Distance'].apply(putting_bucket)
+    df['Make'] = df['Ending Location'] == 'Hole'
+    df['Leave Dist'] = df['Ending Distance']
+
+    # First putt of each hole
+    df['First Putt'] = df.groupby(['Round ID', 'Hole'])['Shot'].transform('min') == df['Shot']
+
+    # 3-putt detection
+    putt_counts = df.groupby(['Round ID', 'Hole'])['Shot'].count().rename("Putt Count")
+    df = df.merge(putt_counts, on=['Round ID', 'Hole'], how='left')
+    df['Three Putt'] = df['Putt Count'] >= 3
+
+    # ------------------------------------------------------------
+    # 2. HERO METRICS
+    # ------------------------------------------------------------
+
+    # Make % (4–5 ft)
+    hero_45 = df[(df['Starting Distance'] >= 4) & (df['Starting Distance'] <= 5)]
+    hero_make_pct = (hero_45['Make'].mean() * 100) if len(hero_45) > 0 else 0
+
+    # SG (5–10 ft)
+    sg_510 = df[(df['Starting Distance'] >= 5) & (df['Starting Distance'] <= 10)]
+    hero_sg_510 = sg_510['Strokes Gained'].sum() if len(sg_510) > 0 else 0
+
+    # Total 3-putts
+    total_three_putts = df[df['Three Putt']].groupby(['Round ID', 'Hole']).ngroups
+
+    # Lag misses (>5 ft leave)
+    lag_miss = df[df['First Putt']]['Leave Dist'] > 5
+    lag_miss_pct = lag_miss.mean() * 100 if len(lag_miss) > 0 else 0
+
+    # Clutch index (birdie putts inside 10 ft)
+    clutch_df = df[(df['First Putt']) & (df['Starting Distance'] <= 10)]
+    clutch_makes = clutch_df['Make'].sum()
+    clutch_attempts = len(clutch_df)
+    clutch_pct = (clutch_makes / clutch_attempts * 100) if clutch_attempts > 0 else 0
+
+    hero_metrics = {
+        "make_45_pct": hero_make_pct,
+        "sg_510": hero_sg_510,
+        "three_putts": total_three_putts,
+        "lag_miss_pct": lag_miss_pct,
+        "clutch_pct": clutch_pct
+    }
+
+    # ------------------------------------------------------------
+    # 3. DISTANCE BUCKET TABLE (with 3-putt %)
+    # ------------------------------------------------------------
+    bucket_rows = []
+
+    for bucket in ["0–3", "4–10", "11–20", "21–30", "31+"]:
+        dfb = df[df['Putt Bucket'] == bucket]
+
+        if dfb.empty:
+            bucket_rows.append([bucket, 0, 0, 0, 0, 0, 0, 0])
+            continue
+
+        attempts = len(dfb)
+        makes = dfb['Make'].sum()
+        make_pct = makes / attempts * 100
+
+        total_sg = dfb['Strokes Gained'].sum()
+        sg_per = total_sg / attempts
+
+        avg_leave = dfb[dfb['First Putt']]['Leave Dist'].mean()
+
+        # 3-putt %
+        three_putt_holes = dfb[dfb['Three Putt']].groupby(['Round ID', 'Hole']).ngroups
+        three_putt_pct = (three_putt_holes / attempts * 100) if attempts > 0 else 0
+
+        bucket_rows.append([
+            bucket, attempts, makes, make_pct,
+            total_sg, sg_per, avg_leave, three_putt_pct
+        ])
+
+    bucket_table = pd.DataFrame(bucket_rows, columns=[
+        "Bucket", "Attempts", "Makes", "Make %", "Total SG",
+        "SG/Shot", "Avg Leave (ft)", "3-Putt %"
+    ])
+
+    # ------------------------------------------------------------
+    # 4. TREND DATA
+    # ------------------------------------------------------------
+    round_labels = filtered_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first')
+    ).reset_index()
+
+    round_labels['Label'] = round_labels.apply(
+        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
+        axis=1
+    )
+
+    trend_df = df.groupby('Round ID').agg(
+        SG=('Strokes Gained', 'sum'),
+        Makes=('Make', 'sum'),
+        Attempts=('Make', 'count'),
+        ThreePutts=('Three Putt', 'sum')
+    ).reset_index()
+
+    trend_df['Make %'] = trend_df['Makes'] / trend_df['Attempts'] * 100
+    trend_df = trend_df.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
+    trend_df = trend_df.sort_values('Date')
+
+    # ------------------------------------------------------------
+    # 5. LAG METRICS
+    # ------------------------------------------------------------
+    first_putts = df[df['First Putt']]
+    avg_leave = first_putts['Leave Dist'].mean()
+    pct_inside_3 = (first_putts['Leave Dist'] <= 3).mean() * 100
+    pct_over_5 = (first_putts['Leave Dist'] > 5).mean() * 100
+
+    lag_metrics = {
+        "avg_leave": avg_leave,
+        "pct_inside_3": pct_inside_3,
+        "pct_over_5": pct_over_5
+    }
+
+    # ------------------------------------------------------------
+    # RETURN EVERYTHING
+    # ------------------------------------------------------------
+    return {
+        "empty": False,
+        "df": df,
+        "hero_metrics": hero_metrics,
+        "bucket_table": bucket_table,
+        "trend_df": trend_df,
+        "lag_metrics": lag_metrics
+    }
+
+# ============================================================
+# COACH'S CORNER ENGINE (engine-powered)
+# ============================================================
+
+def classify_light(row):
+    """DECADE-style Green/Yellow/Red classification."""
+    if row['Shot Type'] not in ['Driving', 'Approach', 'Short Game']:
+        return None
+
+    dist = row['Starting Distance']
+    lie = row.get('Starting Location', None)
+
+    if lie == 'Fairway' and dist < 150:
+        return 'Green'
+    if lie == 'Rough' and 100 <= dist <= 175:
+        return 'Yellow'
+    if lie in ['Sand', 'Recovery'] or dist > 175:
+        return 'Red'
+
+    return 'Yellow'
+
+
+def compute_gir_red_flags(approach):
+    """GIR buckets < 50%."""
+    table = approach.get("bucket_table")
+    if table is None or table.empty or "GIR %" not in table.columns:
         return []
 
-    grouped = df.groupby('Shot Type')['Strokes Gained'].sum().reset_index()
-    grouped = grouped[grouped['Shot Type'].isin(['Driving', 'Approach', 'Short Game', 'Putt'])]
+    gir_flags = table[table["GIR %"] < 50].copy()
+    gir_flags = gir_flags.sort_values("GIR %")
 
-    results = list(zip(grouped['Shot Type'], grouped['Strokes Gained']))
-    results.sort(key=lambda x: x[1], reverse=True)
-
-    return results
-
-
-def tiger5_risk_profile(tiger5_results):
-    """
-    Convert Tiger 5 results into a coach-friendly risk profile.
-    Returns a list of dicts:
-        { 'name': '3 Putts', 'fails': X, 'attempts': Y, 'risk': % }
-    """
-    profile = []
-
-    for name, data in tiger5_results.items():
-        attempts = data['attempts']
-        fails = data['fails']
-        risk = (fails / attempts * 100) if attempts > 0 else 0
-
-        profile.append({
-            'name': name,
-            'fails': fails,
-            'attempts': attempts,
-            'risk': risk
-        })
-
-    profile.sort(key=lambda x: x['risk'], reverse=True)
-    return profile
+    return [
+        {"bucket": row["Bucket"], "gir_pct": row["GIR %"]}
+        for _, row in gir_flags.iterrows()
+    ]
 
 
-def putting_red_flags(putting_df):
-    """
-    Identify putting issues:
-        - Long lag misses
-        - Low make % inside 10 ft
-        - Excessive 3-putts
-    Returns a dict of red flags.
-    """
-    flags = {
-        'lag_miss_rate': "-",
-        'inside_10_make_pct': "-",
-        'three_putt_count': 0
+def compute_short_game_flags(short_game):
+    """Short game inside-8ft % by lie type."""
+    df = short_game.get("df")
+    hero = short_game.get("hero_metrics", {})
+
+    if df is None or df.empty:
+        return {}
+
+    inside_8_fr = hero.get("inside_8_fr", 0)
+    inside_8_sand = hero.get("inside_8_sand", 0)
+
+    fr_df = df[df['Starting Location'].isin(['Fairway', 'Rough'])]
+    sand_df = df[df['Starting Location'] == 'Sand']
+
+    fr_attempts = len(fr_df)
+    sand_attempts = len(sand_df)
+
+    return {
+        "inside8_fr_pct": (inside_8_fr / fr_attempts * 100) if fr_attempts > 0 else 0,
+        "inside8_sand_pct": (inside_8_sand / sand_attempts * 100) if sand_attempts > 0 else 0,
+        "fr_attempts": fr_attempts,
+        "sand_attempts": sand_attempts
     }
 
-    if putting_df.empty:
-        return flags
 
-    # Lag misses: start >= 30 ft, end > 3 ft
-    lag_mask = (putting_df['Starting Distance'] >= 30) & (putting_df['Ending Distance'] > 3)
-    lag_misses = putting_df[lag_mask]
-    flags['lag_miss_rate'] = fmt_pct(len(lag_misses), len(putting_df))
+def compute_putting_flags(putting):
+    """Putting red flags including 3-putts inside 20 ft."""
+    df = putting.get("df")
+    hero = putting.get("hero_metrics", {})
+    table = putting.get("bucket_table")
 
-    # Inside 10 ft make %
-    inside10 = putting_df[putting_df['Starting Distance'] <= 10]
-    if not inside10.empty:
-        flags['inside_10_make_pct'] = fmt_pct(inside10['Made'].sum(), len(inside10))
+    flags = {
+        "make_45_pct": hero.get("make_45_pct", 0),
+        "sg_510": hero.get("sg_510", 0),
+        "lag_miss_pct": hero.get("lag_miss_pct", 0),
+        "three_putt_buckets": [],
+        "three_putts_inside_20": 0
+    }
 
-    # 3-putts
-    hole_putts = putting_df.groupby('Hole Key').agg(
-        putts=('Score', 'max')
-    ).reset_index()
-    flags['three_putt_count'] = (hole_putts['putts'] >= 3).sum()
+    if table is not None and not table.empty and "3-Putt %" in table.columns:
+        for _, row in table.iterrows():
+            flags["three_putt_buckets"].append({
+                "bucket": row["Bucket"],
+                "three_putt_pct": row["3-Putt %"]
+            })
+
+    if df is not None and not df.empty:
+        first_putts = df[df['First Putt']]
+        inside20 = first_putts[first_putts['Starting Distance'] <= 20]
+        flags["three_putts_inside_20"] = inside20[inside20['Three Putt']].groupby(
+            ['Round ID', 'Hole']
+        ).ngroups
 
     return flags
 
 
-def approach_dispersion_summary(approach_df):
-    """
-    Summarize approach proximity by bucket:
-        - Avg proximity
-        - SG per shot
-    Returns a list of dicts.
-    """
-    if approach_df.empty:
+def compute_green_yellow_red_sg(df):
+    """SG by Green/Yellow/Red light."""
+    temp = df.copy()
+    temp['Light'] = temp.apply(classify_light, axis=1)
+    temp = temp[temp['Light'].notna()]
+
+    if temp.empty:
         return []
 
-    grouped = approach_df.groupby('Hero Bucket').agg(
-        avg_prox=('Ending Distance', 'mean'),
-        total_sg=('Strokes Gained', 'sum'),
-        shots=('Strokes Gained', 'count')
+    grouped = temp.groupby('Light')['Strokes Gained'].sum().reset_index()
+
+    order = {"Green": 0, "Yellow": 1, "Red": 2}
+    return sorted(
+        [{"light": r["Light"], "total_sg": r["Strokes Gained"]} for _, r in grouped.iterrows()],
+        key=lambda x: order.get(x["light"], 99)
+    )
+
+
+def compute_bogey_avoidance(df):
+    """Bogey avoidance by par type."""
+    if df.empty or "Score" not in df.columns or "Par" not in df.columns:
+        return {}
+
+    holes = df.groupby(['Round ID', 'Hole']).agg(
+        Score=('Score', 'max'),
+        Par=('Par', 'max')
     ).reset_index()
+    holes['Rel'] = holes['Score'] - holes['Par']
 
-    grouped['sg_per_shot'] = grouped['total_sg'] / grouped['shots']
+    results = {}
+    for par_val in [3, 4, 5]:
+        subset = holes[holes['Par'] == par_val]
+        if subset.empty:
+            results[f"Par{par_val}"] = {"bogey_rate": None}
+            continue
 
-    results = []
-    for _, row in grouped.iterrows():
-        results.append({
-            'bucket': row['Hero Bucket'],
-            'avg_prox': row['avg_prox'],
-            'sg_per_shot': row['sg_per_shot']
-        })
+        bogey_rate = (subset['Rel'] >= 1).mean() * 100
+        results[f"Par{par_val}"] = {"bogey_rate": bogey_rate}
 
-    results.sort(key=lambda x: x['sg_per_shot'])
+    results["Overall"] = {"bogey_rate": (holes['Rel'] >= 1).mean() * 100}
+    return results
+
+
+def compute_birdie_opportunities(df):
+    """Birdie opportunities + conversion."""
+    if df.empty or "Score" not in df.columns or "Par" not in df.columns:
+        return {"opportunities": 0, "conversions": 0, "conversion_pct": 0}
+
+    holes = df.groupby(['Round ID', 'Hole']).agg(
+        Score=('Score', 'max'),
+        Par=('Par', 'max')
+    ).reset_index()
+    holes['Rel'] = holes['Score'] - holes['Par']
+    holes['BirdieOrBetter'] = holes['Rel'] <= -1
+
+    mask = (
+        df['Shot Type'].isin(['Approach', 'Short Game']) &
+        (df['Ending Location'] == 'Green') &
+        (df['Ending Distance'] <= 20)
+    )
+    opp_shots = df[mask]
+
+    if opp_shots.empty:
+        return {"opportunities": 0, "conversions": 0, "conversion_pct": 0}
+
+    opp_holes = opp_shots[['Round ID', 'Hole']].drop_duplicates()
+    merged = opp_holes.merge(holes, on=['Round ID', 'Hole'], how='left')
+
+    opportunities = len(merged)
+    conversions = merged['BirdieOrBetter'].sum()
+
+    return {
+        "opportunities": opportunities,
+        "conversions": conversions,
+        "conversion_pct": conversions / opportunities * 100 if opportunities > 0 else 0
+    }
+
+
+def compute_flow_metrics(df):
+    """Bounce Back, Drop Off, Gas Pedal, Bogey Trains."""
+    if df.empty or "Score" not in df.columns or "Par" not in df.columns:
+        return {}
+
+    holes = df.groupby(['Round ID', 'Hole']).agg(
+        Score=('Score', 'max'),
+        Par=('Par', 'max')
+    ).reset_index()
+    holes['Rel'] = holes['Score'] - holes['Par']
+    holes = holes.sort_values(['Round ID', 'Hole']).reset_index(drop=True)
+
+    bounce_numer = bounce_denom = 0
+    drop_numer = drop_denom = 0
+    gas_numer = gas_denom = 0
+    bogey_trains = []
+
+    for i in range(1, len(holes)):
+        prev_rel = holes.loc[i-1, 'Rel']
+        curr_rel = holes.loc[i, 'Rel']
+
+        prev_bogey = prev_rel >= 1
+        curr_bogey = curr_rel >= 1
+
+        prev_birdie = prev_rel <= -1
+        curr_birdie = curr_rel <= -1
+
+        if prev_bogey:
+            bounce_denom += 1
+            if curr_rel <= 0:
+                bounce_numer += 1
+
+            drop_denom += 1
+            if curr_bogey:
+                drop_numer += 1
+
+        if prev_birdie:
+            gas_denom += 1
+            if curr_birdie:
+                gas_numer += 1
+
+    # Bogey trains
+    for _, group in holes.groupby('Round ID'):
+        train_len = 0
+        for _, row in group.iterrows():
+            if row['Rel'] >= 1:
+                train_len += 1
+            else:
+                if train_len >= 2:
+                    bogey_trains.append(train_len)
+                train_len = 0
+        if train_len >= 2:
+            bogey_trains.append(train_len)
+
+    return {
+        "bounce_back_pct": bounce_numer / bounce_denom * 100 if bounce_denom > 0 else 0,
+        "drop_off_pct": drop_numer / drop_denom * 100 if drop_denom > 0 else 0,
+        "gas_pedal_pct": gas_numer / gas_denom * 100 if gas_denom > 0 else 0,
+        "bogey_trains": bogey_trains,
+        "bogey_train_count": len(bogey_trains),
+        "longest_bogey_train": max(bogey_trains) if bogey_trains else 0
+    }
+
+
+def compute_sg_category_breakdown(df):
+    """SG totals by shot type."""
+    if df.empty:
+        return []
+
+    grouped = df.groupby('Shot Type')['Strokes Gained'].sum().reset_index()
+    grouped['Shot Type'] = grouped['Shot Type'].replace({'Putt': 'Putting'})
+
+    results = list(zip(grouped['Shot Type'], grouped['Strokes Gained']))
+    results.sort(key=lambda x: x[1], reverse=True)
     return results
 
 
 def generate_practice_priorities(
     sg_breakdown,
-    tiger5_profile,
+    gir_flags,
+    short_flags,
     putting_flags,
-    approach_dispersion
+    green_yellow_red,
+    bogey_avoid,
+    birdie_opp,
+    flow_metrics
 ):
-    """
-    Generate coach-friendly practice priorities based on:
-        - SG weaknesses
-        - Tiger 5 risks
-        - Putting red flags
-        - Approach dispersion
-    Returns a list of strings.
-    """
     priorities = []
 
-    # SG Weakest Category
     if sg_breakdown:
         weakest = sg_breakdown[-1]
         priorities.append(f"Improve {weakest[0]} performance (lowest SG category).")
 
-    # Tiger 5 highest risk
-    if tiger5_profile:
-        highest_risk = tiger5_profile[0]
-        if highest_risk['risk'] > 0:
+    for gf in gir_flags:
+        priorities.append(
+            f"Increase GIR from {gf['bucket']} (currently {gf['gir_pct']:.0f}% GIR)."
+        )
+
+    if short_flags.get("inside8_fr_pct", 100) < 40:
+        priorities.append(
+            f"Improve short game proximity from Fairway/Rough (only {short_flags['inside8_fr_pct']:.0f}% inside 8 ft)."
+        )
+
+    if short_flags.get("inside8_sand_pct", 100) < 30:
+        priorities.append(
+            f"Improve bunker play (only {short_flags['inside8_sand_pct']:.0f}% inside 8 ft)."
+        )
+
+    if putting_flags.get("three_putts_inside_20", 0) > 0:
+        priorities.append(
+            f"Reduce 3-putts inside 20 ft ({putting_flags['three_putts_inside_20']} occurrences)."
+        )
+
+    for gy in green_yellow_red:
+        if gy["light"] == "Red" and gy["total_sg"] < 0:
             priorities.append(
-                f"Reduce {highest_risk['name']} (risk {highest_risk['risk']:.1f}%)."
+                f"Improve decision-making in Red Light situations (losing {gy['total_sg']:.1f} SG)."
             )
 
-    # Putting red flags
-    if putting_flags['inside_10_make_pct'] != "-":
-        pct = float(putting_flags['inside_10_make_pct'].replace('%', ''))
-        if pct < 60:
-            priorities.append("Increase make rate inside 10 feet.")
-
-    if putting_flags['lag_miss_rate'] != "-":
-        lag_pct = float(putting_flags['lag_miss_rate'].replace('%', ''))
-        if lag_pct > 25:
-            priorities.append("Improve long-distance lag control (>30 ft).")
-
-    if putting_flags['three_putt_count'] > 0:
-        priorities.append("Reduce 3-putts through speed control practice.")
-
-    # Approach dispersion
-    if approach_dispersion:
-        worst_bucket = approach_dispersion[0]
+    overall_bogey = bogey_avoid.get("Overall", {}).get("bogey_rate", None)
+    if overall_bogey is not None and overall_bogey > 20:
         priorities.append(
-            f"Focus on approach shots from {worst_bucket['bucket']} (lowest SG/shot)."
+            f"Reduce bogey rate (currently {overall_bogey:.0f}%)."
         )
+
+    if birdie_opp["opportunities"] > 0 and birdie_opp["conversion_pct"] < 25:
+        priorities.append(
+            f"Convert more birdie opportunities (only {birdie_opp['conversion_pct']:.0f}% conversion)."
+        )
+
+    if flow_metrics["bounce_back_pct"] < 30:
+        priorities.append("Improve bounce back after bogeys.")
+
+    if flow_metrics["drop_off_pct"] > 50:
+        priorities.append("Reduce bogey streaks and mistake stacking.")
 
     return priorities
 
@@ -1250,44 +1628,142 @@ def generate_practice_priorities(
 # MASTER COACH'S CORNER ENGINE
 # ============================================================
 
-def build_coachs_corner(
-    df,
+def coachs_corner_engine(
+    filtered_df,
     tiger5_results,
-    putting_df,
-    approach_df
+    driving,
+    approach,
+    putting,
+    short_game
 ):
-    """
-    Build all insights for the Coach's Corner tab.
-
-    Returns:
-        dict containing:
-            - strengths
-            - weaknesses
-            - tiger5_risks
-            - putting_flags
-            - approach_dispersion
-            - practice_priorities
-    """
-    sg_breakdown = sg_category_breakdown(df)
-    tiger5_profile = tiger5_risk_profile(tiger5_results)
-    putting_flags = putting_red_flags(putting_df)
-    approach_disp = approach_dispersion_summary(approach_df)
+    sg_breakdown = compute_sg_category_breakdown(filtered_df)
+    gir_flags = compute_gir_red_flags(approach)
+    short_flags = compute_short_game_flags(short_game)
+    putting_flags = compute_putting_flags(putting)
+    green_yellow_red = compute_green_yellow_red_sg(filtered_df)
+    bogey_avoid = compute_bogey_avoidance(filtered_df)
+    birdie_opp = compute_birdie_opportunities(filtered_df)
+    flow_metrics = compute_flow_metrics(filtered_df)
 
     priorities = generate_practice_priorities(
         sg_breakdown,
-        tiger5_profile,
+        gir_flags,
+        short_flags,
         putting_flags,
-        approach_disp
+        green_yellow_red,
+        bogey_avoid,
+        birdie_opp,
+        flow_metrics
     )
 
+    
     return {
-        'strengths': sg_breakdown[:2],
-        'weaknesses': sg_breakdown[-2:],
-        'tiger5_risks': tiger5_profile,
-        'putting_flags': putting_flags,
-        'approach_dispersion': approach_disp,
-        'practice_priorities': priorities
+        "sg_breakdown": sg_breakdown,
+        "strengths": sg_breakdown[:2],
+        "weaknesses": sg_breakdown[-2:],
+        "gir_flags": gir_flags,
+        "short_game_flags": short_flags,
+        "putting_flags": putting_flags,
+        "green_yellow_red": green_yellow_red,
+        "bogey_avoidance": bogey_avoid,
+        "birdie_opportunities": birdie_opp,
+        "flow_metrics": flow_metrics,
+        "practice_priorities": priorities,
+        "tiger5_results": tiger5_results
     }
+
+#Coach Summary
+def generate_coach_summary(cc):
+    """
+    Create a natural-language coaching summary from Coach's Corner metrics.
+    """
+
+    parts = []
+
+    # --- Strengths ---
+    if cc["strengths"]:
+        best_cat, best_sg = cc["strengths"][0]
+        parts.append(
+            f"Your strongest area recently has been {best_cat.lower()}, gaining {best_sg:+.1f} strokes in that category."
+        )
+
+    # --- Weaknesses ---
+    if cc["weaknesses"]:
+        worst_cat, worst_sg = cc["weaknesses"][-1]
+        parts.append(
+            f"The biggest opportunity for improvement is {worst_cat.lower()}, where you're losing {abs(worst_sg):.1f} strokes."
+        )
+
+    # --- GIR Red Flags ---
+    if cc["gir_flags"]:
+        worst_gir = cc["gir_flags"][0]
+        parts.append(
+            f"Approach play from {worst_gir['bucket']} is a concern with only {worst_gir['gir_pct']:.0f}% GIR."
+        )
+
+    # --- Short Game ---
+    sgf = cc["short_game_flags"]
+    if sgf["inside8_fr_pct"] < 40:
+        parts.append(
+            f"Short game from fairway and rough is leaving too many long putts, with only {sgf['inside8_fr_pct']:.0f}% finishing inside 8 feet."
+        )
+    if sgf["inside8_sand_pct"] < 30:
+        parts.append(
+            f"Bunker play needs attention, with just {sgf['inside8_sand_pct']:.0f}% of shots finishing inside 8 feet."
+        )
+
+    # --- Putting ---
+    pf = cc["putting_flags"]
+    if pf["three_putts_inside_20"] > 0:
+        parts.append(
+            f"Putting inside 20 feet is costing strokes, with {pf['three_putts_inside_20']} three-putt situations from makeable range."
+        )
+    if pf["lag_miss_pct"] > 30:
+        parts.append(
+            f"Lag putting is also an issue, with {pf['lag_miss_pct']:.0f}% of first putts finishing outside 5 feet."
+        )
+
+    # --- Decision Making (Green/Yellow/Red SG) ---
+    for gy in cc["green_yellow_red"]:
+        if gy["light"] == "Red" and gy["total_sg"] < 0:
+            parts.append(
+                f"You're losing {abs(gy['total_sg']):.1f} strokes in Red Light situations, suggesting decision-making or target selection needs refinement."
+            )
+
+    # --- Bogey Avoidance ---
+    ba = cc["bogey_avoidance"]["Overall"]["bogey_rate"]
+    if ba > 20:
+        parts.append(
+            f"Bogey avoidance is a key area, with a {ba:.0f}% bogey rate across all holes."
+        )
+
+    # --- Birdie Opportunities ---
+    bo = cc["birdie_opportunities"]
+    if bo["opportunities"] > 0 and bo["conversion_pct"] < 25:
+        parts.append(
+            f"You're creating birdie chances but converting only {bo['conversion_pct']:.0f}% of them."
+        )
+
+    # --- Flow Metrics ---
+    fm = cc["flow_metrics"]
+    if fm["bounce_back_pct"] < 30:
+        parts.append(
+            f"Bounce-back performance is low at {fm['bounce_back_pct']:.0f}%, indicating missed chances to recover after mistakes."
+        )
+    if fm["drop_off_pct"] > 50:
+        parts.append(
+            f"Drop-off rate after bogeys is high at {fm['drop_off_pct']:.0f}%, showing a tendency for mistakes to compound."
+        )
+    if fm["bogey_train_count"] > 0:
+        parts.append(
+            f"You had {fm['bogey_train_count']} bogey train(s), with the longest lasting {fm['longest_bogey_train']} holes."
+        )
+
+    # Combine into a single paragraph
+    summary = " ".join(parts)
+    return summary if summary else "No significant trends detected."
+
+
 # ============================================================
 # MAIN APP — WIRING ENGINES INTO TABS
 # ============================================================
@@ -2062,16 +2538,16 @@ with tab_driving:
 # TAB: APPROACH
 # ============================================================
 with tab_approach:
+
+    approach = approach_engine(filtered_df)
+
+    if approach["empty"]:
+        st.warning("No approach data available for the selected filters.")
+        st.stop()
+
+    df = approach["df"]
+
     st.markdown('<p class="section-title">Approach Play</p>', unsafe_allow_html=True)
-
-    # Filter to approach shots only
-    approach_df = filtered_df[filtered_df['Shot Type'] == 'Approach'].copy()
-
-    # Assign hero buckets
-    approach_df['Hero Bucket'] = approach_df['Starting Distance'].apply(approach_bucket)
-
-    # Assign table buckets
-    approach_df['Table Bucket'] = approach_df.apply(approach_bucket_table, axis=1)
 
     # ------------------------------------------------------------
     # HERO CARDS
@@ -2082,82 +2558,40 @@ with tab_approach:
     cols = st.columns(4)
 
     for col, bucket in zip(cols, hero_buckets):
-        bucket_df = approach_df[approach_df['Hero Bucket'] == bucket]
+        m = approach["hero_metrics"][bucket]
 
-        total_sg = bucket_df['Strokes Gained'].sum() if len(bucket_df) > 0 else 0
-        sg_per_shot = bucket_df['Strokes Gained'].mean() if len(bucket_df) > 0 else 0
-        prox = bucket_df['Ending Distance'].mean() if len(bucket_df) > 0 else 0
-
-        val_class = "positive" if total_sg > 0 else "negative" if total_sg < 0 else ""
+        val_class = "positive" if m["total_sg"] > 0 else "negative" if m["total_sg"] < 0 else ""
 
         with col:
-            st.markdown(f"""
+            st.markdown(
+                f"""
                 <div class="hero-stat">
-                    <div class="hero-value {val_class}">{total_sg:.2f}</div>
+                    <div class="hero-value {val_class}">{m['total_sg']:.2f}</div>
                     <div class="hero-label">{bucket} Yards</div>
-                    <div class="hero-sub">SG/Shot: {sg_per_shot:.3f}</div>
-                    <div class="hero-sub">Proximity: {prox:.1f} ft</div>
+                    <div class="hero-sub">SG/Shot: {m['sg_per_shot']:.3f}</div>
+                    <div class="hero-sub">Proximity: {m['prox']:.1f} ft</div>
                 </div>
-            """, unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True
+            )
 
     # ------------------------------------------------------------
-    # BUILD DISTANCE BUCKET TABLE (needed for radars + expander)
+    # DISTANCE BUCKET TABLE (expander)
     # ------------------------------------------------------------
-    table_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
-
-    rows = []
-    for bucket in table_buckets:
-        dfb = approach_df[approach_df['Table Bucket'] == bucket]
-
-        if len(dfb) == 0:
-            rows.append([bucket, 0, 0, 0, 0, 0, 0, 0, 0])
-            continue
-
-        total_sg = dfb['Strokes Gained'].sum()
-        shots = len(dfb)
-        sg_per_shot = dfb['Strokes Gained'].mean()
-        prox = dfb['Ending Distance'].mean()
-
-        green_df = dfb[dfb['Ending Location'] == 'Green']
-        prox_green = green_df['Ending Distance'].mean() if len(green_df) > 0 else 0
-        gir = len(green_df) / shots * 100
-
-        good = (dfb['Strokes Gained'] > 0.5).sum()
-        bad = (dfb['Strokes Gained'] < -0.5).sum()
-
-        rows.append([
-            bucket, total_sg, shots, sg_per_shot, prox, prox_green, gir, good, bad
-        ])
-
-    bucket_table = pd.DataFrame(rows, columns=[
-        "Bucket", "Total SG", "# Shots", "SG/Shot", "Proximity (ft)",
-        "Prox on Green Hit (ft)", "GIR %", "Good Shots", "Bad Shots"
-    ])
+    with st.expander("View Full Distance Bucket Table"):
+        st.dataframe(
+            approach["bucket_table"],
+            use_container_width=True,
+            hide_index=True
+        )
 
     # ------------------------------------------------------------
-    # RADAR CHARTS (SG/Shot, Proximity, GIR%)
+    # RADAR CHARTS
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Approach Profile by Distance Bucket</p>', unsafe_allow_html=True)
 
-    radar_buckets = ["50–100", "100–150", "150–200", ">200", "Rough <150", "Rough >150"]
+    radar_df = approach["radar_df"]
 
-    radar_rows = []
-    for bucket in radar_buckets:
-        dfb = approach_df[approach_df['Table Bucket'] == bucket]
-
-        if len(dfb) == 0:
-            radar_rows.append([bucket, 0, 0, 0])
-            continue
-
-        sg_per_shot = dfb['Strokes Gained'].mean()
-        prox = dfb['Ending Distance'].mean()
-        gir = (dfb['Ending Location'] == 'Green').mean() * 100
-
-        radar_rows.append([bucket, sg_per_shot, prox, gir])
-
-    radar_df = pd.DataFrame(radar_rows, columns=["Bucket", "SG/Shot", "Proximity", "GIR%"])
-
-    # Fixed scales
     sg_min, sg_max = -0.5, 0.5
     prox_min, prox_max = 0, 45
     gir_min, gir_max = 0, 100
@@ -2177,7 +2611,6 @@ with tab_approach:
         )
         fig_radar_sg.update_traces(fill='toself')
 
-        # Force a tick at 0.0 so the ring exists
         fig_radar_sg.update_layout(
             polar=dict(
                 bgcolor="rgba(0,0,0,0)",
@@ -2188,11 +2621,7 @@ with tab_approach:
                     tickvals=[sg_min, 0, sg_max],
                     ticktext=["", "0.0", ""]
                 ),
-                angularaxis=dict(
-                    showgrid=True,
-                    gridcolor="#444",
-                    color="#FFC72C"
-                )
+                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
             ),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
@@ -2201,7 +2630,7 @@ with tab_approach:
             height=350
         )
 
-    # ⭐ Bold 0.0 ring using a polar-sector shape
+        # Bold 0.0 ring
         fig_radar_sg.add_shape(
             type="path",
             path="M 0 0 L 1 0 A 1 1 0 1 1 -1 0 Z",
@@ -2213,8 +2642,6 @@ with tab_approach:
 
         st.plotly_chart(fig_radar_sg, use_container_width=True)
 
-    
-    
     # Radar 2 — Proximity
     with col2:
         fig_radar_prox = px.line_polar(
@@ -2222,7 +2649,7 @@ with tab_approach:
             r="Proximity",
             theta="Bucket",
             line_close=True,
-            range_r=[prox_max, prox_min],  # flip scale: closer = farther out
+            range_r=[prox_max, prox_min],  # flipped scale
             title="Proximity (Closer = Better)",
             color_discrete_sequence=[ODU_BLACK]
         )
@@ -2238,11 +2665,7 @@ with tab_approach:
                     tickvals=[0, 30, 60],
                     ticktext=["0", "30", "60"]
                 ),
-                angularaxis=dict(
-                    showgrid=True,
-                    gridcolor="#444",
-                    color="#FFC72C"
-                )
+                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
             ),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
@@ -2257,7 +2680,7 @@ with tab_approach:
     with col3:
         fig_radar_gir = px.line_polar(
             radar_df,
-            r="GIR%",
+            r="GGIR%",
             theta="Bucket",
             line_close=True,
             range_r=[gir_min, gir_max],
@@ -2281,17 +2704,13 @@ with tab_approach:
 
         st.plotly_chart(fig_radar_gir, use_container_width=True)
 
-    # Collapsible table
-    with st.expander("View Full Distance Bucket Table"):
-        st.dataframe(bucket_table, use_container_width=True, hide_index=True)
-
     # ------------------------------------------------------------
     # SCATTER PLOT
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">SG vs Starting Distance</p>', unsafe_allow_html=True)
 
     fig_scatter = px.scatter(
-        approach_df,
+        approach["scatter_df"],
         x="Starting Distance",
         y="Strokes Gained",
         color="Starting Location",
@@ -2314,51 +2733,12 @@ with tab_approach:
     st.plotly_chart(fig_scatter, use_container_width=True)
 
     # ------------------------------------------------------------
-    # BOXPLOT
-    # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Proximity by Distance Bucket</p>', unsafe_allow_html=True)
-
-    fig_box = px.box(
-        approach_df.dropna(subset=['Hero Bucket']),
-        x="Hero Bucket",
-        y="Ending Distance",
-        color="Starting Location",
-        color_discrete_map={
-            "Fairway": ODU_GOLD,
-            "Rough": ODU_RED,
-            "Sand": ODU_PURPLE,
-            "Tee": ODU_BLACK
-        }
-    )
-
-    fig_box.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
-        height=400
-    )
-
-    st.plotly_chart(fig_box, use_container_width=True)
-
-    # ------------------------------------------------------------
-    # HEATMAP (Ordered Axes)
+    # HEATMAP
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">SG per Shot Heatmap</p>', unsafe_allow_html=True)
 
-    bucket_order = [">200", "150–200", "100–150", "50–100"]
-    lie_order = ["Tee", "Fairway", "Rough", "Sand"]
-
-    heat_df = approach_df.dropna(subset=['Hero Bucket']).copy()
-    heat_df['Lie'] = heat_df['Starting Location']
-
-    heat_df['Hero Bucket'] = pd.Categorical(heat_df['Hero Bucket'], categories=bucket_order, ordered=True)
-    heat_df['Lie'] = pd.Categorical(heat_df['Lie'], categories=lie_order, ordered=True)
-
-    heatmap_data = heat_df.groupby(['Hero Bucket', 'Lie'])['Strokes Gained'].mean().reset_index()
-    heatmap_pivot = heatmap_data.pivot(index='Hero Bucket', columns='Lie', values='Strokes Gained')
-
     fig_heat = px.imshow(
-        heatmap_pivot.loc[bucket_order, lie_order],
+        approach["heatmap_pivot"],
         color_continuous_scale='RdYlGn',
         aspect='auto'
     )
@@ -2373,36 +2753,24 @@ with tab_approach:
     st.plotly_chart(fig_heat, use_container_width=True)
 
     # ------------------------------------------------------------
-    # APPROACH TREND ANALYSIS
+    # TREND
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Approach SG Trend by Round</p>', unsafe_allow_html=True)
 
-    round_labels = filtered_df.groupby('Round ID').agg(
-        Date=('Date', 'first'),
-        Course=('Course', 'first')
-    ).reset_index()
-
-    round_labels['Label'] = round_labels.apply(
-        lambda r: f"{pd.to_datetime(r['Date']).strftime('%m/%d/%Y')} {r['Course']}",
-        axis=1
-    )
-
-    sg_round = approach_df.groupby('Round ID')['Strokes Gained'].sum().reset_index()
-    sg_round = sg_round.merge(round_labels[['Round ID', 'Label', 'Date']], on='Round ID')
-    sg_round = sg_round.sort_values('Date')
+    trend_df = approach["trend_df"]
 
     use_ma = st.checkbox("Apply Moving Average", value=False)
 
     if use_ma:
         window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
-        sg_round['SG_MA'] = sg_round['Strokes Gained'].rolling(window=window).mean()
-        y_col = 'SG_MA'
+        trend_df["SG_MA"] = trend_df["Strokes Gained"].rolling(window=window).mean()
+        y_col = "SG_MA"
     else:
-        y_col = 'Strokes Gained'
+        y_col = "Strokes Gained"
 
     fig_trend = px.line(
-        sg_round,
-        x='Label',
+        trend_df,
+        x="Label",
         y=y_col,
         markers=True,
         title="SG: Approach Trend",
@@ -2422,90 +2790,465 @@ with tab_approach:
 
     st.plotly_chart(fig_trend, use_container_width=True)
 
-    st.write("Use approach_df, approach_hero_metrics, approach_table, approach_sg_trend in your existing layout.")
-
 # ============================================================
 # TAB: SHORT GAME
 # ============================================================
+
 with tab_short_game:
-    # Keep your existing layout.
-    # Use:
-    #   sg_metrics = short_game_summary(short_game_df)
-    #   sg_trend_df = short_game_sg_trend(short_game_df)
-    st.write("Use short_game_df, short_game_summary, short_game_sg_trend in your existing layout.")
+
+    sg = short_game_engine(filtered_df)
+
+    if sg["empty"]:
+        st.warning("No short game data available for the selected filters.")
+        st.stop()
+
+    df = sg["df"]
+    hero = sg["hero_metrics"]
+
+    st.markdown('<p class="section-title">Short Game Performance</p>', unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # HERO CARDS
+    # ------------------------------------------------------------
+    col1, col2, col3, col4 = st.columns(4)
+
+    # SG: Around the Green
+    with col1:
+        color = "#2d6a4f" if hero["sg_total"] >= 0 else "#E03C31"
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value" style="color:{color};">{hero['sg_total']:+.2f}</div>
+                <div class="hero-label">SG: Around the Green</div>
+                <div class="hero-sub">Total</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Shots inside 8 ft (Fairway + Rough)
+    with col2:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value">{hero['inside_8_fr']}</div>
+                <div class="hero-label">Inside 8 ft</div>
+                <div class="hero-sub">Fairway + Rough</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Shots inside 8 ft (Sand)
+    with col3:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value">{hero['inside_8_sand']}</div>
+                <div class="hero-label">Inside 8 ft</div>
+                <div class="hero-sub">Sand</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Avg Proximity
+    with col4:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value">{hero['avg_proximity']:.1f} ft</div>
+                <div class="hero-label">Avg Proximity</div>
+                <div class="hero-sub">All Short Game Shots</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # ------------------------------------------------------------
+    # DISTANCE × LIE TABLE
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Performance by Distance & Lie</p>', unsafe_allow_html=True)
+
+    st.dataframe(
+        sg["distance_lie_table"],
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # ------------------------------------------------------------
+    # TREND CHART
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Short Game Trend by Round</p>', unsafe_allow_html=True)
+
+    trend_df = sg["trend_df"]
+
+    use_ma = st.checkbox("Apply Moving Average", value=False, key="sg_ma")
+
+    if use_ma:
+        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0, key="sg_ma_window")
+        trend_df["SG_MA"] = trend_df["SG"].rolling(window=window).mean()
+        trend_df["Inside8_MA"] = trend_df["Inside8 %"].rolling(window=window).mean()
+        y1 = "SG_MA"
+        y2 = "Inside8_MA"
+    else:
+        y1 = "SG"
+        y2 = "Inside8 %"
+
+    fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # SG bar chart
+    fig_trend.add_trace(
+        go.Bar(
+            x=trend_df["Label"],
+            y=trend_df[y1],
+            name="SG: Short Game",
+            marker_color=ODU_GOLD,
+            opacity=0.85
+        ),
+        secondary_y=False
+    )
+
+    # Inside 8 ft line
+    fig_trend.add_trace(
+        go.Scatter(
+            x=trend_df["Label"],
+            y=trend_df[y2],
+            name="% Inside 8 ft",
+            mode="lines+markers",
+            line=dict(color=ODU_BLACK, width=3),
+            marker=dict(size=9, color=ODU_BLACK)
+        ),
+        secondary_y=True
+    )
+
+    fig_trend.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font_family="Inter",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        margin=dict(t=60, b=80, l=60, r=60),
+        height=350,
+        hovermode="x unified",
+        xaxis=dict(tickangle=-45)
+    )
+
+    fig_trend.update_yaxes(
+        title_text="Strokes Gained",
+        gridcolor="#e8e8e8",
+        zerolinecolor=ODU_BLACK,
+        zerolinewidth=2,
+        secondary_y=False
+    )
+
+    fig_trend.update_yaxes(
+        title_text="% Inside 8 ft",
+        range=[0, 100],
+        showgrid=False,
+        secondary_y=True
+    )
+
+    st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
+
 
 # ============================================================
 # TAB: PUTTING
 # ============================================================
+
 with tab_putting:
-    # Keep your existing layout and visuals.
-    # Replace broken table logic with:
-    #   putting_metrics = putting_hero_metrics(putting_df, num_rounds)
-    #   make_table_df = putting_make_pct_by_distance(putting_df)
-    #   lag_scatter_df = putting_lag_scatter_data(putting_df)
-    #   putting_trend_df = putting_sg_by_round(putting_df)
-    #   clutch_val = putting_clutch_index(putting_df)
-    st.write("Use putting_df and the putting_* engine functions in your existing Putting tab layout.")
+
+    putting = putting_engine(filtered_df)
+
+    if putting["empty"]:
+        st.warning("No putting data available for the selected filters.")
+        st.stop()
+
+    df = putting["df"]
+    hero = putting["hero_metrics"]
+
+    st.markdown('<p class="section-title">Putting Performance</p>', unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # HERO CARDS
+    # ------------------------------------------------------------
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    # Make % (4–5 ft)
+    with col1:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value">{hero['make_45_pct']:.0f}%</div>
+                <div class="hero-label">Make %</div>
+                <div class="hero-sub">4–5 ft</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # SG (5–10 ft)
+    with col2:
+        color = "#2d6a4f" if hero["sg_510"] >= 0 else "#E03C31"
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value" style="color:{color};">{hero['sg_510']:+.2f}</div>
+                <div class="hero-label">SG Putting</div>
+                <div class="hero-sub">5–10 ft</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Total 3-putts
+    with col3:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value">{hero['three_putts']}</div>
+                <div class="hero-label">3-Putts</div>
+                <div class="hero-sub">Total</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Lag Miss %
+    with col4:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value">{hero['lag_miss_pct']:.0f}%</div>
+                <div class="hero-label">Lag Miss %</div>
+                <div class="hero-sub">Leaves >5 ft</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Clutch %
+    with col5:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value">{hero['clutch_pct']:.0f}%</div>
+                <div class="hero-label">Clutch Index</div>
+                <div class="hero-sub">Birdie Putts ≤10 ft</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # ------------------------------------------------------------
+    # DISTANCE BUCKET TABLE
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Putting by Distance Bucket</p>', unsafe_allow_html=True)
+
+    st.dataframe(
+        putting["bucket_table"],
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # ------------------------------------------------------------
+    # LAG METRICS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Lag Putting</p>', unsafe_allow_html=True)
+
+    lag = putting["lag_metrics"]
+
+    colA, colB, colC = st.columns(3)
+
+    with colA:
+        st.metric("Avg Leave Distance", f"{lag['avg_leave']:.1f} ft")
+
+    with colB:
+        st.metric("Leaves Inside 3 ft", f"{lag['pct_inside_3']:.0f}%")
+
+    with colC:
+        st.metric("Leaves Over 5 ft", f"{lag['pct_over_5']:.0f}%")
+
+    # ------------------------------------------------------------
+    # TREND CHART
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Putting Trend by Round</p>', unsafe_allow_html=True)
+
+    trend_df = putting["trend_df"]
+
+    use_ma = st.checkbox("Apply Moving Average", value=False)
+
+    if use_ma:
+        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0)
+        trend_df["SG_MA"] = trend_df["SG"].rolling(window=window).mean()
+        y_col = "SG_MA"
+    else:
+        y_col = "SG"
+
+    fig_trend = px.line(
+        trend_df,
+        x="Label",
+        y=y_col,
+        markers=True,
+        title="SG: Putting Trend",
+        color_discrete_sequence=[ODU_BLACK]
+    )
+
+    fig_trend.update_layout(
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font_family='Inter',
+        xaxis_title='',
+        yaxis_title='Strokes Gained',
+        height=400
+    )
+
+    fig_trend.update_xaxes(tickangle=-45)
+
+    st.plotly_chart(fig_trend, use_container_width=True)
+
 
 # ============================================================
 # TAB: COACH'S CORNER
 # ============================================================
-with tab_coach:
+
+with tab_coachs_corner:
+
+    cc = coachs_corner_engine(
+        filtered_df,
+        tiger5_results,
+        driving,
+        approach,
+        putting,
+        short_game
+    )
+
     st.markdown('<p class="section-title">Coach\'s Corner</p>', unsafe_allow_html=True)
 
-    strengths = coachs_corner_data['strengths']
-    weaknesses = coachs_corner_data['weaknesses']
-    tiger5_risks = coachs_corner_data['tiger5_risks']
-    putting_flags = coachs_corner_data['putting_flags']
-    approach_disp = coachs_corner_data['approach_dispersion']
-    priorities = coachs_corner_data['practice_priorities']
+    # ============================================================
+    # COACH SUMMARY
+    # ============================================================
+    st.markdown('<p class="subsection-title">Coach Summary</p>', unsafe_allow_html=True)
 
-    col_left, col_right = st.columns(2)
+    summary = generate_coach_summary(cc)
+    st.markdown(f"<div class='coach-summary'>{summary}</div>", unsafe_allow_html=True)
 
-    with col_left:
-        st.subheader("Strengths")
-        if strengths:
-            for cat, val in strengths:
-                st.markdown(f"- **{cat}:** {val:.2f} SG")
-        else:
-            st.write("No strengths identified (insufficient data).")
+    st.markdown("---")
 
-        st.subheader("Weaknesses")
-        if weaknesses:
-            for cat, val in weaknesses:
-                st.markdown(f"- **{cat}:** {val:.2f} SG")
-        else:
-            st.write("No weaknesses identified (insufficient data).")
+    
+    # ============================================================
+    # 1. STRENGTHS & WEAKNESSES
+    # ============================================================
+    st.markdown('<p class="subsection-title">Strengths & Weaknesses</p>', unsafe_allow_html=True)
 
-        st.subheader("Practice Priorities")
-        if priorities:
-            for p in priorities:
-                st.markdown(f"- {p}")
-        else:
-            st.write("No specific priorities generated.")
+    col1, col2 = st.columns(2)
 
-    with col_right:
-        st.subheader("Tiger 5 Risk Profile")
-        if tiger5_risks:
-            for item in tiger5_risks:
-                st.markdown(
-                    f"- **{item['name']}** — {item['fails']} fails in {item['attempts']} attempts "
-                    f"({item['risk']:.1f}% risk)"
-                )
-        else:
-            st.write("No Tiger 5 data available.")
+    with col1:
+        st.markdown("### Strengths")
+        for cat, sg in cc["strengths"]:
+            st.markdown(f"- **{cat}**: {sg:+.2f} SG")
 
-        st.subheader("Putting Red Flags")
-        st.markdown(f"- **Lag Miss Rate:** {putting_flags['lag_miss_rate']}")
-        st.markdown(f"- **Make % Inside 10 ft:** {putting_flags['inside_10_make_pct']}")
-        st.markdown(f"- **3-Putt Holes:** {putting_flags['three_putt_count']}")
+    with col2:
+        st.markdown("### Weaknesses")
+        for cat, sg in cc["weaknesses"]:
+            st.markdown(f"- **{cat}**: {sg:+.2f} SG")
 
-        st.subheader("Approach Dispersion")
-        if approach_disp:
-            for item in approach_disp:
-                st.markdown(
-                    f"- **{item['bucket']}** — Avg Prox: {item['avg_prox']:.1f} ft, "
-                    f"SG/Shot: {item['sg_per_shot']:.3f}"
-                )
-        else:
-            st.write("No approach dispersion data available.")
+    st.markdown("---")
+
+    # ============================================================
+    # 2. RED FLAGS
+    # ============================================================
+    st.markdown('<p class="subsection-title">Red Flags</p>', unsafe_allow_html=True)
+
+    # --- Approach Red Flags ---
+    st.markdown("### Approach (GIR < 50%)")
+    gir_flags = cc["gir_flags"]
+    if gir_flags:
+        for gf in gir_flags:
+            st.markdown(f"- **{gf['bucket']}**: {gf['gir_pct']:.0f}% GIR")
+    else:
+        st.markdown("*No GIR red flags.*")
+
+    # --- Short Game Red Flags ---
+    st.markdown("### Short Game (Inside 8 ft)")
+    sgf = cc["short_game_flags"]
+    st.markdown(f"- **Fairway/Rough**: {sgf['inside8_fr_pct']:.0f}% inside 8 ft")
+    st.markdown(f"- **Sand**: {sgf['inside8_sand_pct']:.0f}% inside 8 ft")
+
+    # --- Putting Red Flags ---
+    st.markdown("### Putting")
+    pf = cc["putting_flags"]
+    st.markdown(f"- **Make % (4–5 ft)**: {pf['make_45_pct']:.0f}%")
+    st.markdown(f"- **SG (5–10 ft)**: {pf['sg_510']:+.2f}")
+    st.markdown(f"- **Lag Miss % (>5 ft)**: {pf['lag_miss_pct']:.0f}%")
+    st.markdown(f"- **3-Putts Inside 20 ft**: {pf['three_putts_inside_20']}")
+
+    st.markdown("---")
+
+    # ============================================================
+    # 3. DECISION MAKING (DECADE-style)
+    # ============================================================
+    st.markdown('<p class="subsection-title">Decision Making</p>', unsafe_allow_html=True)
+
+    # --- Green / Yellow / Red SG ---
+    st.markdown("### Green / Yellow / Red SG")
+    for gy in cc["green_yellow_red"]:
+        st.markdown(f"- **{gy['light']} Light**: {gy['total_sg']:+.2f} SG")
+
+    # --- Bogey Avoidance ---
+    st.markdown("### Bogey Avoidance")
+    ba = cc["bogey_avoidance"]
+    st.markdown(f"- **Overall**: {ba['Overall']['bogey_rate']:.0f}% bogey rate")
+    st.markdown(f"- **Par 3**: {ba['Par3']['bogey_rate']:.0f}%")
+    st.markdown(f"- **Par 4**: {ba['Par4']['bogey_rate']:.0f}%")
+    st.markdown(f"- **Par 5**: {ba['Par5']['bogey_rate']:.0f}%")
+
+    # --- Birdie Opportunities ---
+    st.markdown("### Birdie Opportunities")
+    bo = cc["birdie_opportunities"]
+    st.markdown(f"- **Opportunities**: {bo['opportunities']}")
+    st.markdown(f"- **Conversions**: {bo['conversions']}")
+    st.markdown(f"- **Conversion %**: {bo['conversion_pct']:.0f}%")
+
+    st.markdown("---")
+
+    # ============================================================
+    # 4. ROUND FLOW (Bounce Back, Drop Off, Gas Pedal, Bogey Trains)
+    # ============================================================
+    st.markdown('<p class="subsection-title">Round Flow</p>', unsafe_allow_html=True)
+
+    fm = cc["flow_metrics"]
+
+    colA, colB, colC, colD = st.columns(4)
+
+    with colA:
+        st.metric("Bounce Back %", f"{fm['bounce_back_pct']:.0f}%")
+
+    with colB:
+        st.metric("Drop Off %", f"{fm['drop_off_pct']:.0f}%")
+
+    with colC:
+        st.metric("Gas Pedal %", f"{fm['gas_pedal_pct']:.0f}%")
+
+    with colD:
+        st.metric("Bogey Trains", f"{fm['bogey_train_count']}")
+
+    if fm["bogey_train_count"] > 0:
+        st.markdown(f"- **Longest Train**: {fm['longest_bogey_train']} holes")
+        st.markdown(f"- **Train Lengths**: {fm['bogey_trains']}")
+
+    st.markdown("---")
+
+    # ============================================================
+    # 5. PRACTICE PRIORITIES
+    # ============================================================
+    st.markdown('<p class="subsection-title">Practice Priorities</p>', unsafe_allow_html=True)
+
+    for p in cc["practice_priorities"]:
+        st.markdown(f"- {p}")
+
