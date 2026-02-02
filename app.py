@@ -7,7 +7,15 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from hole_summary import build_hole_summary
+from data.load_data import load_data
+from engines.hole_summary import build_hole_summary
+from engines.driving import build_driving_results
+from engines.approach import build_approach_results
+from engines.short_game import build_short_game_results
+from engines.putting import build_putting_results
+from engines.tiger5 import build_tiger5_results
+from engines.coachs_corner import build_coachs_corner
+from engines.overview import build_overview_metrics
 
 # ============================================================
 # CONFIG
