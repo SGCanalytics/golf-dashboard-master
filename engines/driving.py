@@ -123,3 +123,30 @@ def driving_engine(filtered_df, num_rounds):
     }
 
     return results
+
+def driving_narrative(results):
+    sg = results.get("driving_sg_per_round", 0)
+    fairway = results.get("fairway", 0)
+    rough = results.get("rough", 0)
+    ob = results.get("ob_count", 0)
+    penalties = results.get("penalty_count", 0)
+
+    lines = ["Driving Performance:"]
+
+    if sg > 0.25:
+        lines.append(f"- Strong off the tee, gaining {sg:.2f} strokes per round.")
+    elif sg > 0:
+        lines.append(f"- Slightly positive SG off the tee at {sg:.2f} per round.")
+    else:
+        lines.append(f"- Losing strokes off the tee ({sg:.2f} per round).")
+
+    lines.append(f"- Fairway hits: {fairway}, Rough: {rough}.")
+    
+    if ob > 0:
+        lines.append(f"- {ob} OB/re-tee events — these are costing strokes.")
+    if penalties > 0:
+        lines.append(f"- {penalties} penalties from tee shots.")
+
+    return "\n".join(lines)
+    
+    
