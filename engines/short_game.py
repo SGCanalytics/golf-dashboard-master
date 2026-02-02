@@ -98,7 +98,9 @@ def short_game_engine(filtered_df, num_rounds):
     }
 
     return results
-
+#################################
+# AI Narative
+##############################
 def short_game_narrative(results):
     sg = results.get("sg_per_round", 0)
     attempts = results.get("up_and_down_attempts", 0)
