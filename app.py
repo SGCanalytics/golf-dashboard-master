@@ -19,6 +19,7 @@ from engines.overview import (
     overview_engine,
     build_sg_trend,
     build_scoring_by_par,
+    build_hole_outcomes,
     build_sg_by_hole_pivot,
     build_tiger5_fail_shots,
     build_shot_detail
@@ -402,22 +403,153 @@ def overview_tab(
         st.info("No data available for SG trend.")
 
     # ------------------------------------------------------------
-    # SCORING AVERAGE & SG BY HOLE PAR (Feature 4)
+    # SCORING & HOLE OUTCOMES (Feature 4 — donut + cards)
     # ------------------------------------------------------------
     st.markdown(
-        '<p class="section-title">Scoring Average &amp; SG by Hole Par</p>',
+        '<p class="section-title">Scoring &amp; Hole Outcomes</p>',
         unsafe_allow_html=True
     )
 
+    outcomes = build_hole_outcomes(hole_summary)
     scoring_par = build_scoring_by_par(hole_summary)
 
-    if not scoring_par.empty:
-        st.dataframe(scoring_par, use_container_width=True, hide_index=True)
-    else:
-        st.info("No scoring data available.")
+    col_donut, col_cards = st.columns([1, 1])
+
+    # ---- LEFT: Donut chart of hole outcomes ----
+    with col_donut:
+        if not outcomes.empty:
+            outcome_colors = {
+                'Eagle': ODU_GOLD,
+                'Birdie': ODU_GREEN,
+                'Par': '#333333',
+                'Bogey': ODU_RED,
+                'Double or Worse': ODU_PURPLE
+            }
+            chart_data = outcomes[outcomes['Count'] > 0]
+            total_holes = int(outcomes['Count'].sum())
+
+            fig_outcomes = go.Figure(data=[go.Pie(
+                labels=chart_data['Score'],
+                values=chart_data['Count'],
+                hole=0.6,
+                marker_colors=[outcome_colors.get(s, '#999')
+                               for s in chart_data['Score']],
+                textinfo='label+percent',
+                textposition='outside',
+                textfont=dict(family='Inter', size=12),
+                pull=[0.02] * len(chart_data)
+            )])
+
+            fig_outcomes.update_layout(
+                showlegend=False,
+                margin=dict(t=30, b=30, l=30, r=30),
+                height=380,
+                annotations=[dict(
+                    text=f'<b>{total_holes}</b><br>Holes',
+                    x=0.5, y=0.5,
+                    font=dict(family='Playfair Display', size=22,
+                              color='#000'),
+                    showarrow=False
+                )]
+            )
+
+            st.plotly_chart(fig_outcomes, use_container_width=True)
+        else:
+            st.info("No hole outcome data available.")
+
+    # ---- RIGHT: Scoring cards by par ----
+    with col_cards:
+        if not scoring_par.empty:
+            overall_avg = hole_summary['Hole Score'].mean()
+            overall_sg = hole_summary['total_sg'].sum()
+            overall_sg_hole = hole_summary['total_sg'].mean()
+
+            # Overall card
+            sg_color = ODU_GREEN if overall_sg >= 0 else ODU_RED
+            st.markdown(f'''
+                <div style="background:linear-gradient(135deg,#000 0%,#1a1a1a 100%);
+                     border-radius:12px;padding:1rem 1.25rem;
+                     border:2px solid {ODU_GOLD};margin-bottom:0.75rem;
+                     display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-family:Inter;font-size:0.7rem;font-weight:600;
+                             color:{ODU_GOLD};text-transform:uppercase;
+                             letter-spacing:0.08em;">Overall</div>
+                        <div style="font-family:Playfair Display,serif;font-size:1.8rem;
+                             font-weight:700;color:{ODU_GOLD};line-height:1.1;">
+                            {overall_avg:.2f}</div>
+                        <div style="font-family:Inter;font-size:0.65rem;
+                             color:rgba(255,199,44,0.7);">Scoring Avg</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-family:Playfair Display,serif;font-size:1.4rem;
+                             font-weight:700;color:{sg_color};">
+                            {overall_sg:+.2f}</div>
+                        <div style="font-family:Inter;font-size:0.6rem;
+                             color:rgba(255,199,44,0.6);">Total SG</div>
+                        <div style="font-family:Playfair Display,serif;font-size:1rem;
+                             font-weight:600;color:{sg_color};margin-top:0.2rem;">
+                            {overall_sg_hole:+.3f}</div>
+                        <div style="font-family:Inter;font-size:0.6rem;
+                             color:rgba(255,199,44,0.6);">SG / Hole</div>
+                    </div>
+                </div>
+            ''', unsafe_allow_html=True)
+
+            # Per-par cards
+            for _, row in scoring_par.iterrows():
+                par_val = int(row['Par'])
+                sc_avg = row['Scoring Avg']
+                t_sg = row['Total SG']
+                sg_h = row['SG / Hole']
+                holes_n = int(row['Holes Played'])
+                sg_color_p = ODU_GREEN if t_sg >= 0 else ODU_RED
+                vs_par = sc_avg - par_val
+
+                st.markdown(f'''
+                    <div style="background:#ffffff;border-radius:10px;
+                         padding:0.85rem 1.25rem;margin-bottom:0.6rem;
+                         border-left:4px solid {ODU_GOLD};
+                         box-shadow:0 2px 6px rgba(0,0,0,0.06);
+                         display:flex;justify-content:space-between;
+                         align-items:center;">
+                        <div>
+                            <div style="font-family:Inter;font-size:0.7rem;
+                                 font-weight:600;color:#888;
+                                 text-transform:uppercase;
+                                 letter-spacing:0.06em;">
+                                Par {par_val}
+                                <span style="color:#bbb;font-weight:400;">
+                                    &middot; {holes_n} holes</span></div>
+                            <div style="font-family:Playfair Display,serif;
+                                 font-size:1.5rem;font-weight:700;
+                                 color:#000;line-height:1.1;">
+                                {sc_avg:.2f}
+                                <span style="font-size:0.8rem;color:#888;">
+                                    ({vs_par:+.2f})</span></div>
+                            <div style="font-family:Inter;font-size:0.6rem;
+                                 color:#aaa;">Scoring Avg (vs Par)</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-family:Playfair Display,serif;
+                                 font-size:1.2rem;font-weight:700;
+                                 color:{sg_color_p};">{t_sg:+.2f}</div>
+                            <div style="font-family:Inter;font-size:0.6rem;
+                                 color:#aaa;">Total SG</div>
+                            <div style="font-family:Playfair Display,serif;
+                                 font-size:0.95rem;font-weight:600;
+                                 color:{sg_color_p};margin-top:0.15rem;">
+                                {sg_h:+.3f}</div>
+                            <div style="font-family:Inter;font-size:0.6rem;
+                                 color:#aaa;">SG / Hole</div>
+                        </div>
+                    </div>
+                ''', unsafe_allow_html=True)
+        else:
+            st.info("No scoring data available.")
 
     # ------------------------------------------------------------
-    # HOLE-BY-HOLE SG PIVOT (Feature 5)
+    # HOLE-BY-HOLE SG PIVOT (Feature 5 — styled HTML)
     # ------------------------------------------------------------
     st.markdown(
         '<p class="section-title">Hole-by-Hole Strokes Gained</p>',
@@ -427,7 +559,87 @@ def overview_tab(
     sg_pivot = build_sg_by_hole_pivot(filtered_df)
 
     if not sg_pivot.empty:
-        st.dataframe(sg_pivot, use_container_width=True, hide_index=True)
+        hole_cols = [c for c in sg_pivot.columns if c != 'Shot Type']
+
+        def _sg_cell_style(val):
+            """Return inline CSS for conditional SG colouring."""
+            try:
+                v = float(val)
+            except (ValueError, TypeError):
+                return ''
+            if v > 0.25:
+                return 'background:#d4edda;color:#155724;font-weight:600;'
+            if v > 0:
+                return 'background:#e8f5e9;color:#2d6a4f;'
+            if v < -0.25:
+                return 'background:#f8d7da;color:#721c24;font-weight:600;'
+            if v < 0:
+                return 'background:#fce4ec;color:#E03C31;'
+            return 'color:#888;'
+
+        # Build HTML table
+        html = '<div style="overflow-x:auto;">'
+        html += ('<table style="width:100%;border-collapse:separate;'
+                 'border-spacing:0;font-family:Inter,sans-serif;'
+                 'background:#fff;border-radius:12px;overflow:hidden;'
+                 'box-shadow:0 4px 16px rgba(0,0,0,0.08);">')
+
+        # Header row
+        html += '<tr>'
+        html += ('<th style="background:#1a1a1a;color:#FFC72C;'
+                 'font-weight:600;font-size:0.75rem;'
+                 'text-transform:uppercase;letter-spacing:0.05em;'
+                 'padding:0.85rem 0.5rem;text-align:left;'
+                 'position:sticky;left:0;z-index:1;">Shot Type</th>')
+        for h in hole_cols:
+            html += (f'<th style="background:#1a1a1a;color:#FFC72C;'
+                     f'font-weight:600;font-size:0.75rem;'
+                     f'padding:0.85rem 0.4rem;text-align:center;">'
+                     f'{h}</th>')
+        html += '</tr>'
+
+        # Data rows
+        for idx, row in sg_pivot.iterrows():
+            shot_type = row['Shot Type']
+            is_total = (shot_type == 'Total SG')
+
+            if is_total:
+                row_bg = ('background:linear-gradient(90deg,'
+                          '#FFC72C 0%,#e6b327 100%);')
+                label_style = ('font-weight:700;color:#000;'
+                               'font-size:0.9rem;padding:0.9rem 0.5rem;'
+                               'text-align:left;position:sticky;left:0;')
+                cell_base = ('font-weight:700;color:#000;'
+                             'font-size:0.9rem;padding:0.9rem 0.4rem;'
+                             'text-align:center;')
+            else:
+                row_bg = ''
+                label_style = ('font-weight:500;color:#333;'
+                               'font-size:0.85rem;padding:0.7rem 0.5rem;'
+                               'text-align:left;border-bottom:1px solid '
+                               '#f0f0f0;position:sticky;left:0;'
+                               'background:#fff;')
+                cell_base = ('font-size:0.85rem;padding:0.7rem 0.4rem;'
+                             'text-align:center;border-bottom:1px solid '
+                             '#f0f0f0;')
+
+            html += f'<tr style="{row_bg}">'
+            html += f'<td style="{label_style}">{shot_type}</td>'
+
+            for h in hole_cols:
+                val = row[h]
+                if is_total:
+                    cond = _sg_cell_style(val)
+                    style = cell_base + cond
+                else:
+                    style = cell_base + _sg_cell_style(val)
+                display = f'{val:+.2f}' if val != 0 else '0.00'
+                html += f'<td style="{style}">{display}</td>'
+
+            html += '</tr>'
+
+        html += '</table></div>'
+        st.markdown(html, unsafe_allow_html=True)
     else:
         st.info("No hole-by-hole data available.")
 
