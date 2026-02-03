@@ -208,6 +208,7 @@ def tiger5_by_round(df, hole_summary):
             'Round ID': rid,
             'Label': label,
             'Date': date_obj,
+            'Course': r['Course'],
             '3 Putts': f_3p,
             'Double Bogey': f_db,
             'Par 5 Bogey': f_p5,
