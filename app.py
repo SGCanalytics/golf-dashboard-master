@@ -15,7 +15,14 @@ from engines.short_game import build_short_game_results
 from engines.putting import build_putting_results
 from engines.tiger5 import build_tiger5_results
 from engines.coachs_corner import build_coachs_corner
-from engines.overview import overview_engine
+from engines.overview import (
+    overview_engine,
+    build_sg_trend,
+    build_scoring_by_par,
+    build_sg_by_hole_pivot,
+    build_tiger5_fail_shots,
+    build_shot_detail
+)
 
 # ============================================================
 # CONFIG
@@ -221,24 +228,78 @@ def overview_tab(
         ''', unsafe_allow_html=True)
 
     # ------------------------------------------------------------
-    # TIGER 5 TREND CHART
+    # TIGER 5 TREND CHART (stacked bar by round)
     # ------------------------------------------------------------
     with st.expander("View Tiger 5 Trend by Round"):
         t5_df = tiger5_results["by_round"]
 
         if not t5_df.empty:
-            # your existing chart code goes here unchanged
-            pass
+            t5_df = t5_df.copy()
+            t5_df['Chart Label'] = (
+                t5_df['Date'].dt.strftime('%d/%m/%Y') + ' ' + t5_df['Course']
+            )
+
+            fail_types = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
+                          'Missed Green', '125yd Bogey']
+            t5_colors = [ODU_PURPLE, ODU_RED, ODU_GOLD, ODU_GREEN, ODU_BLACK]
+
+            fig_t5 = go.Figure()
+            for fail_type, color in zip(fail_types, t5_colors):
+                fig_t5.add_trace(go.Bar(
+                    x=t5_df['Chart Label'],
+                    y=t5_df[fail_type],
+                    name=fail_type,
+                    marker_color=color
+                ))
+
+            fig_t5.update_layout(
+                barmode='stack',
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font_family='Inter',
+                xaxis_title='',
+                yaxis_title='Tiger 5 Fails',
+                height=400,
+                legend=dict(
+                    orientation='h', yanchor='bottom', y=1.02,
+                    xanchor='right', x=1
+                ),
+                margin=dict(t=60, b=80, l=60, r=40),
+                xaxis=dict(tickangle=-45),
+                hovermode='x unified'
+            )
+
+            st.plotly_chart(fig_t5, use_container_width=True,
+                            config={'displayModeBar': False})
+        else:
+            st.info("No data available for Tiger 5 trend.")
 
     # ------------------------------------------------------------
-    # TIGER 5 FAIL DETAILS
+    # TIGER 5 FAIL DETAILS (shot-level)
     # ------------------------------------------------------------
     with st.expander("View Tiger 5 Fail Details"):
+        fail_shots = build_tiger5_fail_shots(filtered_df, tiger5_results)
+        any_fails = False
+
         for stat_name in tiger5_names:
-            detail = tiger5_results[stat_name]
-            if detail['fails'] > 0:
-                # your existing fail detail UI goes here unchanged
-                pass
+            holes = fail_shots.get(stat_name, [])
+            if holes:
+                any_fails = True
+                st.markdown(f"#### {stat_name}")
+                for hole_data in holes:
+                    st.markdown(
+                        f"**{hole_data['date']} &mdash; "
+                        f"{hole_data['course']} &mdash; "
+                        f"Hole {hole_data['hole']}**"
+                    )
+                    st.dataframe(
+                        hole_data['shots'],
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+        if not any_fails:
+            st.info("No Tiger 5 fails to display.")
 
     # ------------------------------------------------------------
     # SG SUMMARY CARDS
@@ -281,8 +342,113 @@ def overview_tab(
                 </div>
             """, unsafe_allow_html=True)
 
+    # ------------------------------------------------------------
+    # SG TREND BY ROUND (Feature 3)
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Strokes Gained Trend</p>',
+                unsafe_allow_html=True)
+
+    sg_trend = build_sg_trend(filtered_df)
+
+    if not sg_trend.empty:
+        use_ma_sg = st.checkbox("Apply Moving Average", value=False,
+                                key="overview_sg_trend_ma")
+        categories = ['Driving', 'Approach', 'Short Game', 'Putting']
+        cat_colors = [ODU_GOLD, ODU_BLACK, ODU_GREEN, ODU_PURPLE]
+
+        if use_ma_sg:
+            ma_window = st.selectbox("Moving Average Window", [3, 5, 10],
+                                     index=0, key="overview_sg_trend_window")
+            for cat in categories:
+                sg_trend[f'{cat}_MA'] = (
+                    sg_trend[cat].rolling(window=ma_window).mean()
+                )
+            plot_cols = [f'{cat}_MA' for cat in categories]
+        else:
+            plot_cols = categories
+
+        fig_sg_trend = go.Figure()
+        for cat, pcol, color in zip(categories, plot_cols, cat_colors):
+            fig_sg_trend.add_trace(go.Scatter(
+                x=sg_trend['Label'],
+                y=sg_trend[pcol],
+                name=cat,
+                mode='lines+markers',
+                line=dict(color=color, width=2),
+                marker=dict(size=6)
+            ))
+
+        fig_sg_trend.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_family='Inter',
+            xaxis_title='',
+            yaxis_title='Strokes Gained',
+            height=400,
+            legend=dict(
+                orientation='h', yanchor='bottom', y=1.02,
+                xanchor='right', x=1
+            ),
+            margin=dict(t=60, b=80, l=60, r=40),
+            xaxis=dict(tickangle=-45),
+            yaxis=dict(gridcolor='#e8e8e8', zerolinecolor=ODU_BLACK,
+                       zerolinewidth=2),
+            hovermode='x unified'
+        )
+
+        st.plotly_chart(fig_sg_trend, use_container_width=True,
+                        config={'displayModeBar': False})
+    else:
+        st.info("No data available for SG trend.")
+
+    # ------------------------------------------------------------
+    # SCORING AVERAGE & SG BY HOLE PAR (Feature 4)
+    # ------------------------------------------------------------
+    st.markdown(
+        '<p class="section-title">Scoring Average &amp; SG by Hole Par</p>',
+        unsafe_allow_html=True
+    )
+
+    scoring_par = build_scoring_by_par(hole_summary)
+
+    if not scoring_par.empty:
+        st.dataframe(scoring_par, use_container_width=True, hide_index=True)
+    else:
+        st.info("No scoring data available.")
+
+    # ------------------------------------------------------------
+    # HOLE-BY-HOLE SG PIVOT (Feature 5)
+    # ------------------------------------------------------------
+    st.markdown(
+        '<p class="section-title">Hole-by-Hole Strokes Gained</p>',
+        unsafe_allow_html=True
+    )
+
+    sg_pivot = build_sg_by_hole_pivot(filtered_df)
+
+    if not sg_pivot.empty:
+        st.dataframe(sg_pivot, use_container_width=True, hide_index=True)
+    else:
+        st.info("No hole-by-hole data available.")
+
+    # ------------------------------------------------------------
+    # SHOT LEVEL DETAIL (Feature 6)
+    # ------------------------------------------------------------
+    with st.expander("View Shot Level Detail"):
+        shot_detail = build_shot_detail(filtered_df)
+
+        if shot_detail:
+            for round_label, detail_df in shot_detail.items():
+                st.markdown(f"#### {round_label}")
+                st.dataframe(
+                    detail_df, use_container_width=True, hide_index=True
+                )
+        else:
+            st.info("No shot data available.")
+
+
 # ============================================================
-# TAB: DRIVING 
+# TAB: DRIVING
 # ============================================================
 
 def driving_tab(drive, num_rounds):
