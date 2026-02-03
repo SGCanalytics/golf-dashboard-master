@@ -167,6 +167,11 @@ def build_tiger5_results(df, hole_summary):
         if total_attempts > 0 else 0
     )
 
+    # Pack grit_score and by_round into the results dict so overview_tab
+    # can access them as tiger5_results["grit_score"] and tiger5_results["by_round"]
+    results["grit_score"] = grit_score
+    results["by_round"] = tiger5_by_round(df, hole_summary)
+
     return results, total_fails, grit_score
 
 

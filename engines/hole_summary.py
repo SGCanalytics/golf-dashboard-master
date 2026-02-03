@@ -28,7 +28,7 @@ def build_hole_summary(filtered_df):
     - SG by hole
     """
 
-    hole_summary = df.groupby(
+    hole_summary = filtered_df.groupby(
         ['Player', 'Round ID', 'Date', 'Course', 'Hole', 'Par']
     ).agg(
         num_shots=('Shot', 'count'),

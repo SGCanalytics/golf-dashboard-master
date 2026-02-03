@@ -1,4 +1,5 @@
 import pandas as pd
+import streamlit as st
 
 # ============================================================
 # CONFIG
@@ -37,24 +38,11 @@ def determine_shot_type(start_location, start_distance, par):
     return 'Other'
 
 
-def score_to_name(hole_score, par):
-    """Convert numeric score vs par into a label."""
-    diff = hole_score - par
-    if diff <= -2:
-        return 'Eagle'
-    elif diff == -1:
-        return 'Birdie'
-    elif diff == 0:
-        return 'Par'
-    elif diff == 1:
-        return 'Bogey'
-    return 'Double or Worse'
-
-
 # ============================================================
 # MAIN DATA LOADER
 # ============================================================
 
+@st.cache_data(ttl=300)
 def load_data():
     """
     Load, clean, and enrich the dataset.
@@ -93,5 +81,8 @@ def load_data():
         '-H' + df['Hole'].astype(str) +
         '-S' + df['Shot'].astype(str)
     )
+
+    # Date conversion
+    df['Date'] = pd.to_datetime(df['Date'])
 
     return df

@@ -4,34 +4,114 @@ import pandas as pd
 # PUTTING ENGINE 
 # ============================================================
 
-def build_putting_results(filtered_df, num_rounds):
-    """
-    Return a putting-only DataFrame with consistent, ready-to-use columns.
-    Assumes:
-        - Shot Type == 'Putt'
-        - 'Score' represents number of putts on the hole context
-    """
-    putting_df = df[df['Shot Type'] == 'Putt'].copy()
+def _enrich_putting_df(filtered_df):
+    """Filter to putts and add computed columns."""
+    putting_df = filtered_df[filtered_df['Shot Type'] == 'Putt'].copy()
+    if putting_df.empty:
+        return putting_df
 
-    # Ensure distances are numeric
     putting_df['Starting Distance'] = pd.to_numeric(
         putting_df['Starting Distance'], errors='coerce'
     )
     putting_df['Ending Distance'] = pd.to_numeric(
         putting_df['Ending Distance'], errors='coerce'
     )
-
-    # Flag: 1 if holed (Ending Distance == 0)
     putting_df['Made'] = (putting_df['Ending Distance'] == 0).astype(int)
-
-    # Hole-level identifier
     putting_df['Hole Key'] = (
         putting_df['Player'].astype(str) + '|' +
         putting_df['Round ID'].astype(str) + '|' +
         putting_df['Hole'].astype(str)
     )
-
     return putting_df
+
+
+def build_putting_results(filtered_df, num_rounds):
+    """
+    Return a rich dict consumed by putting_tab and overview_engine.
+    """
+    putting_df = _enrich_putting_df(filtered_df)
+
+    empty_hero = {
+        "make_45_pct": 0.0, "sg_510": 0.0,
+        "three_putts": 0, "lag_miss_pct": 0.0, "clutch_pct": 0.0
+    }
+    empty_lag = {"avg_leave": 0.0, "pct_inside_3": 0.0, "pct_over_5": 0.0}
+
+    if putting_df.empty:
+        return {
+            "empty": True,
+            "df": putting_df,
+            "total_sg_putting": 0.0,
+            "hero_metrics": empty_hero,
+            "bucket_table": pd.DataFrame(),
+            "lag_metrics": empty_lag,
+            "trend_df": pd.DataFrame()
+        }
+
+    total_sg = putting_df['Strokes Gained'].sum()
+
+    # --- Hero metrics ---
+    # Make % 4-5 ft
+    m45 = putting_df[(putting_df['Starting Distance'] >= 4) & (putting_df['Starting Distance'] <= 5)]
+    make_45_pct = (m45['Made'].sum() / len(m45) * 100) if len(m45) > 0 else 0.0
+
+    # SG 5-10 ft
+    m510 = putting_df[(putting_df['Starting Distance'] >= 5) & (putting_df['Starting Distance'] <= 10)]
+    sg_510 = m510['Strokes Gained'].sum() if not m510.empty else 0.0
+
+    # 3-putts (count holes with 3+ putts)
+    putt_counts = putting_df.groupby('Hole Key').size()
+    three_putts = int((putt_counts >= 3).sum())
+
+    # Lag miss % (putts starting >= 30 ft that leave > 5 ft)
+    lag_putts = putting_df[putting_df['Starting Distance'] >= 30]
+    if not lag_putts.empty:
+        lag_miss_pct = (lag_putts['Ending Distance'] > 5).sum() / len(lag_putts) * 100
+    else:
+        lag_miss_pct = 0.0
+
+    # Clutch % (birdie putts inside 10 ft — make %)
+    clutch_putts = putting_df[putting_df['Starting Distance'] <= 10]
+    clutch_pct = (clutch_putts['Made'].sum() / len(clutch_putts) * 100) if len(clutch_putts) > 0 else 0.0
+
+    hero = {
+        "make_45_pct": make_45_pct,
+        "sg_510": sg_510,
+        "three_putts": three_putts,
+        "lag_miss_pct": lag_miss_pct,
+        "clutch_pct": clutch_pct
+    }
+
+    # --- Bucket table ---
+    bucket_table = putting_make_pct_by_distance(putting_df)
+
+    # --- Lag metrics ---
+    if not lag_putts.empty:
+        lag_metrics = {
+            "avg_leave": lag_putts['Ending Distance'].mean(),
+            "pct_inside_3": (lag_putts['Ending Distance'] <= 3).sum() / len(lag_putts) * 100,
+            "pct_over_5": (lag_putts['Ending Distance'] > 5).sum() / len(lag_putts) * 100
+        }
+    else:
+        lag_metrics = empty_lag
+
+    # --- Trend ---
+    trend_df = putting_sg_by_round(putting_df)
+    if not trend_df.empty:
+        trend_df['Label'] = trend_df.apply(
+            lambda r: f"{r['Date'].strftime('%m/%d')} {r['Course']}", axis=1
+        )
+        trend_df = trend_df.rename(columns={'SG_Putting': 'SG'})
+
+    return {
+        "empty": False,
+        "df": putting_df,
+        "total_sg_putting": total_sg,
+        "hero_metrics": hero,
+        "bucket_table": bucket_table,
+        "lag_metrics": lag_metrics,
+        "trend_df": trend_df
+    }
 
 
 # ============================================================

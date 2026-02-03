@@ -15,12 +15,11 @@ from engines.short_game import build_short_game_results
 from engines.putting import build_putting_results
 from engines.tiger5 import build_tiger5_results
 from engines.coachs_corner import build_coachs_corner
-from engines.overview import build_overview_metrics
+from engines.overview import overview_engine
 
 # ============================================================
 # CONFIG
 # ============================================================
-SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZZ8-dHrvrfl8YQnRSLpCYS6GjTHpXQm2uVuqS0X5t3yOxhciFnvxlLSSMX_gplveVmlP5Uz8nOmJF/pub?gid=0&single=true&output=csv"
 
 st.set_page_config(page_title="ODU Golf Analytics", layout="wide")
 
@@ -171,38 +170,6 @@ def fmt_pct(count, total):
 def fmt_pr(count, rounds):
     """Format per-round metric safely."""
     return f"{count/rounds:.1f}" if rounds > 0 else "-"
-
-# ============================================================
-# DATA LOADING
-# ============================================================
-
-@st.cache_data(ttl=300)
-def load_data():
-    df = pd.read_csv(SHEET_URL)
-
-    df['Player'] = df['Player'].str.strip().str.title()
-    df['Course'] = df['Course'].str.strip().str.title()
-    df['Tournament'] = df['Tournament'].str.strip().str.title()
-
-    first_shots = df[df['Shot'] == 1].copy()
-    first_shots['Par'] = first_shots['Starting Distance'].apply(determine_par)
-
-    df = df.merge(
-        first_shots[['Round ID', 'Hole', 'Par']],
-        on=['Round ID', 'Hole'],
-        how='left'
-    )
-
-    df['Shot ID'] = (
-        df['Round ID'] +
-        '-H' + df['Hole'].astype(str) +
-        '-S' + df['Shot'].astype(str)
-    )
-
-    df['Date'] = pd.to_datetime(df['Date'])
-
-    return df
-
 
 # ============================================================
 # TAB: OVERVIEW
@@ -1381,20 +1348,22 @@ num_rounds = filtered_df['Round ID'].nunique()
 hole_summary = build_hole_summary(filtered_df)
 
 # ---------- ENGINE CALLS ----------
-driving_results = driving_engine(filtered_df, num_rounds)
-approach_results = approach_engine(filtered_df, num_rounds)
-short_game_results = short_game_engine(filtered_df, num_rounds)
-putting_results = putting_engine(filtered_df, num_rounds)
+driving_results = build_driving_results(filtered_df, num_rounds)
+approach_results = build_approach_results(filtered_df, num_rounds)
+short_game_results = build_short_game_results(filtered_df, num_rounds)
+putting_results = build_putting_results(filtered_df, num_rounds)
 
-tiger5_results, total_tiger5_fails, grit_score = calculate_tiger5(filtered_df, hole_summary)
+tiger5_results, total_tiger5_fails, grit_score = build_tiger5_results(filtered_df, hole_summary)
 
-coachs_corner_results = coachs_corner_engine(
+coachs_corner_results = build_coachs_corner(
     filtered_df,
-    tiger5_results,
+    hole_summary,
     driving_results,
     approach_results,
+    short_game_results,
     putting_results,
-    short_game_results
+    tiger5_results,
+    grit_score
 )
 
 # ============================================================
