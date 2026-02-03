@@ -188,6 +188,32 @@ def build_scoring_by_par(hole_summary):
 
 
 # ============================================================
+# HOLE OUTCOME DISTRIBUTION
+# ============================================================
+
+def build_hole_outcomes(hole_summary):
+    """Count and percentage of each scoring outcome."""
+    if hole_summary.empty:
+        return pd.DataFrame()
+
+    score_order = ['Eagle', 'Birdie', 'Par', 'Bogey', 'Double or Worse']
+
+    counts = hole_summary['Score Name'].value_counts()
+    total = counts.sum()
+
+    rows = []
+    for name in score_order:
+        c = int(counts.get(name, 0))
+        rows.append({
+            'Score': name,
+            'Count': c,
+            'Pct': round(c / total * 100, 1) if total > 0 else 0
+        })
+
+    return pd.DataFrame(rows)
+
+
+# ============================================================
 # HOLE-BY-HOLE SG PIVOT BY SHOT TYPE
 # ============================================================
 
