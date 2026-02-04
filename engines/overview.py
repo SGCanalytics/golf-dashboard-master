@@ -153,7 +153,7 @@ def build_sg_trend(df):
     trend['Date'] = pd.to_datetime(trend['Date'])
     trend = trend.sort_values('Date')
     trend['Label'] = trend.apply(
-        lambda r: f"{r['Date'].strftime('%d/%m/%Y')} {r['Course']}", axis=1
+        lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
     )
 
     for cat in ['Driving', 'Approach', 'Short Game', 'Putting']:
@@ -335,7 +335,7 @@ def build_tiger5_fail_shots(df, tiger5_results):
                 ).round(2)
 
                 holes_list.append({
-                    'date': pd.to_datetime(date).strftime('%d/%m/%Y'),
+                    'date': pd.to_datetime(date).strftime('%m/%d/%y'),
                     'course': course,
                     'hole': int(hole),
                     'shots': shots_data
@@ -366,7 +366,7 @@ def build_shot_detail(df):
 
     for _, r in round_info.iterrows():
         rid = r['Round ID']
-        label = f"{r['Date'].strftime('%d/%m/%Y')} - {r['Course']}"
+        label = f"{r['Date'].strftime('%m/%d/%y')} - {r['Course']}"
 
         round_shots = df[df['Round ID'] == rid][[
             'Hole', 'Par', 'Shot', 'Starting Distance', 'Starting Location',

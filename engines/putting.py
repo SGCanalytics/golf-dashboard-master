@@ -99,7 +99,7 @@ def build_putting_results(filtered_df, num_rounds):
     trend_df = putting_sg_by_round(putting_df)
     if not trend_df.empty:
         trend_df['Label'] = trend_df.apply(
-            lambda r: f"{r['Date'].strftime('%m/%d')} {r['Course']}", axis=1
+            lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
         )
         trend_df = trend_df.rename(columns={'SG_Putting': 'SG'})
 

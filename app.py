@@ -53,137 +53,145 @@ ODU_GREEN = '#2d6a4f'
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap');
-    
+
     .stApp { background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%); }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    
-    h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif !important; letter-spacing: -0.02em; }
+
+    h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif !important; letter-spacing: -0.02em; color: #000 !important; }
     p, span, div, label, .stMarkdown { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    
+
     .main-title { font-family: 'Playfair Display', Georgia, serif; font-size: 2.8rem; font-weight: 700; color: #000000; margin-bottom: 0.25rem; }
     .main-subtitle { font-family: 'Inter', sans-serif; font-size: 1rem; color: #666666; font-weight: 400; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 3px solid #FFC72C; }
     .section-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 600; color: #000000; margin: 2.5rem 0 1.5rem 0; padding-bottom: 0.75rem; border-bottom: 2px solid #FFC72C; }
-    
-    .tiger-card-success { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #FFC72C; margin-bottom: 1rem; }
-    .tiger-card-success .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #FFC72C; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .tiger-card-success .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #FFC72C; line-height: 1; margin-bottom: 0.25rem; }
-    .tiger-card-success .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,199,44,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
-    
-    .tiger-card-fail { background: linear-gradient(135deg, #E03C31 0%, #c93028 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: none; margin-bottom: 1rem; }
-    .tiger-card-fail .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .tiger-card-fail .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #ffffff; line-height: 1; margin-bottom: 0.25rem; }
-    .tiger-card-fail .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
-    
-    .grit-card { background: linear-gradient(135deg, #FFC72C 0%, #e6b327 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: none; margin-bottom: 1rem; }
-    .grit-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(0,0,0,0.7); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .grit-card .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #000000; line-height: 1; margin-bottom: 0.25rem; }
-    .grit-card .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: 0.05em; }
-    
-    .sg-card { background: #ffffff; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8e8e8; margin-bottom: 1rem; }
-    .sg-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .sg-card .card-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: #000000; line-height: 1; }
-    .sg-card .card-value.positive { color: #2d6a4f; }
-    .sg-card .card-value.negative { color: #E03C31; }
-    
+
+    /* ---------- MAIN CONTENT — dark text on light backgrounds ---------- */
+    section.main p, section.main span, section.main div,
+    section.main label, section.main li { color: #333; }
+    section.main h1, section.main h2, section.main h3,
+    section.main h4, section.main h5 { color: #000 !important; }
+
+    /* ---------- SIDEBAR — light text on dark background ---------- */
     section[data-testid="stSidebar"] { background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%); }
-    .sidebar-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; color: #FFC72C; margin-bottom: 0.5rem; padding-bottom: 1rem; border-bottom: 1px solid #333; }
-    .sidebar-label { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; color: #D3AF7E; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; margin-top: 1.25rem; }
-    
-    .stDataFrame th { text-align: center !important; background-color: #000000 !important; color: #FFC72C !important; font-family: 'Inter', sans-serif !important; font-weight: 600 !important; font-size: 0.8rem !important; }
-    .stDataFrame td { text-align: center !important; font-family: 'Inter', sans-serif !important; font-size: 0.85rem !important; }
-    
-    .streamlit-expanderHeader { font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 0.9rem !important; background-color: #f8f8f8 !important; border-radius: 8px !important; }
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] div { color: #e0d6c2 !important; }
+    section[data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] span { color: #000 !important; }
+    section[data-testid="stSidebar"] hr { border-color: #333; }
+    section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div,
+    section[data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] > div,
+    section[data-testid="stSidebar"] .stDateInput input { background: #2a2a2a; color: #e0d6c2 !important; border: 1px solid #444; }
+    .sidebar-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; color: #FFC72C !important; margin-bottom: 0.5rem; padding-bottom: 1rem; border-bottom: 1px solid #333; }
+    .sidebar-label { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; color: #D3AF7E !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; margin-top: 1.25rem; }
+
+    /* ---------- TIGER 5 CARDS ---------- */
+    .tiger-card-success { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #FFC72C; margin-bottom: 1rem; }
+    .tiger-card-success .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #FFC72C !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .tiger-card-success .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #FFC72C !important; line-height: 1; margin-bottom: 0.25rem; }
+    .tiger-card-success .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,199,44,0.7) !important; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .tiger-card-fail { background: linear-gradient(135deg, #E03C31 0%, #c93028 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: none; margin-bottom: 1rem; }
+    .tiger-card-fail .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.9) !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .tiger-card-fail .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #ffffff !important; line-height: 1; margin-bottom: 0.25rem; }
+    .tiger-card-fail .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,255,255,0.7) !important; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .grit-card { background: linear-gradient(135deg, #FFC72C 0%, #e6b327 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: none; margin-bottom: 1rem; }
+    .grit-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(0,0,0,0.7) !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .grit-card .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #000000 !important; line-height: 1; margin-bottom: 0.25rem; }
+    .grit-card .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(0,0,0,0.6) !important; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ---------- SG CARDS ---------- */
+    .sg-card { background: #ffffff; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8e8e8; margin-bottom: 1rem; }
+    .sg-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666666 !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .sg-card .card-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: #000000 !important; line-height: 1; }
+    .sg-card .card-value.positive { color: #2d6a4f !important; }
+    .sg-card .card-value.negative { color: #E03C31 !important; }
+
+    /* ---------- DATA TABLES — clean light style ---------- */
+    .stDataFrame th { text-align: center !important; background-color: #f8f6f1 !important; color: #333 !important; font-family: 'Inter', sans-serif !important; font-weight: 600 !important; font-size: 0.8rem !important; border-bottom: 2px solid #FFC72C !important; }
+    .stDataFrame td { text-align: center !important; font-family: 'Inter', sans-serif !important; font-size: 0.85rem !important; color: #333 !important; }
+
+    /* ---------- EXPANDERS ---------- */
+    .streamlit-expanderHeader { font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 0.9rem !important; background-color: #f8f6f1 !important; border-radius: 8px !important; }
+    .streamlit-expanderHeader p, .streamlit-expanderHeader span { color: #333 !important; }
+    .streamlit-expanderHeader svg { fill: #333 !important; }
+    details summary span { color: #333 !important; }
+    details[open] summary span { color: #333 !important; }
+
+    /* ---------- CHARTS wrapper ---------- */
     .stPlotlyChart { background: #ffffff; border-radius: 12px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8e8e8; }
-    
+
+    /* ---------- TABS ---------- */
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] { height: 50px; background-color: #e8e8e8; border-radius: 8px 8px 0 0; padding: 0 24px; font-family: 'Inter', sans-serif; font-weight: 500; color: #333 !important; }
+    .stTabs [data-baseweb="tab"]:hover { background-color: #ddd; }
+    .stTabs [aria-selected="true"] { background-color: #FFC72C !important; color: #000 !important; font-weight: 600 !important; }
+
+    /* ---------- CHECKBOX / SELECT / METRIC in main content ---------- */
+    section.main .stCheckbox label span { color: #333 !important; }
+    section.main .stSelectbox label span { color: #333 !important; }
+    [data-testid="stMetricLabel"] { color: #555 !important; }
+    [data-testid="stMetricValue"] { color: #000 !important; }
+
+    /* ---------- CUSTOM TABLE (driving, SG pivot) ---------- */
     .par-score-card { background: #ffffff; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; border-left: 4px solid #FFC72C; display: flex; justify-content: space-between; align-items: center; }
     .par-score-card .par-label { font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 500; color: #333; }
     .par-score-card .par-value { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: #000; }
-    
+
     .driving-table { width: 100%; border-collapse: separate; border-spacing: 0; font-family: 'Inter', sans-serif; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-    .driving-table th { background: #1a1a1a; color: #FFC72C; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 0.75rem; text-align: center; }
+    .driving-table th { background: #f8f6f1; color: #333; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 0.75rem; text-align: center; border-bottom: 2px solid #FFC72C; }
     .driving-table th:first-child { text-align: left; padding-left: 1.25rem; }
     .driving-table td { padding: 0.75rem; text-align: center; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; color: #333; }
     .driving-table td:first-child { text-align: left; padding-left: 1.25rem; font-weight: 500; }
     .driving-table tr:last-child td { border-bottom: none; }
     .driving-table .row-primary { background: #f8f8f8; }
     .driving-table .row-primary td { font-weight: 600; font-size: 1rem; padding: 1rem 0.75rem; }
-    .driving-table .row-header { background: #2a2a2a; }
-    .driving-table .row-header td { color: #D3AF7E; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.6rem 0.75rem; }
+    .driving-table .row-header { background: #f0ede5; }
+    .driving-table .row-header td { color: #666; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.6rem 0.75rem; }
     .driving-table .row-highlight { background: linear-gradient(90deg, #FFC72C 0%, #e6b327 100%); }
     .driving-table .row-highlight td { font-weight: 700; color: #000; padding: 0.875rem 0.75rem; }
     .driving-table .row-danger { background: linear-gradient(90deg, #E03C31 0%, #c93028 100%); }
     .driving-table .row-danger td { font-weight: 700; color: #fff; padding: 0.875rem 0.75rem; }
     .driving-table .indent { padding-left: 2rem !important; }
 
+    /* ---------- HERO STAT CARDS ---------- */
     .hero-stat {
-    background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    border: 2px solid #FFC72C;
-    margin-bottom: 1.5rem;
-}
-
-.hero-stat .hero-value {
-    font-family: 'Playfair Display', serif;
-    font-size: 2.6rem;        /* was 4rem */
-    font-weight: 700;
-    color: #FFC72C;
-    line-height: 1.1;
-    margin-bottom: 0.4rem;
-}
-
-.hero-stat .hero-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #D3AF7E;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.3rem;
-}
-
-.hero-stat .hero-sub {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;       /* slightly smaller */
-    color: rgba(255,199,44,0.75);  /* stronger contrast */
-    margin-top: 0.25rem;
-}
-
-.hero-stat:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 0 18px rgba(255, 199, 44, 0.45);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-    
-    /* Tab styling */
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; background-color: #e8e8e8; border-radius: 8px 8px 0 0; padding: 0 24px; font-family: 'Inter', sans-serif; font-weight: 500; color: #333 !important; }
-    .stTabs [data-baseweb="tab"]:hover { background-color: #ddd; }
-    .stTabs [aria-selected="true"] { background-color: #FFC72C !important; color: #000 !important; font-weight: 600 !important; }
-
-    /* Force dark text on light backgrounds globally */
-    .stApp p, .stApp span, .stApp div, .stApp label,
-    .stApp .stMarkdown, .stApp .stText { color: #333; }
-
-    /* Expander styling — ensure dark text */
-    .streamlit-expanderHeader p, .streamlit-expanderHeader span,
-    .streamlit-expanderHeader svg { color: #333 !important; fill: #333 !important; }
-    details summary span { color: #333 !important; }
-    details[open] summary span { color: #333 !important; }
-
-    /* Checkbox and selectbox labels */
-    .stCheckbox label span, .stSelectbox label span,
-    .stMultiSelect label span, .stDateInput label span { color: #333 !important; }
-
-    /* Metric labels */
-    [data-testid="stMetricLabel"] { color: #555 !important; }
-    [data-testid="stMetricValue"] { color: #000 !important; }
-
-    /* Markdown headers inside tabs */
-    .stTabs h1, .stTabs h2, .stTabs h3, .stTabs h4 { color: #000 !important; }
-    .stTabs p, .stTabs li, .stTabs span { color: #333; }
+        background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        border: 2px solid #FFC72C;
+        margin-bottom: 1.5rem;
+    }
+    .hero-stat .hero-value {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.6rem;
+        font-weight: 700;
+        color: #FFC72C !important;
+        line-height: 1.1;
+        margin-bottom: 0.4rem;
+    }
+    .hero-stat .hero-label {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #D3AF7E !important;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.3rem;
+    }
+    .hero-stat .hero-sub {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.75rem;
+        color: rgba(255,199,44,0.75) !important;
+        margin-top: 0.25rem;
+    }
+    .hero-stat:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 0 18px rgba(255, 199, 44, 0.45);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -201,11 +209,18 @@ def sg_value_class(val):
 
 def fmt_pct(count, total):
     """Format percentage safely."""
-    return f"{count/total*100:.1f}%" if total > 0 else "-"
+    return f"{count/total*100:.0f}%" if total > 0 else "-"
 
 def fmt_pr(count, rounds):
     """Format per-round metric safely."""
     return f"{count/rounds:.1f}" if rounds > 0 else "-"
+
+# Shared Plotly layout defaults — white background, dark text
+CHART_LAYOUT = dict(
+    plot_bgcolor='#ffffff',
+    paper_bgcolor='#ffffff',
+    font=dict(family='Inter', color='#333'),
+)
 
 # ============================================================
 # TAB: TIGER 5
@@ -262,7 +277,7 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
         st.markdown(f'''
             <div class="grit-card">
                 <div class="card-label">Grit Score</div>
-                <div class="card-value">{grit_score:.1f}%</div>
+                <div class="card-value">{grit_score:.0f}%</div>
                 <div class="card-unit">success rate</div>
             </div>
         ''', unsafe_allow_html=True)
@@ -276,7 +291,7 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
         if not t5_df.empty:
             t5_df = t5_df.copy()
             t5_df['Chart Label'] = (
-                t5_df['Date'].dt.strftime('%d/%m/%Y') + ' ' + t5_df['Course']
+                t5_df['Date'].dt.strftime('%m/%d/%y') + ' ' + t5_df['Course']
             )
 
             fail_types = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
@@ -293,10 +308,8 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
                 ))
 
             fig_t5.update_layout(
+                **CHART_LAYOUT,
                 barmode='stack',
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                font_family='Inter',
                 xaxis_title='',
                 yaxis_title='Tiger 5 Fails',
                 height=400,
@@ -441,10 +454,8 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
         ))
 
         fig_impact.update_layout(
+            **CHART_LAYOUT,
             barmode='group',
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font_family='Inter',
             xaxis_title='',
             yaxis_title='Score',
             height=400,
@@ -587,9 +598,7 @@ def strokes_gained_tab(
             ))
 
         fig_sg_trend.update_layout(
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font_family='Inter',
+            **CHART_LAYOUT,
             xaxis_title='',
             yaxis_title='Strokes Gained',
             height=400,
@@ -649,6 +658,7 @@ def strokes_gained_tab(
             )])
 
             fig_outcomes.update_layout(
+                **CHART_LAYOUT,
                 showlegend=False,
                 margin=dict(t=40, b=40, l=60, r=60),
                 height=340,
@@ -697,7 +707,7 @@ def strokes_gained_tab(
                              color:rgba(255,199,44,0.6);">Total SG</div>
                         <div style="font-family:Playfair Display,serif;font-size:1rem;
                              font-weight:600;color:{sg_color};margin-top:0.2rem;">
-                            {overall_sg_hole:+.3f}</div>
+                            {overall_sg_hole:+.2f}</div>
                         <div style="font-family:Inter;font-size:0.6rem;
                              color:rgba(255,199,44,0.6);">SG / Hole</div>
                     </div>
@@ -747,7 +757,7 @@ def strokes_gained_tab(
                             <div style="font-family:Playfair Display,serif;
                                  font-size:0.95rem;font-weight:600;
                                  color:{sg_color_p};margin-top:0.15rem;">
-                                {sg_h:+.3f}</div>
+                                {sg_h:+.2f}</div>
                             <div style="font-family:Inter;font-size:0.6rem;
                                  color:#aaa;">SG / Hole</div>
                         </div>
@@ -797,15 +807,17 @@ def strokes_gained_tab(
         n_cols = len(hole_cols) + 1
         label_w = '90px'
         html += '<tr>'
-        html += (f'<th style="background:#1a1a1a;color:#FFC72C;'
+        html += (f'<th style="background:#f8f6f1;color:#333;'
                  f'font-weight:600;font-size:0.65rem;'
                  f'text-transform:uppercase;letter-spacing:0.03em;'
                  f'padding:0.55rem 0.25rem;text-align:left;'
+                 f'border-bottom:2px solid #FFC72C;'
                  f'width:{label_w};position:sticky;left:0;'
                  f'z-index:1;">Shot Type</th>')
         for h in hole_cols:
-            html += (f'<th style="background:#1a1a1a;color:#FFC72C;'
+            html += (f'<th style="background:#f8f6f1;color:#333;'
                      f'font-weight:600;font-size:0.65rem;'
+                     f'border-bottom:2px solid #FFC72C;'
                      f'padding:0.55rem 0.15rem;text-align:center;'
                      f'white-space:nowrap;">{h}</th>')
         html += '</tr>'
@@ -918,7 +930,7 @@ def driving_tab(drive, num_rounds):
         st.markdown(
             f"""
             <div class="hero-stat" style="border-color: {color};">
-                <div class="hero-value" style="color: {color};">{drive['obstruction_pct']:.1f}%</div>
+                <div class="hero-value" style="color: {color};">{drive['obstruction_pct']:.0f}%</div>
                 <div class="hero-label">Obstruction Rate</div>
                 <div class="hero-sub">Sand + Recovery</div>
             </div>
@@ -933,7 +945,7 @@ def driving_tab(drive, num_rounds):
             <div class="hero-stat" style="border-color: {color};">
                 <div class="hero-value" style="color: {color};">{drive['penalty_total']}</div>
                 <div class="hero-label">Penalties + OB</div>
-                <div class="hero-sub">{drive['penalty_rate_pct']:.1f}% of drives</div>
+                <div class="hero-sub">{drive['penalty_rate_pct']:.0f}% of drives</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -972,6 +984,7 @@ def driving_tab(drive, num_rounds):
         )
 
         fig_donut.update_layout(
+            **CHART_LAYOUT,
             showlegend=False,
             margin=dict(t=40, b=40, l=40, r=40),
             height=400,
@@ -1054,9 +1067,7 @@ def driving_tab(drive, num_rounds):
     )
 
     fig_sg_result.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
+        **CHART_LAYOUT,
         xaxis=dict(
             title='Strokes Gained',
             gridcolor='#e8e8e8',
@@ -1103,9 +1114,7 @@ def driving_tab(drive, num_rounds):
     )
 
     fig_trend.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
+        **CHART_LAYOUT,
         legend=dict(
             orientation='h',
             yanchor='bottom',
@@ -1149,7 +1158,7 @@ def driving_tab(drive, num_rounds):
             'Ending Location', 'Penalty', 'Strokes Gained'
         ]].copy()
 
-        detail['Date'] = pd.to_datetime(detail['Date']).dt.strftime('%m/%d/%Y')
+        detail['Date'] = pd.to_datetime(detail['Date']).dt.strftime('%m/%d/%y')
 
         detail.columns = [
             'Player', 'Date', 'Course', 'Hole',
@@ -1171,7 +1180,7 @@ def driving_tab(drive, num_rounds):
         with st.expander(f"⚠️ OB / Re-Tee Instances ({drive['ob_count']} total)"):
 
             ob_df = pd.DataFrame(drive['ob_details'])
-            ob_df['Date'] = pd.to_datetime(ob_df['Date']).dt.strftime('%m/%d/%Y')
+            ob_df['Date'] = pd.to_datetime(ob_df['Date']).dt.strftime('%m/%d/%y')
             ob_df['Hole'] = ob_df['Hole'].astype(int)
 
             st.dataframe(ob_df, use_container_width=True, hide_index=True)
@@ -1186,7 +1195,7 @@ def driving_tab(drive, num_rounds):
                 'Starting Distance', 'Ending Location', 'Strokes Gained'
             ]].copy()
 
-            obs['Date'] = pd.to_datetime(obs['Date']).dt.strftime('%m/%d/%Y')
+            obs['Date'] = pd.to_datetime(obs['Date']).dt.strftime('%m/%d/%y')
 
             obs.columns = [
                 'Player', 'Date', 'Course', 'Hole',
@@ -1232,7 +1241,7 @@ def approach_tab(approach, num_rounds):
                 <div class="hero-stat">
                     <div class="hero-value {val_class}">{m['total_sg']:.2f}</div>
                     <div class="hero-label">{bucket} Yards</div>
-                    <div class="hero-sub">SG/Shot: {m['sg_per_shot']:.3f}</div>
+                    <div class="hero-sub">SG/Shot: {m['sg_per_shot']:.2f}</div>
                     <div class="hero-sub">Proximity: {m['prox']:.1f} ft</div>
                 </div>
                 """,
@@ -1275,21 +1284,18 @@ def approach_tab(approach, num_rounds):
         )
         fig_radar_sg.update_traces(fill='toself')
         fig_radar_sg.update_layout(
+            **CHART_LAYOUT,
             polar=dict(
-                bgcolor="rgba(0,0,0,0)",
+                bgcolor="#ffffff",
                 radialaxis=dict(
                     showgrid=True,
-                    gridcolor="#444",
-                    color="#FFC72C",
+                    gridcolor="#ddd",
+                    color="#333",
                     tickvals=[sg_min, 0, sg_max],
                     ticktext=["", "0.0", ""]
                 ),
-                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+                angularaxis=dict(showgrid=True, gridcolor="#ddd", color="#333")
             ),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font_family="Inter",
-            font_color="#FFC72C",
             height=350
         )
         st.plotly_chart(fig_radar_sg, use_container_width=True)
@@ -1307,21 +1313,18 @@ def approach_tab(approach, num_rounds):
         )
         fig_radar_prox.update_traces(fill='toself')
         fig_radar_prox.update_layout(
+            **CHART_LAYOUT,
             polar=dict(
-                bgcolor="rgba(0,0,0,0)",
+                bgcolor="#ffffff",
                 radialaxis=dict(
                     showgrid=True,
-                    gridcolor="#444",
-                    color="#FFC72C",
+                    gridcolor="#ddd",
+                    color="#333",
                     tickvals=[0, 30, 60],
                     ticktext=["0", "30", "60"]
                 ),
-                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+                angularaxis=dict(showgrid=True, gridcolor="#ddd", color="#333")
             ),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font_family="Inter",
-            font_color="#FFC72C",
             height=350
         )
         st.plotly_chart(fig_radar_prox, use_container_width=True)
@@ -1339,15 +1342,12 @@ def approach_tab(approach, num_rounds):
         )
         fig_radar_gir.update_traces(fill='toself')
         fig_radar_gir.update_layout(
+            **CHART_LAYOUT,
             polar=dict(
-                bgcolor="rgba(0,0,0,0)",
-                radialaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C"),
-                angularaxis=dict(showgrid=True, gridcolor="#444", color="#FFC72C")
+                bgcolor="#ffffff",
+                radialaxis=dict(showgrid=True, gridcolor="#ddd", color="#333"),
+                angularaxis=dict(showgrid=True, gridcolor="#ddd", color="#333")
             ),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font_family="Inter",
-            font_color="#FFC72C",
             height=350
         )
         st.plotly_chart(fig_radar_gir, use_container_width=True)
@@ -1371,9 +1371,7 @@ def approach_tab(approach, num_rounds):
         }
     )
     fig_scatter.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
+        **CHART_LAYOUT,
         height=400
     )
     st.plotly_chart(fig_scatter, use_container_width=True)
@@ -1389,9 +1387,7 @@ def approach_tab(approach, num_rounds):
         aspect='auto'
     )
     fig_heat.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
+        **CHART_LAYOUT,
         height=400
     )
     st.plotly_chart(fig_heat, use_container_width=True)
@@ -1421,9 +1417,7 @@ def approach_tab(approach, num_rounds):
         color_discrete_sequence=[ODU_BLACK]
     )
     fig_trend.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
+        **CHART_LAYOUT,
         xaxis_title='',
         yaxis_title='Strokes Gained',
         height=400
@@ -1563,9 +1557,7 @@ def short_game_tab(sg, num_rounds):
     )
 
     fig_trend.update_layout(
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        font_family="Inter",
+        **CHART_LAYOUT,
         legend=dict(
             orientation="h",
             yanchor="bottom",
@@ -1738,9 +1730,7 @@ def putting_tab(putting, num_rounds):
     )
 
     fig_trend.update_layout(
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        font_family='Inter',
+        **CHART_LAYOUT,
         xaxis_title='',
         yaxis_title='Strokes Gained',
         height=400
