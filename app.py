@@ -24,6 +24,7 @@ from engines.overview import (
     build_tiger5_fail_shots,
     build_shot_detail
 )
+from engines.strokes_gained import BENCHMARK_FILES, apply_benchmark_sg
 
 # ============================================================
 # CONFIG
@@ -436,18 +437,19 @@ def overview_tab(
                                for s in chart_data['Score']],
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family='Inter', size=12),
-                pull=[0.02] * len(chart_data)
+                textfont=dict(family='Inter', size=11),
+                pull=[0.02] * len(chart_data),
+                domain=dict(x=[0.15, 0.85], y=[0.1, 0.9])
             )])
 
             fig_outcomes.update_layout(
                 showlegend=False,
-                margin=dict(t=30, b=30, l=30, r=30),
-                height=380,
+                margin=dict(t=40, b=40, l=60, r=60),
+                height=340,
                 annotations=[dict(
                     text=f'<b>{total_holes}</b><br>Holes',
                     x=0.5, y=0.5,
-                    font=dict(family='Playfair Display', size=22,
+                    font=dict(family='Playfair Display', size=20,
                               color='#000'),
                     showarrow=False
                 )]
@@ -582,20 +584,24 @@ def overview_tab(
         html += ('<table style="width:100%;border-collapse:separate;'
                  'border-spacing:0;font-family:Inter,sans-serif;'
                  'background:#fff;border-radius:12px;overflow:hidden;'
-                 'box-shadow:0 4px 16px rgba(0,0,0,0.08);">')
+                 'box-shadow:0 4px 16px rgba(0,0,0,0.08);'
+                 'table-layout:fixed;">')
 
         # Header row
+        n_cols = len(hole_cols) + 1
+        label_w = '90px'
         html += '<tr>'
-        html += ('<th style="background:#1a1a1a;color:#FFC72C;'
-                 'font-weight:600;font-size:0.75rem;'
-                 'text-transform:uppercase;letter-spacing:0.05em;'
-                 'padding:0.85rem 0.5rem;text-align:left;'
-                 'position:sticky;left:0;z-index:1;">Shot Type</th>')
+        html += (f'<th style="background:#1a1a1a;color:#FFC72C;'
+                 f'font-weight:600;font-size:0.65rem;'
+                 f'text-transform:uppercase;letter-spacing:0.03em;'
+                 f'padding:0.55rem 0.25rem;text-align:left;'
+                 f'width:{label_w};position:sticky;left:0;'
+                 f'z-index:1;">Shot Type</th>')
         for h in hole_cols:
             html += (f'<th style="background:#1a1a1a;color:#FFC72C;'
-                     f'font-weight:600;font-size:0.75rem;'
-                     f'padding:0.85rem 0.4rem;text-align:center;">'
-                     f'{h}</th>')
+                     f'font-weight:600;font-size:0.65rem;'
+                     f'padding:0.55rem 0.15rem;text-align:center;'
+                     f'white-space:nowrap;">{h}</th>')
         html += '</tr>'
 
         # Data rows
@@ -606,20 +612,21 @@ def overview_tab(
             if is_total:
                 row_bg = ('background:linear-gradient(90deg,'
                           '#FFC72C 0%,#e6b327 100%);')
-                label_style = ('font-weight:700;color:#000;'
-                               'font-size:0.9rem;padding:0.9rem 0.5rem;'
-                               'text-align:left;position:sticky;left:0;')
+                label_style = (f'font-weight:700;color:#000;'
+                               f'font-size:0.72rem;padding:0.5rem 0.25rem;'
+                               f'text-align:left;position:sticky;left:0;'
+                               f'width:{label_w};')
                 cell_base = ('font-weight:700;color:#000;'
-                             'font-size:0.9rem;padding:0.9rem 0.4rem;'
+                             'font-size:0.72rem;padding:0.5rem 0.15rem;'
                              'text-align:center;')
             else:
                 row_bg = ''
-                label_style = ('font-weight:500;color:#333;'
-                               'font-size:0.85rem;padding:0.7rem 0.5rem;'
-                               'text-align:left;border-bottom:1px solid '
-                               '#f0f0f0;position:sticky;left:0;'
-                               'background:#fff;')
-                cell_base = ('font-size:0.85rem;padding:0.7rem 0.4rem;'
+                label_style = (f'font-weight:500;color:#333;'
+                               f'font-size:0.72rem;padding:0.4rem 0.25rem;'
+                               f'text-align:left;border-bottom:1px solid '
+                               f'#f0f0f0;position:sticky;left:0;'
+                               f'background:#fff;width:{label_w};')
+                cell_base = ('font-size:0.72rem;padding:0.4rem 0.15rem;'
                              'text-align:center;border-bottom:1px solid '
                              '#f0f0f0;')
 
@@ -1675,6 +1682,16 @@ df = load_data()
 # ---------- SIDEBAR FILTERS ----------
 with st.sidebar:
     st.markdown('<p class="sidebar-title">ODU Golf</p>', unsafe_allow_html=True)
+
+    st.markdown('<p class="sidebar-label">SG Benchmark</p>', unsafe_allow_html=True)
+    benchmark_choice = st.selectbox(
+        "SG Benchmark",
+        options=list(BENCHMARK_FILES.keys()),
+        index=0,
+        label_visibility="collapsed"
+    )
+
+    st.markdown("---")
     st.markdown('<p class="sidebar-label">Filters</p>', unsafe_allow_html=True)
 
     players = st.multiselect(
@@ -1719,6 +1736,9 @@ filtered_df = df[
     (df['Date'].dt.date >= date_range[0]) &
     (df['Date'].dt.date <= date_range[1])
 ].copy()
+
+# ---------- RECALCULATE SG FROM BENCHMARK ----------
+filtered_df = apply_benchmark_sg(filtered_df, benchmark_choice)
 
 num_rounds = filtered_df['Round ID'].nunique()
 
