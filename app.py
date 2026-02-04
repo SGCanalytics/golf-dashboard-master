@@ -24,6 +24,7 @@ from engines.overview import (
     build_tiger5_fail_shots,
     build_shot_detail
 )
+from engines.strokes_gained import BENCHMARK_FILES, apply_benchmark_sg
 
 # ============================================================
 # CONFIG
@@ -1681,6 +1682,16 @@ df = load_data()
 # ---------- SIDEBAR FILTERS ----------
 with st.sidebar:
     st.markdown('<p class="sidebar-title">ODU Golf</p>', unsafe_allow_html=True)
+
+    st.markdown('<p class="sidebar-label">SG Benchmark</p>', unsafe_allow_html=True)
+    benchmark_choice = st.selectbox(
+        "SG Benchmark",
+        options=list(BENCHMARK_FILES.keys()),
+        index=0,
+        label_visibility="collapsed"
+    )
+
+    st.markdown("---")
     st.markdown('<p class="sidebar-label">Filters</p>', unsafe_allow_html=True)
 
     players = st.multiselect(
@@ -1725,6 +1736,9 @@ filtered_df = df[
     (df['Date'].dt.date >= date_range[0]) &
     (df['Date'].dt.date <= date_range[1])
 ].copy()
+
+# ---------- RECALCULATE SG FROM BENCHMARK ----------
+filtered_df = apply_benchmark_sg(filtered_df, benchmark_choice)
 
 num_rounds = filtered_df['Round ID'].nunique()
 
