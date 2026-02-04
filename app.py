@@ -13,7 +13,11 @@ from engines.driving import build_driving_results
 from engines.approach import build_approach_results
 from engines.short_game import build_short_game_results
 from engines.putting import build_putting_results
-from engines.tiger5 import build_tiger5_results
+from engines.tiger5 import (
+    build_tiger5_results,
+    build_tiger5_root_cause,
+    build_tiger5_scoring_impact
+)
 from engines.coachs_corner import build_coachs_corner
 from engines.overview import (
     overview_engine,
@@ -181,29 +185,41 @@ def fmt_pr(count, rounds):
     return f"{count/rounds:.1f}" if rounds > 0 else "-"
 
 # ============================================================
-# TAB: OVERVIEW
+# TAB: TIGER 5
 # ============================================================
 
-def overview_tab(
-    filtered_df,
-    hole_summary,
-    num_rounds,
-    driving_results,
-    approach_results,
-    short_game_results,
-    putting_results,
-    tiger5_results
-):
-    
-    # ------------------------------------------------------------
-    # TIGER 5 SUMMARY (ENGINE-POWERED)
-    # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Tiger 5 Performance</p>', unsafe_allow_html=True)
+def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
 
-    tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
+    tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
+                    'Missed Green', '125yd Bogey']
+
+    # ------------------------------------------------------------
+    # HERO CARD — TOTAL TIGER 5 FAILS
+    # ------------------------------------------------------------
+    fail_color = ODU_RED if total_tiger5_fails > 0 else ODU_GREEN
+    st.markdown(f'''
+        <div style="background:linear-gradient(135deg,#000 0%,#1a1a1a 100%);
+             border-radius:16px;padding:2rem;text-align:center;
+             border:3px solid {fail_color};margin-bottom:1.5rem;">
+            <div style="font-family:Inter;font-size:0.85rem;font-weight:600;
+                 color:{fail_color};text-transform:uppercase;letter-spacing:0.1em;
+                 margin-bottom:0.5rem;">Total Tiger 5 Fails</div>
+            <div style="font-family:Playfair Display,serif;font-size:4rem;
+                 font-weight:700;color:{fail_color};line-height:1;">
+                {total_tiger5_fails}</div>
+            <div style="font-family:Inter;font-size:0.75rem;color:rgba(255,255,255,0.6);
+                 margin-top:0.4rem;">across all filtered rounds</div>
+        </div>
+    ''', unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # TIGER 5 PERFORMANCE CARDS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Tiger 5 Performance</p>',
+                unsafe_allow_html=True)
+
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-    # Tiger 5 Cards
     for col, stat_name in zip([col1, col2, col3, col4, col5], tiger5_names):
         fails = int(tiger5_results[stat_name]['fails'])
         attempts = int(tiger5_results[stat_name]['attempts'])
@@ -218,7 +234,6 @@ def overview_tab(
                 </div>
             ''', unsafe_allow_html=True)
 
-    # Grit Score Card
     with col6:
         grit_score = tiger5_results["grit_score"]
         st.markdown(f'''
@@ -302,6 +317,174 @@ def overview_tab(
 
         if not any_fails:
             st.info("No Tiger 5 fails to display.")
+
+    # ------------------------------------------------------------
+    # ROOT CAUSE ANALYSIS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Root Cause Analysis</p>',
+                unsafe_allow_html=True)
+
+    shot_type_counts, detail_by_type = build_tiger5_root_cause(
+        filtered_df, tiger5_results, hole_summary
+    )
+
+    # 4 shot-type cards
+    rc_cols = st.columns(4)
+    rc_types = ['Driving', 'Approach', 'Short Game', 'Putt']
+    rc_colors = [ODU_GOLD, ODU_BLACK, ODU_GREEN, ODU_PURPLE]
+
+    for col, stype, color in zip(rc_cols, rc_types, rc_colors):
+        count = shot_type_counts.get(stype, 0)
+        pct = (count / total_tiger5_fails * 100) if total_tiger5_fails > 0 else 0
+        with col:
+            st.markdown(f'''
+                <div style="background:#fff;border-radius:12px;padding:1.25rem;
+                     text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);
+                     border-top:4px solid {color};margin-bottom:1rem;">
+                    <div style="font-family:Inter;font-size:0.7rem;font-weight:600;
+                         color:#666;text-transform:uppercase;letter-spacing:0.08em;
+                         margin-bottom:0.5rem;">{stype}</div>
+                    <div style="font-family:Playfair Display,serif;font-size:2.2rem;
+                         font-weight:700;color:{color};line-height:1;">
+                        {count}</div>
+                    <div style="font-family:Inter;font-size:0.65rem;color:#999;
+                         margin-top:0.3rem;">{pct:.0f}% of fails</div>
+                </div>
+            ''', unsafe_allow_html=True)
+
+    # Detailed breakdown by T5 type
+    with st.expander("View Root Cause Breakdown by Fail Type"):
+        for stat_name in tiger5_names:
+            items = detail_by_type.get(stat_name, [])
+            if not items:
+                continue
+            st.markdown(f"#### {stat_name}")
+            if stat_name == '3 Putts':
+                lag = sum(1 for i in items if i['cause'] == 'Poor Lag Putt')
+                short = sum(1 for i in items if i['cause'] == 'Missed Short Putt')
+                other = len(items) - lag - short
+                parts = []
+                if lag:
+                    parts.append(f"Poor Lag Putt (left >5ft): **{lag}**")
+                if short:
+                    parts.append(f"Missed Short Putt (<=5ft): **{short}**")
+                if other:
+                    parts.append(f"Other: **{other}**")
+                for p in parts:
+                    st.markdown(f"- {p}")
+            elif stat_name == '125yd Bogey':
+                cause_counts = {}
+                for i in items:
+                    cause_counts[i['cause']] = cause_counts.get(
+                        i['cause'], 0) + 1
+                for cause, cnt in sorted(cause_counts.items(),
+                                         key=lambda x: -x[1]):
+                    st.markdown(f"- {cause}: **{cnt}**")
+            else:
+                cause_counts = {}
+                for i in items:
+                    cause_counts[i['shot_type']] = cause_counts.get(
+                        i['shot_type'], 0) + 1
+                for stype, cnt in sorted(cause_counts.items(),
+                                         key=lambda x: -x[1]):
+                    st.markdown(f"- {stype}: **{cnt}**")
+
+    # ------------------------------------------------------------
+    # SCORING IMPACT
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Scoring Impact</p>',
+                unsafe_allow_html=True)
+
+    t5_by_round = tiger5_results.get("by_round", pd.DataFrame())
+    impact_df = build_tiger5_scoring_impact(t5_by_round)
+
+    if not impact_df.empty:
+        fig_impact = go.Figure()
+
+        fig_impact.add_trace(go.Bar(
+            x=impact_df['Label'],
+            y=impact_df['Total Score'],
+            name='Actual Score',
+            marker_color=ODU_RED,
+            opacity=0.85
+        ))
+
+        fig_impact.add_trace(go.Bar(
+            x=impact_df['Label'],
+            y=impact_df['Potential Score'],
+            name='Potential Score (50% fewer fails)',
+            marker_color=ODU_GREEN,
+            opacity=0.85
+        ))
+
+        fig_impact.update_layout(
+            barmode='group',
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_family='Inter',
+            xaxis_title='',
+            yaxis_title='Score',
+            height=400,
+            legend=dict(
+                orientation='h', yanchor='bottom', y=1.02,
+                xanchor='right', x=1
+            ),
+            margin=dict(t=60, b=80, l=60, r=40),
+            xaxis=dict(tickangle=-45),
+            hovermode='x unified'
+        )
+
+        st.plotly_chart(fig_impact, use_container_width=True,
+                        config={'displayModeBar': False})
+
+        # Summary stats
+        total_actual = impact_df['Total Score'].sum()
+        total_potential = impact_df['Potential Score'].sum()
+        total_saved = total_actual - total_potential
+        num_rds = len(impact_df)
+        avg_actual = total_actual / num_rds if num_rds > 0 else 0
+        avg_potential = total_potential / num_rds if num_rds > 0 else 0
+
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            st.markdown(f'''
+                <div class="sg-card">
+                    <div class="card-label">Avg Actual Score</div>
+                    <div class="card-value">{avg_actual:.1f}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+        with sc2:
+            st.markdown(f'''
+                <div class="sg-card">
+                    <div class="card-label">Avg Potential Score</div>
+                    <div class="card-value positive">{avg_potential:.1f}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+        with sc3:
+            st.markdown(f'''
+                <div class="sg-card">
+                    <div class="card-label">Total Strokes Saved</div>
+                    <div class="card-value positive">{total_saved:.0f}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.info("No round data available for scoring impact.")
+
+
+# ============================================================
+# TAB: STROKES GAINED (formerly Overview)
+# ============================================================
+
+def strokes_gained_tab(
+    filtered_df,
+    hole_summary,
+    num_rounds,
+    driving_results,
+    approach_results,
+    short_game_results,
+    putting_results,
+    tiger5_results
+):
 
     # ------------------------------------------------------------
     # SG SUMMARY CARDS
@@ -1768,12 +1951,15 @@ coachs_corner_results = build_coachs_corner(
 # TABS
 # ============================================================
 
-tab_overview, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
-    ["Overview", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
+tab_tiger5, tab_sg, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
+    ["Tiger 5", "Strokes Gained", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
 )
 
-with tab_overview:
-    overview_tab(
+with tab_tiger5:
+    tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails)
+
+with tab_sg:
+    strokes_gained_tab(
         filtered_df,
         hole_summary,
         num_rounds,

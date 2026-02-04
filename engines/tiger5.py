@@ -230,3 +230,142 @@ def tiger5_by_round(df, hole_summary):
         )
 
     return t5_df
+
+
+# ============================================================
+# TIGER 5 ROOT CAUSE ANALYSIS
+# ============================================================
+
+def build_tiger5_root_cause(df, tiger5_results, hole_summary):
+    """
+    Analyse every Tiger 5 fail to determine which shot type caused it.
+
+    Returns:
+        shot_type_counts: dict  {'Driving': n, 'Approach': n, ...}
+        detail_by_type:   dict  keyed by T5 category with per-fail breakdown
+    """
+    cat_map = {
+        'Driving': 'Driving',
+        'Approach': 'Approach',
+        'Short Game': 'Short Game',
+        'Putt': 'Putt',
+        'Recovery': 'Short Game',
+        'Other': 'Other'
+    }
+
+    shot_type_counts = {'Driving': 0, 'Approach': 0, 'Short Game': 0, 'Putt': 0}
+    detail_by_type = {}
+
+    tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
+                    'Missed Green', '125yd Bogey']
+
+    for stat_name in tiger5_names:
+        info = tiger5_results.get(stat_name, {})
+        if not isinstance(info, dict) or info.get('fails', 0) == 0:
+            detail_by_type[stat_name] = []
+            continue
+
+        detail_holes = info['detail_holes']
+        items = []
+
+        for _, row in detail_holes.iterrows():
+            rid = row['Round ID']
+            hole = row['Hole']
+            hole_shots = df[(df['Round ID'] == rid) & (df['Hole'] == hole)].copy()
+            if hole_shots.empty:
+                continue
+
+            sg_numeric = pd.to_numeric(hole_shots['Strokes Gained'], errors='coerce')
+            end_dist = pd.to_numeric(hole_shots['Ending Distance'], errors='coerce')
+
+            if stat_name == '3 Putts':
+                putts = hole_shots[hole_shots['Shot Type'] == 'Putt'].copy()
+                putts_sg = pd.to_numeric(putts['Strokes Gained'], errors='coerce')
+                putts_end = pd.to_numeric(putts['Ending Distance'], errors='coerce')
+                if len(putts) >= 2:
+                    first_end = putts_end.iloc[0]
+                    if first_end > 5:
+                        cause = 'Poor Lag Putt'
+                    else:
+                        cause = 'Missed Short Putt'
+                else:
+                    cause = 'Putt'
+                shot_type_counts['Putt'] += 1
+                items.append({'cause': cause, 'shot_type': 'Putt'})
+
+            elif stat_name in ('Double Bogey', 'Par 5 Bogey'):
+                worst_idx = sg_numeric.idxmin()
+                worst_row = hole_shots.loc[worst_idx]
+                raw_type = worst_row['Shot Type']
+                mapped = cat_map.get(raw_type, 'Other')
+                if mapped in shot_type_counts:
+                    shot_type_counts[mapped] += 1
+                items.append({
+                    'cause': f"{mapped} (Shot {int(worst_row['Shot'])})",
+                    'shot_type': mapped,
+                    'sg': float(sg_numeric.loc[worst_idx])
+                })
+
+            elif stat_name == 'Missed Green':
+                sg_shots = hole_shots[hole_shots['Shot Type'] == 'Short Game']
+                shot_type_counts['Short Game'] += 1
+                items.append({'cause': 'Short Game', 'shot_type': 'Short Game'})
+
+            elif stat_name == '125yd Bogey':
+                # Check for three-putt first
+                putts = hole_shots[hole_shots['Shot Type'] == 'Putt']
+                if len(putts) >= 3:
+                    cause = 'Three Putt'
+                    shot_type_counts['Putt'] += 1
+                    items.append({'cause': cause, 'shot_type': 'Putt'})
+                else:
+                    # Find worst SG among approach/short game/putt shots
+                    relevant = hole_shots[
+                        hole_shots['Shot Type'].isin(
+                            ['Approach', 'Short Game', 'Putt', 'Recovery']
+                        )
+                    ]
+                    if not relevant.empty:
+                        rel_sg = pd.to_numeric(
+                            relevant['Strokes Gained'], errors='coerce'
+                        )
+                        worst_idx = rel_sg.idxmin()
+                        raw_type = relevant.loc[worst_idx, 'Shot Type']
+                        mapped = cat_map.get(raw_type, 'Other')
+                        if mapped in shot_type_counts:
+                            shot_type_counts[mapped] += 1
+                        items.append({
+                            'cause': mapped,
+                            'shot_type': mapped,
+                            'sg': float(rel_sg.loc[worst_idx])
+                        })
+
+        detail_by_type[stat_name] = items
+
+    return shot_type_counts, detail_by_type
+
+
+# ============================================================
+# TIGER 5 SCORING IMPACT
+# ============================================================
+
+def build_tiger5_scoring_impact(tiger5_by_round_df):
+    """
+    Compare actual round scores vs potential scores if 50% of T5 fails
+    were eliminated (each eliminated fail = 1 stroke saved).
+
+    Returns:
+        DataFrame with columns: Label, Date, Actual Score, Potential Score,
+                                Total Fails, Fails Removed
+    """
+    if tiger5_by_round_df.empty:
+        return pd.DataFrame()
+
+    t5 = tiger5_by_round_df.copy()
+    t5['Fails Removed'] = (t5['Total Fails'] * 0.5).apply(
+        lambda x: int(round(x))
+    )
+    t5['Potential Score'] = t5['Total Score'] - t5['Fails Removed']
+
+    return t5[['Label', 'Date', 'Total Score', 'Potential Score',
+               'Total Fails', 'Fails Removed']].copy()
