@@ -58,90 +58,44 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif !important; letter-spacing: -0.02em; color: #000 !important; }
+    h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif !important; letter-spacing: -0.02em; }
     p, span, div, label, .stMarkdown { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
     .main-title { font-family: 'Playfair Display', Georgia, serif; font-size: 2.8rem; font-weight: 700; color: #000000; margin-bottom: 0.25rem; }
     .main-subtitle { font-family: 'Inter', sans-serif; font-size: 1rem; color: #666666; font-weight: 400; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 3px solid #FFC72C; }
     .section-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 600; color: #000000; margin: 2.5rem 0 1.5rem 0; padding-bottom: 0.75rem; border-bottom: 2px solid #FFC72C; }
 
-    /* ---------- MAIN CONTENT — dark text on light backgrounds ---------- */
-    section.main p, section.main span, section.main div,
-    section.main label, section.main li { color: #333; }
-    section.main h1, section.main h2, section.main h3,
-    section.main h4, section.main h5 { color: #000 !important; }
-
-    /* ---------- SIDEBAR — light text on dark background ---------- */
-    section[data-testid="stSidebar"] { background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%); }
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] div { color: #e0d6c2 !important; }
-    section[data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] span { color: #000 !important; }
-    section[data-testid="stSidebar"] hr { border-color: #333; }
-    section[data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div,
-    section[data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] > div,
-    section[data-testid="stSidebar"] .stDateInput input { background: #2a2a2a; color: #e0d6c2 !important; border: 1px solid #444; }
-    .sidebar-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; color: #FFC72C !important; margin-bottom: 0.5rem; padding-bottom: 1rem; border-bottom: 1px solid #333; }
-    .sidebar-label { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; color: #D3AF7E !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; margin-top: 1.25rem; }
-
-    /* ---------- TIGER 5 CARDS ---------- */
     .tiger-card-success { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #FFC72C; margin-bottom: 1rem; }
-    .tiger-card-success .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #FFC72C !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .tiger-card-success .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #FFC72C !important; line-height: 1; margin-bottom: 0.25rem; }
-    .tiger-card-success .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,199,44,0.7) !important; text-transform: uppercase; letter-spacing: 0.05em; }
+    .tiger-card-success .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #FFC72C; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .tiger-card-success .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #FFC72C; line-height: 1; margin-bottom: 0.25rem; }
+    .tiger-card-success .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,199,44,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
 
     .tiger-card-fail { background: linear-gradient(135deg, #E03C31 0%, #c93028 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: none; margin-bottom: 1rem; }
-    .tiger-card-fail .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.9) !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .tiger-card-fail .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #ffffff !important; line-height: 1; margin-bottom: 0.25rem; }
-    .tiger-card-fail .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,255,255,0.7) !important; text-transform: uppercase; letter-spacing: 0.05em; }
+    .tiger-card-fail .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .tiger-card-fail .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #ffffff; line-height: 1; margin-bottom: 0.25rem; }
+    .tiger-card-fail .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
 
     .grit-card { background: linear-gradient(135deg, #FFC72C 0%, #e6b327 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: none; margin-bottom: 1rem; }
-    .grit-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(0,0,0,0.7) !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .grit-card .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #000000 !important; line-height: 1; margin-bottom: 0.25rem; }
-    .grit-card .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(0,0,0,0.6) !important; text-transform: uppercase; letter-spacing: 0.05em; }
+    .grit-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(0,0,0,0.7); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .grit-card .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #000000; line-height: 1; margin-bottom: 0.25rem; }
+    .grit-card .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(0,0,0,0.6); text-transform: uppercase; letter-spacing: 0.05em; }
 
-    /* ---------- SG CARDS ---------- */
     .sg-card { background: #ffffff; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8e8e8; margin-bottom: 1rem; }
-    .sg-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666666 !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
-    .sg-card .card-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: #000000 !important; line-height: 1; }
-    .sg-card .card-value.positive { color: #2d6a4f !important; }
-    .sg-card .card-value.negative { color: #E03C31 !important; }
+    .sg-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .sg-card .card-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: #000000; line-height: 1; }
+    .sg-card .card-value.positive { color: #2d6a4f; }
+    .sg-card .card-value.negative { color: #E03C31; }
 
-    /* ---------- DATA TABLES — clean light style ---------- */
+    section[data-testid="stSidebar"] { background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%); }
+    .sidebar-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.4rem; font-weight: 600; color: #FFC72C; margin-bottom: 0.5rem; padding-bottom: 1rem; border-bottom: 1px solid #333; }
+    .sidebar-label { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; color: #D3AF7E; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; margin-top: 1.25rem; }
+
     .stDataFrame th { text-align: center !important; background-color: #f8f6f1 !important; color: #333 !important; font-family: 'Inter', sans-serif !important; font-weight: 600 !important; font-size: 0.8rem !important; border-bottom: 2px solid #FFC72C !important; }
-    .stDataFrame td { text-align: center !important; font-family: 'Inter', sans-serif !important; font-size: 0.85rem !important; color: #333 !important; background-color: #ffffff !important; }
-    [data-testid="stDataFrame"] { background-color: #ffffff !important; }
-    [data-testid="stDataFrame"] div { color: #333 !important; }
-    [data-testid="stDataFrame"] [data-testid="glideDataEditor"] { background-color: #ffffff !important; }
+    .stDataFrame td { text-align: center !important; font-family: 'Inter', sans-serif !important; font-size: 0.85rem !important; }
 
-    /* ---------- EXPANDERS ---------- */
-    [data-testid="stExpander"] summary { background-color: #f8f6f1 !important; border-radius: 8px !important; }
-    [data-testid="stExpander"] summary span { color: #333 !important; font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 0.9rem !important; }
-    [data-testid="stExpander"] summary svg { fill: #333 !important; color: #333 !important; }
-    [data-testid="stExpander"] [data-testid="stExpanderDetails"] { background-color: #ffffff !important; color: #333 !important; }
-    .streamlit-expanderHeader { font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 0.9rem !important; background-color: #f8f6f1 !important; border-radius: 8px !important; }
-    .streamlit-expanderHeader p, .streamlit-expanderHeader span { color: #333 !important; }
-    .streamlit-expanderHeader svg { fill: #333 !important; }
-    details summary span { color: #333 !important; }
-    details[open] summary span { color: #333 !important; }
-
-    /* ---------- CHARTS wrapper ---------- */
+    .streamlit-expanderHeader { font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 0.9rem !important; background-color: #f8f8f8 !important; border-radius: 8px !important; }
     .stPlotlyChart { background: #ffffff; border-radius: 12px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8e8e8; }
 
-    /* ---------- TABS ---------- */
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; background-color: #e8e8e8; border-radius: 8px 8px 0 0; padding: 0 24px; font-family: 'Inter', sans-serif; font-weight: 500; color: #333 !important; }
-    .stTabs [data-baseweb="tab"]:hover { background-color: #ddd; }
-    .stTabs [aria-selected="true"] { background-color: #FFC72C !important; color: #000 !important; font-weight: 600 !important; }
-
-    /* ---------- CHECKBOX / SELECT / METRIC in main content ---------- */
-    section.main .stCheckbox label span { color: #333 !important; }
-    section.main .stSelectbox label span { color: #333 !important; }
-    [data-testid="stMetricLabel"] { color: #555 !important; }
-    [data-testid="stMetricValue"] { color: #000 !important; }
-
-    /* ---------- CUSTOM TABLE (driving, SG pivot) ---------- */
     .par-score-card { background: #ffffff; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; border-left: 4px solid #FFC72C; display: flex; justify-content: space-between; align-items: center; }
     .par-score-card .par-label { font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 500; color: #333; }
     .par-score-card .par-value { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: #000; }
@@ -162,7 +116,6 @@ st.markdown("""
     .driving-table .row-danger td { font-weight: 700; color: #fff; padding: 0.875rem 0.75rem; }
     .driving-table .indent { padding-left: 2rem !important; }
 
-    /* ---------- HERO STAT CARDS ---------- */
     .hero-stat {
         background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
         border-radius: 16px;
@@ -175,7 +128,7 @@ st.markdown("""
         font-family: 'Playfair Display', serif;
         font-size: 2.6rem;
         font-weight: 700;
-        color: #FFC72C !important;
+        color: #FFC72C;
         line-height: 1.1;
         margin-bottom: 0.4rem;
     }
@@ -183,7 +136,7 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
         font-size: 0.85rem;
         font-weight: 600;
-        color: #D3AF7E !important;
+        color: #D3AF7E;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         margin-bottom: 0.3rem;
@@ -191,7 +144,7 @@ st.markdown("""
     .hero-stat .hero-sub {
         font-family: 'Inter', sans-serif;
         font-size: 0.75rem;
-        color: rgba(255,199,44,0.75) !important;
+        color: rgba(255,199,44,0.75);
         margin-top: 0.25rem;
     }
     .hero-stat:hover {
@@ -199,6 +152,12 @@ st.markdown("""
         box-shadow: 0 0 18px rgba(255, 199, 44, 0.45);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] { height: 50px; background-color: #f0f0f0; border-radius: 8px 8px 0 0; padding: 0 24px; font-family: 'Inter', sans-serif; font-weight: 500; color: #333 !important; }
+    .stTabs [data-baseweb="tab"]:hover { background-color: #ddd; }
+    .stTabs [aria-selected="true"] { background-color: #FFC72C !important; color: #000 !important; font-weight: 600 !important; }
 </style>
 """, unsafe_allow_html=True)
 
