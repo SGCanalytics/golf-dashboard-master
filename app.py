@@ -110,9 +110,16 @@ st.markdown("""
 
     /* ---------- DATA TABLES — clean light style ---------- */
     .stDataFrame th { text-align: center !important; background-color: #f8f6f1 !important; color: #333 !important; font-family: 'Inter', sans-serif !important; font-weight: 600 !important; font-size: 0.8rem !important; border-bottom: 2px solid #FFC72C !important; }
-    .stDataFrame td { text-align: center !important; font-family: 'Inter', sans-serif !important; font-size: 0.85rem !important; color: #333 !important; }
+    .stDataFrame td { text-align: center !important; font-family: 'Inter', sans-serif !important; font-size: 0.85rem !important; color: #333 !important; background-color: #ffffff !important; }
+    [data-testid="stDataFrame"] { background-color: #ffffff !important; }
+    [data-testid="stDataFrame"] div { color: #333 !important; }
+    [data-testid="stDataFrame"] [data-testid="glideDataEditor"] { background-color: #ffffff !important; }
 
     /* ---------- EXPANDERS ---------- */
+    [data-testid="stExpander"] summary { background-color: #f8f6f1 !important; border-radius: 8px !important; }
+    [data-testid="stExpander"] summary span { color: #333 !important; font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 0.9rem !important; }
+    [data-testid="stExpander"] summary svg { fill: #333 !important; color: #333 !important; }
+    [data-testid="stExpander"] [data-testid="stExpanderDetails"] { background-color: #ffffff !important; color: #333 !important; }
     .streamlit-expanderHeader { font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 0.9rem !important; background-color: #f8f6f1 !important; border-radius: 8px !important; }
     .streamlit-expanderHeader p, .streamlit-expanderHeader span { color: #333 !important; }
     .streamlit-expanderHeader svg { fill: #333 !important; }
