@@ -84,7 +84,7 @@ def build_short_game_results(filtered_df, num_rounds):
         lambda r: r['Inside8_Count'] / r['Total_Shots'] * 100 if r['Total_Shots'] > 0 else 0, axis=1
     )
     round_trend['Label'] = round_trend.apply(
-        lambda r: f"{r['Date'].strftime('%m/%d')} {r['Course']}", axis=1
+        lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
     )
 
     return {

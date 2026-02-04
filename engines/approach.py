@@ -128,7 +128,7 @@ def build_approach_results(filtered_df, num_rounds):
     round_trend['Date'] = pd.to_datetime(round_trend['Date'])
     round_trend = round_trend.sort_values('Date')
     round_trend['Label'] = round_trend.apply(
-        lambda r: f"{r['Date'].strftime('%m/%d')} {r['Course']}", axis=1
+        lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
     )
 
     return {
