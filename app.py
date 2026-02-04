@@ -159,8 +159,31 @@ st.markdown("""
     
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { height: 50px; background-color: #f0f0f0; border-radius: 8px 8px 0 0; padding: 0 24px; font-family: 'Inter', sans-serif; font-weight: 500; }
-    .stTabs [aria-selected="true"] { background-color: #FFC72C !important; }
+    .stTabs [data-baseweb="tab"] { height: 50px; background-color: #e8e8e8; border-radius: 8px 8px 0 0; padding: 0 24px; font-family: 'Inter', sans-serif; font-weight: 500; color: #333 !important; }
+    .stTabs [data-baseweb="tab"]:hover { background-color: #ddd; }
+    .stTabs [aria-selected="true"] { background-color: #FFC72C !important; color: #000 !important; font-weight: 600 !important; }
+
+    /* Force dark text on light backgrounds globally */
+    .stApp p, .stApp span, .stApp div, .stApp label,
+    .stApp .stMarkdown, .stApp .stText { color: #333; }
+
+    /* Expander styling — ensure dark text */
+    .streamlit-expanderHeader p, .streamlit-expanderHeader span,
+    .streamlit-expanderHeader svg { color: #333 !important; fill: #333 !important; }
+    details summary span { color: #333 !important; }
+    details[open] summary span { color: #333 !important; }
+
+    /* Checkbox and selectbox labels */
+    .stCheckbox label span, .stSelectbox label span,
+    .stMultiSelect label span, .stDateInput label span { color: #333 !important; }
+
+    /* Metric labels */
+    [data-testid="stMetricLabel"] { color: #555 !important; }
+    [data-testid="stMetricValue"] { color: #000 !important; }
+
+    /* Markdown headers inside tabs */
+    .stTabs h1, .stTabs h2, .stTabs h3, .stTabs h4 { color: #000 !important; }
+    .stTabs p, .stTabs li, .stTabs span { color: #333; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -292,33 +315,6 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
             st.info("No data available for Tiger 5 trend.")
 
     # ------------------------------------------------------------
-    # TIGER 5 FAIL DETAILS (shot-level)
-    # ------------------------------------------------------------
-    with st.expander("View Tiger 5 Fail Details"):
-        fail_shots = build_tiger5_fail_shots(filtered_df, tiger5_results)
-        any_fails = False
-
-        for stat_name in tiger5_names:
-            holes = fail_shots.get(stat_name, [])
-            if holes:
-                any_fails = True
-                st.markdown(f"#### {stat_name}")
-                for hole_data in holes:
-                    st.markdown(
-                        f"**{hole_data['date']} &mdash; "
-                        f"{hole_data['course']} &mdash; "
-                        f"Hole {hole_data['hole']}**"
-                    )
-                    st.dataframe(
-                        hole_data['shots'],
-                        use_container_width=True,
-                        hide_index=True
-                    )
-
-        if not any_fails:
-            st.info("No Tiger 5 fails to display.")
-
-    # ------------------------------------------------------------
     # ROOT CAUSE ANALYSIS
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Root Cause Analysis</p>',
@@ -388,6 +384,33 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
                 for stype, cnt in sorted(cause_counts.items(),
                                          key=lambda x: -x[1]):
                     st.markdown(f"- {stype}: **{cnt}**")
+
+    # ------------------------------------------------------------
+    # TIGER 5 FAIL DETAILS (shot-level)
+    # ------------------------------------------------------------
+    with st.expander("View Tiger 5 Fail Details"):
+        fail_shots = build_tiger5_fail_shots(filtered_df, tiger5_results)
+        any_fails = False
+
+        for stat_name in tiger5_names:
+            holes = fail_shots.get(stat_name, [])
+            if holes:
+                any_fails = True
+                st.markdown(f"#### {stat_name}")
+                for hole_data in holes:
+                    st.markdown(
+                        f"**{hole_data['date']} &mdash; "
+                        f"{hole_data['course']} &mdash; "
+                        f"Hole {hole_data['hole']}**"
+                    )
+                    st.dataframe(
+                        hole_data['shots'],
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+        if not any_fails:
+            st.info("No Tiger 5 fails to display.")
 
     # ------------------------------------------------------------
     # SCORING IMPACT
@@ -1875,7 +1898,7 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown('<p class="sidebar-label">Filters</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sidebar-label">Player</p>', unsafe_allow_html=True)
 
     players = st.multiselect(
         "Player",
