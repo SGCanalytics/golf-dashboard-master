@@ -116,6 +116,62 @@ def overview_engine(df, hole_summary, driving_results, approach_results,
 
 
 # ============================================================
+# SG SEPARATORS — GRANULAR BREAKDOWNS
+# ============================================================
+
+def build_sg_separators(df, num_rounds):
+    """Calculate granular SG separator metrics with per-round values."""
+    if df.empty:
+        return []
+
+    start_dist = pd.to_numeric(df['Starting Distance'], errors='coerce')
+
+    def _calc(mask):
+        total = df.loc[mask, 'Strokes Gained'].sum()
+        per_round = total / num_rounds if num_rounds > 0 else 0
+        return total, per_round
+
+    separators = []
+
+    # SG Putting 3-6 Feet
+    m = (df['Shot Type'] == 'Putt') & (start_dist >= 3) & (start_dist <= 6)
+    t, pr = _calc(m)
+    separators.append(('SG Putting 3–6ft', t, pr))
+
+    # SG Putting 25+ Feet
+    m = (df['Shot Type'] == 'Putt') & (start_dist >= 25)
+    t, pr = _calc(m)
+    separators.append(('SG Putting 25+ft', t, pr))
+
+    # SG Approach 100-150 yards
+    m = (df['Shot Type'] == 'Approach') & (start_dist >= 100) & (start_dist <= 150)
+    t, pr = _calc(m)
+    separators.append(('SG Approach 100–150yd', t, pr))
+
+    # SG Approach 150-200 yards
+    m = (df['Shot Type'] == 'Approach') & (start_dist >= 150) & (start_dist <= 200)
+    t, pr = _calc(m)
+    separators.append(('SG Approach 150–200yd', t, pr))
+
+    # SG Approach Rough <150 yards
+    m = (df['Shot Type'] == 'Approach') & (df['Starting Location'] == 'Rough') & (start_dist < 150)
+    t, pr = _calc(m)
+    separators.append(('SG Approach Rough <150yd', t, pr))
+
+    # SG Playable Drives = drives ending in Fairway, Rough, or Sand
+    m = (df['Shot Type'] == 'Driving') & (df['Ending Location'].isin(['Fairway', 'Rough', 'Sand']))
+    t, pr = _calc(m)
+    separators.append(('SG Playable Drives', t, pr))
+
+    # SG Around the Green = Short Game with starting distance <= 25 yards
+    m = (df['Shot Type'] == 'Short Game') & (start_dist <= 25)
+    t, pr = _calc(m)
+    separators.append(('SG Around the Green', t, pr))
+
+    return separators
+
+
+# ============================================================
 # SG TREND BY ROUND
 # ============================================================
 
@@ -255,11 +311,20 @@ def build_sg_by_hole_pivot(df):
     total_row.name = 'Total SG'
     pivot_table = pd.concat([pivot_table, total_row.to_frame().T])
 
+    # Add Total column (sum across all holes for each row)
+    pivot_table['Total'] = pivot_table.sum(axis=1)
+
     pivot_table = pivot_table.round(2)
 
     # Clean up for display
     pivot_table.index.name = 'Shot Type'
-    pivot_table.columns = [int(c) for c in pivot_table.columns]
+    new_cols = []
+    for c in pivot_table.columns:
+        try:
+            new_cols.append(int(c))
+        except (ValueError, TypeError):
+            new_cols.append(c)
+    pivot_table.columns = new_cols
     pivot_table = pivot_table.reset_index()
 
     return pivot_table

@@ -21,6 +21,7 @@ from engines.tiger5 import (
 from engines.coachs_corner import build_coachs_corner
 from engines.overview import (
     overview_engine,
+    build_sg_separators,
     build_sg_trend,
     build_scoring_by_par,
     build_hole_outcomes,
@@ -486,49 +487,195 @@ def strokes_gained_tab(
     tiger5_results
 ):
 
-    # ------------------------------------------------------------
-    # SG SUMMARY CARDS
-    # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Strokes Gained Summary</p>', unsafe_allow_html=True)
-
-    # Replace inline SG logic with overview engine output
     overview = overview_engine(
-        filtered_df,
-        hole_summary,
-        driving_results,
-        approach_results,
-        short_game_results,
-        putting_results,
+        filtered_df, hole_summary, driving_results,
+        approach_results, short_game_results, putting_results,
         tiger5_results
     )
 
     total_sg = overview["total_sg"]
-    sg_per_round = overview["sg_per_round"]
-    sg_tee_to_green = overview["sg_tee_to_green"]
-    sg_putts_over_30 = overview["sg_putts_over_30"]
-    sg_putts_5_10 = overview["sg_putts_5_10"]
+    sg_cat = overview.get("sg_by_category", {})
 
-    metrics = [
-        ('Total SG', total_sg),
-        ('SG / Round', sg_per_round),
-        ('SG Tee to Green', sg_tee_to_green),
-        ('SG Putting >30ft', sg_putts_over_30),
-        ('SG Putts 5–10ft', sg_putts_5_10)
+    # ------------------------------------------------------------
+    # 1. SG SUMMARY CARDS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Strokes Gained Summary</p>',
+                unsafe_allow_html=True)
+
+    sg_drive = sg_cat.get('Driving', 0)
+    sg_approach = sg_cat.get('Approach', 0)
+    sg_putting = sg_cat.get('Putting', 0)
+    sg_short = sg_cat.get('Short Game', 0)
+
+    summary_metrics = [
+        ('SG Total', total_sg),
+        ('SG Drive', sg_drive),
+        ('SG Approach', sg_approach),
+        ('SG Putting', sg_putting),
+        ('SG Short Game', sg_short),
     ]
 
-    col1, col2, col3, col4, col5 = st.columns(5)
-    for col, (label, val) in zip([col1, col2, col3, col4, col5], metrics):
+    cols = st.columns(5)
+    for col, (label, val) in zip(cols, summary_metrics):
+        pr = val / num_rounds if num_rounds > 0 else 0
+        val_class = sg_value_class(val)
         with col:
-            val_class = sg_value_class(val)
             st.markdown(f"""
                 <div class="sg-card">
                     <div class="card-label">{label}</div>
-                    <div class="card-value {val_class}">{val:.2f}</div>
+                    <div class="card-value {val_class}">{val:+.2f}</div>
+                    <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                         margin-top:0.3rem;">{pr:+.2f} per round</div>
                 </div>
             """, unsafe_allow_html=True)
 
     # ------------------------------------------------------------
-    # SG TREND BY ROUND (Feature 3)
+    # 2. SG SEPARATORS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Strokes Gained Separators</p>',
+                unsafe_allow_html=True)
+
+    separators = build_sg_separators(filtered_df, num_rounds)
+
+    if separators:
+        # Row 1: first 4 cards
+        row1 = st.columns(4)
+        for col, (label, val, pr) in zip(row1, separators[:4]):
+            val_class = sg_value_class(val)
+            with col:
+                st.markdown(f"""
+                    <div class="sg-card">
+                        <div class="card-label">{label}</div>
+                        <div class="card-value {val_class}">{val:+.2f}</div>
+                        <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                             margin-top:0.3rem;">{pr:+.2f} per round</div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+        # Row 2: remaining 3 cards
+        row2 = st.columns(4)
+        for col, (label, val, pr) in zip(row2, separators[4:]):
+            val_class = sg_value_class(val)
+            with col:
+                st.markdown(f"""
+                    <div class="sg-card">
+                        <div class="card-label">{label}</div>
+                        <div class="card-value {val_class}">{val:+.2f}</div>
+                        <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                             margin-top:0.3rem;">{pr:+.2f} per round</div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # 3. HOLE-BY-HOLE SG PIVOT (with Total column)
+    # ------------------------------------------------------------
+    st.markdown(
+        '<p class="section-title">Hole-by-Hole Strokes Gained</p>',
+        unsafe_allow_html=True
+    )
+
+    sg_pivot = build_sg_by_hole_pivot(filtered_df)
+
+    if not sg_pivot.empty:
+        hole_cols = [c for c in sg_pivot.columns if c != 'Shot Type']
+
+        def _sg_cell_style(val):
+            """Return inline CSS for conditional SG colouring."""
+            try:
+                v = float(val)
+            except (ValueError, TypeError):
+                return ''
+            if v > 0.25:
+                return 'background:#d4edda;color:#155724;font-weight:600;'
+            if v > 0:
+                return 'background:#e8f5e9;color:#2d6a4f;'
+            if v < -0.25:
+                return 'background:#f8d7da;color:#721c24;font-weight:600;'
+            if v < 0:
+                return 'background:#fce4ec;color:#E03C31;'
+            return 'color:#888;'
+
+        # Build HTML table
+        html = '<div style="overflow-x:auto;">'
+        html += ('<table style="width:100%;border-collapse:separate;'
+                 'border-spacing:0;font-family:Inter,sans-serif;'
+                 'background:#fff;border-radius:12px;overflow:hidden;'
+                 'box-shadow:0 4px 16px rgba(0,0,0,0.08);'
+                 'table-layout:fixed;">')
+
+        # Header row
+        label_w = '90px'
+        html += '<tr>'
+        html += (f'<th style="background:#f8f6f1;color:#333;'
+                 f'font-weight:600;font-size:0.65rem;'
+                 f'text-transform:uppercase;letter-spacing:0.03em;'
+                 f'padding:0.55rem 0.25rem;text-align:left;'
+                 f'border-bottom:2px solid #FFC72C;'
+                 f'width:{label_w};position:sticky;left:0;'
+                 f'z-index:1;">Shot Type</th>')
+        for h in hole_cols:
+            is_total_col = (str(h) == 'Total')
+            th_extra = 'border-left:2px solid #FFC72C;font-weight:700;' if is_total_col else ''
+            html += (f'<th style="background:#f8f6f1;color:#333;'
+                     f'font-weight:600;font-size:0.65rem;'
+                     f'border-bottom:2px solid #FFC72C;'
+                     f'padding:0.55rem 0.15rem;text-align:center;'
+                     f'white-space:nowrap;{th_extra}">{h}</th>')
+        html += '</tr>'
+
+        # Data rows
+        for idx, row in sg_pivot.iterrows():
+            shot_type = row['Shot Type']
+            is_total_row = (shot_type == 'Total SG')
+
+            if is_total_row:
+                row_bg = ('background:linear-gradient(90deg,'
+                          '#FFC72C 0%,#e6b327 100%);')
+                label_style = (f'font-weight:700;color:#000;'
+                               f'font-size:0.72rem;padding:0.5rem 0.25rem;'
+                               f'text-align:left;position:sticky;left:0;'
+                               f'width:{label_w};')
+                cell_base = ('font-weight:700;color:#000;'
+                             'font-size:0.72rem;padding:0.5rem 0.15rem;'
+                             'text-align:center;')
+            else:
+                row_bg = ''
+                label_style = (f'font-weight:500;color:#333;'
+                               f'font-size:0.72rem;padding:0.4rem 0.25rem;'
+                               f'text-align:left;border-bottom:1px solid '
+                               f'#f0f0f0;position:sticky;left:0;'
+                               f'background:#fff;width:{label_w};')
+                cell_base = ('font-size:0.72rem;padding:0.4rem 0.15rem;'
+                             'text-align:center;border-bottom:1px solid '
+                             '#f0f0f0;')
+
+            html += f'<tr style="{row_bg}">'
+            html += f'<td style="{label_style}">{shot_type}</td>'
+
+            for h in hole_cols:
+                val = row[h]
+                is_total_col = (str(h) == 'Total')
+                border_left = 'border-left:2px solid #FFC72C;' if is_total_col else ''
+
+                if is_total_row:
+                    cond = _sg_cell_style(val)
+                    style = cell_base + cond + border_left
+                else:
+                    style = cell_base + _sg_cell_style(val) + border_left
+                    if is_total_col:
+                        style += 'font-weight:600;'
+                display = f'{val:+.2f}' if val != 0 else '0.00'
+                html += f'<td style="{style}">{display}</td>'
+
+            html += '</tr>'
+
+        html += '</table></div>'
+        st.markdown(html, unsafe_allow_html=True)
+    else:
+        st.info("No hole-by-hole data available.")
+
+    # ------------------------------------------------------------
+    # 4. SG TREND BY ROUND
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Strokes Gained Trend</p>',
                 unsafe_allow_html=True)
@@ -585,7 +732,7 @@ def strokes_gained_tab(
         st.info("No data available for SG trend.")
 
     # ------------------------------------------------------------
-    # SCORING & HOLE OUTCOMES (Feature 4 — donut + cards)
+    # 5. SCORING & HOLE OUTCOMES (donut + cards)
     # ------------------------------------------------------------
     st.markdown(
         '<p class="section-title">Scoring &amp; Hole Outcomes</p>',
@@ -595,7 +742,7 @@ def strokes_gained_tab(
     outcomes = build_hole_outcomes(hole_summary)
     scoring_par = build_scoring_by_par(hole_summary)
 
-    col_donut, col_cards = st.columns([1, 1])
+    col_donut, col_cards = st.columns([3, 2])
 
     # ---- LEFT: Donut chart of hole outcomes ----
     with col_donut:
@@ -618,20 +765,20 @@ def strokes_gained_tab(
                                for s in chart_data['Score']],
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family='Inter', size=11),
+                textfont=dict(family='Inter', size=12),
                 pull=[0.02] * len(chart_data),
-                domain=dict(x=[0.15, 0.85], y=[0.1, 0.9])
+                domain=dict(x=[0.1, 0.9], y=[0.05, 0.95])
             )])
 
             fig_outcomes.update_layout(
                 **CHART_LAYOUT,
                 showlegend=False,
-                margin=dict(t=40, b=40, l=60, r=60),
-                height=340,
+                margin=dict(t=30, b=30, l=40, r=40),
+                height=420,
                 annotations=[dict(
                     text=f'<b>{total_holes}</b><br>Holes',
                     x=0.5, y=0.5,
-                    font=dict(family='Playfair Display', size=20,
+                    font=dict(family='Playfair Display', size=22,
                               color='#000'),
                     showarrow=False
                 )]
@@ -733,109 +880,7 @@ def strokes_gained_tab(
             st.info("No scoring data available.")
 
     # ------------------------------------------------------------
-    # HOLE-BY-HOLE SG PIVOT (Feature 5 — styled HTML)
-    # ------------------------------------------------------------
-    st.markdown(
-        '<p class="section-title">Hole-by-Hole Strokes Gained</p>',
-        unsafe_allow_html=True
-    )
-
-    sg_pivot = build_sg_by_hole_pivot(filtered_df)
-
-    if not sg_pivot.empty:
-        hole_cols = [c for c in sg_pivot.columns if c != 'Shot Type']
-
-        def _sg_cell_style(val):
-            """Return inline CSS for conditional SG colouring."""
-            try:
-                v = float(val)
-            except (ValueError, TypeError):
-                return ''
-            if v > 0.25:
-                return 'background:#d4edda;color:#155724;font-weight:600;'
-            if v > 0:
-                return 'background:#e8f5e9;color:#2d6a4f;'
-            if v < -0.25:
-                return 'background:#f8d7da;color:#721c24;font-weight:600;'
-            if v < 0:
-                return 'background:#fce4ec;color:#E03C31;'
-            return 'color:#888;'
-
-        # Build HTML table
-        html = '<div style="overflow-x:auto;">'
-        html += ('<table style="width:100%;border-collapse:separate;'
-                 'border-spacing:0;font-family:Inter,sans-serif;'
-                 'background:#fff;border-radius:12px;overflow:hidden;'
-                 'box-shadow:0 4px 16px rgba(0,0,0,0.08);'
-                 'table-layout:fixed;">')
-
-        # Header row
-        n_cols = len(hole_cols) + 1
-        label_w = '90px'
-        html += '<tr>'
-        html += (f'<th style="background:#f8f6f1;color:#333;'
-                 f'font-weight:600;font-size:0.65rem;'
-                 f'text-transform:uppercase;letter-spacing:0.03em;'
-                 f'padding:0.55rem 0.25rem;text-align:left;'
-                 f'border-bottom:2px solid #FFC72C;'
-                 f'width:{label_w};position:sticky;left:0;'
-                 f'z-index:1;">Shot Type</th>')
-        for h in hole_cols:
-            html += (f'<th style="background:#f8f6f1;color:#333;'
-                     f'font-weight:600;font-size:0.65rem;'
-                     f'border-bottom:2px solid #FFC72C;'
-                     f'padding:0.55rem 0.15rem;text-align:center;'
-                     f'white-space:nowrap;">{h}</th>')
-        html += '</tr>'
-
-        # Data rows
-        for idx, row in sg_pivot.iterrows():
-            shot_type = row['Shot Type']
-            is_total = (shot_type == 'Total SG')
-
-            if is_total:
-                row_bg = ('background:linear-gradient(90deg,'
-                          '#FFC72C 0%,#e6b327 100%);')
-                label_style = (f'font-weight:700;color:#000;'
-                               f'font-size:0.72rem;padding:0.5rem 0.25rem;'
-                               f'text-align:left;position:sticky;left:0;'
-                               f'width:{label_w};')
-                cell_base = ('font-weight:700;color:#000;'
-                             'font-size:0.72rem;padding:0.5rem 0.15rem;'
-                             'text-align:center;')
-            else:
-                row_bg = ''
-                label_style = (f'font-weight:500;color:#333;'
-                               f'font-size:0.72rem;padding:0.4rem 0.25rem;'
-                               f'text-align:left;border-bottom:1px solid '
-                               f'#f0f0f0;position:sticky;left:0;'
-                               f'background:#fff;width:{label_w};')
-                cell_base = ('font-size:0.72rem;padding:0.4rem 0.15rem;'
-                             'text-align:center;border-bottom:1px solid '
-                             '#f0f0f0;')
-
-            html += f'<tr style="{row_bg}">'
-            html += f'<td style="{label_style}">{shot_type}</td>'
-
-            for h in hole_cols:
-                val = row[h]
-                if is_total:
-                    cond = _sg_cell_style(val)
-                    style = cell_base + cond
-                else:
-                    style = cell_base + _sg_cell_style(val)
-                display = f'{val:+.2f}' if val != 0 else '0.00'
-                html += f'<td style="{style}">{display}</td>'
-
-            html += '</tr>'
-
-        html += '</table></div>'
-        st.markdown(html, unsafe_allow_html=True)
-    else:
-        st.info("No hole-by-hole data available.")
-
-    # ------------------------------------------------------------
-    # SHOT LEVEL DETAIL (Feature 6)
+    # SHOT LEVEL DETAIL
     # ------------------------------------------------------------
     with st.expander("View Shot Level Detail"):
         shot_detail = build_shot_detail(filtered_df)
