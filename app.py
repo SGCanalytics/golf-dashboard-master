@@ -518,14 +518,13 @@ def strokes_gained_tab(
     cols = st.columns(5)
     for col, (label, val) in zip(cols, summary_metrics):
         pr = val / num_rounds if num_rounds > 0 else 0
-        val_class = sg_value_class(val)
+        card_class = "tiger-card-fail" if val < 0 else "tiger-card-success"
         with col:
             st.markdown(f"""
-                <div class="sg-card">
+                <div class="{card_class}">
                     <div class="card-label">{label}</div>
-                    <div class="card-value {val_class}">{val:+.2f}</div>
-                    <div style="font-family:Inter;font-size:0.7rem;color:#888;
-                         margin-top:0.3rem;">{pr:+.2f} per round</div>
+                    <div class="card-value">{val:+.2f}</div>
+                    <div class="card-unit">{pr:+.2f} per round</div>
                 </div>
             """, unsafe_allow_html=True)
 
@@ -541,28 +540,26 @@ def strokes_gained_tab(
         # Row 1: first 4 cards
         row1 = st.columns(4)
         for col, (label, val, pr) in zip(row1, separators[:4]):
-            val_class = sg_value_class(val)
+            card_class = "tiger-card-fail" if val < 0 else "tiger-card-success"
             with col:
                 st.markdown(f"""
-                    <div class="sg-card">
+                    <div class="{card_class}">
                         <div class="card-label">{label}</div>
-                        <div class="card-value {val_class}">{val:+.2f}</div>
-                        <div style="font-family:Inter;font-size:0.7rem;color:#888;
-                             margin-top:0.3rem;">{pr:+.2f} per round</div>
+                        <div class="card-value">{val:+.2f}</div>
+                        <div class="card-unit">{pr:+.2f} per round</div>
                     </div>
                 """, unsafe_allow_html=True)
 
         # Row 2: remaining 3 cards
         row2 = st.columns(4)
         for col, (label, val, pr) in zip(row2, separators[4:]):
-            val_class = sg_value_class(val)
+            card_class = "tiger-card-fail" if val < 0 else "tiger-card-success"
             with col:
                 st.markdown(f"""
-                    <div class="sg-card">
+                    <div class="{card_class}">
                         <div class="card-label">{label}</div>
-                        <div class="card-value {val_class}">{val:+.2f}</div>
-                        <div style="font-family:Inter;font-size:0.7rem;color:#888;
-                             margin-top:0.3rem;">{pr:+.2f} per round</div>
+                        <div class="card-value">{val:+.2f}</div>
+                        <div class="card-unit">{pr:+.2f} per round</div>
                     </div>
                 """, unsafe_allow_html=True)
 
