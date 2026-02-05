@@ -1402,7 +1402,7 @@ def approach_tab(approach, num_rounds):
     st.markdown('<p class="section-title">Approach Play</p>', unsafe_allow_html=True)
 
     # ------------------------------------------------------------
-    # SECTION 1: HERO CARDS
+    # SECTION 1: HERO CARDS  (Tiger 5 card style)
     # ------------------------------------------------------------
     total_sg = approach["total_sg"]
     sg_per_round = approach["sg_per_round"]
@@ -1411,66 +1411,34 @@ def approach_tab(approach, num_rounds):
     pos_rate = approach["positive_shot_rate"]
     poor_rate = approach["poor_shot_rate"]
 
-    sg_color = '#2d6a4f' if total_sg >= 0 else '#E03C31'
-    fw_color = '#2d6a4f' if sg_fairway >= 0 else '#E03C31'
-    rgh_color = '#2d6a4f' if sg_rough >= 0 else '#E03C31'
-    pos_color = '#2d6a4f' if pos_rate >= 50 else '#E03C31'
-    poor_color = '#E03C31' if poor_rate > 20 else '#FFC72C'
+    hero_items = [
+        ("Total SG Approach", f"{total_sg:+.2f}", f"{sg_per_round:+.2f} per round",
+         total_sg >= 0),
+        ("SG App Fairway", f"{sg_fairway:+.2f}", "Starting Lie: Fairway",
+         sg_fairway >= 0),
+        ("SG App Rough", f"{sg_rough:+.2f}", "Starting Lie: Rough",
+         sg_rough >= 0),
+        ("Positive Shot Rate", f"{pos_rate:.0f}%", "Shots with SG \u2265 0.00",
+         pos_rate >= 50),
+        ("Poor Shot Rate", f"{poor_rate:.0f}%", "Shots with SG \u2264 -0.15",
+         poor_rate <= 20),
+    ]
 
-    h1, h2, h3, h4, h5 = st.columns(5)
-
-    with h1:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {sg_color};">
-                <div class="hero-label">Total SG Approach</div>
-                <div class="hero-value" style="color: {sg_color};">{total_sg:+.2f}</div>
-                <div class="hero-sub">{sg_per_round:+.2f} per round</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    with h2:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {fw_color};">
-                <div class="hero-label">SG App Fairway</div>
-                <div class="hero-value" style="color: {fw_color};">{sg_fairway:+.2f}</div>
-                <div class="hero-sub">Starting Lie: Fairway</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    with h3:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {rgh_color};">
-                <div class="hero-label">SG App Rough</div>
-                <div class="hero-value" style="color: {rgh_color};">{sg_rough:+.2f}</div>
-                <div class="hero-sub">Starting Lie: Rough</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    with h4:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {pos_color};">
-                <div class="hero-label">Positive Shot Rate</div>
-                <div class="hero-value" style="color: {pos_color};">{pos_rate:.0f}%</div>
-                <div class="hero-sub">Shots with SG &ge; 0.00</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    with h5:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {poor_color};">
-                <div class="hero-label">Poor Shot Rate</div>
-                <div class="hero-value" style="color: {poor_color};">{poor_rate:.0f}%</div>
-                <div class="hero-sub">Shots with SG &le; -0.15</div>
-            </div>
-            """, unsafe_allow_html=True)
+    h_cols = st.columns(5)
+    for col, (label, value, unit, is_good) in zip(h_cols, hero_items):
+        card_cls = "tiger-card-success" if is_good else "tiger-card-fail"
+        with col:
+            st.markdown(
+                f"""
+                <div class="{card_cls}">
+                    <div class="card-label">{label}</div>
+                    <div class="card-value">{value}</div>
+                    <div class="card-unit">{unit}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
     # ------------------------------------------------------------
-    # SECTION 2: APPROACH PERFORMANCE BY DISTANCE
+    # SECTION 2: APPROACH PERFORMANCE BY DISTANCE  (SG separator style)
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Approach Performance by Distance</p>', unsafe_allow_html=True)
 
@@ -1491,24 +1459,23 @@ def approach_tab(approach, num_rounds):
     for col, bucket in zip(ft_cols, ft_buckets):
         m = approach["fairway_tee_metrics"][bucket]
         card_key = f"FT|{bucket}"
+        val_class = sg_value_class(m["total_sg"])
 
         if card_key == best_key:
-            border = '#2d6a4f'
+            border_style = "border: 2px solid #2d6a4f;"
         elif card_key == worst_key:
-            border = '#E03C31'
+            border_style = "border: 2px solid #E03C31;"
         else:
-            border = '#FFC72C'
-
-        val_color = '#2d6a4f' if m["sg_per_shot"] > 0 else '#E03C31' if m["sg_per_shot"] < 0 else '#FFC72C'
+            border_style = ""
 
         with col:
             st.markdown(
                 f"""
-                <div class="hero-stat" style="border-color: {border};">
-                    <div class="hero-value" style="color: {val_color};">{m['sg_per_shot']:+.3f}</div>
-                    <div class="hero-label">{bucket} Yards</div>
-                    <div class="hero-sub">Total SG: {m['total_sg']:+.2f} &middot; {m['shots']} shots</div>
-                    <div class="hero-sub">Proximity: {m['prox']:.1f} ft &middot; GIR: {m['green_hit_pct']:.0f}%</div>
+                <div class="sg-card" style="{border_style}">
+                    <div class="card-label">{bucket} Yards</div>
+                    <div class="card-value {val_class}">{m['total_sg']:+.2f}</div>
+                    <div style="font-family:Inter;font-size:0.7rem;color:#888;margin-top:0.3rem;">
+                        {m['shots']} shots &middot; Prox: {m['prox']:.1f} ft &middot; GIR: {m['green_hit_pct']:.0f}%</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1526,37 +1493,36 @@ def approach_tab(approach, num_rounds):
     for col, rb in zip(r_cols[:2], rough_buckets):
         m = approach["rough_metrics"][rb]
         card_key = f"R|{rb}"
+        val_class = sg_value_class(m["total_sg"])
 
         if card_key == best_key:
-            border = '#2d6a4f'
+            border_style = "border: 2px solid #2d6a4f;"
         elif card_key == worst_key:
-            border = '#E03C31'
+            border_style = "border: 2px solid #E03C31;"
         else:
-            border = '#FFC72C'
-
-        val_color = '#2d6a4f' if m["sg_per_shot"] > 0 else '#E03C31' if m["sg_per_shot"] < 0 else '#FFC72C'
+            border_style = ""
 
         with col:
             st.markdown(
                 f"""
-                <div class="hero-stat" style="border-color: {border};">
-                    <div class="hero-value" style="color: {val_color};">{m['sg_per_shot']:+.3f}</div>
-                    <div class="hero-label">{rb} Yards</div>
-                    <div class="hero-sub">Total SG: {m['total_sg']:+.2f} &middot; {m['shots']} shots</div>
-                    <div class="hero-sub">Proximity: {m['prox']:.1f} ft &middot; GIR: {m['green_hit_pct']:.0f}%</div>
+                <div class="sg-card" style="{border_style}">
+                    <div class="card-label">{rb} Yards</div>
+                    <div class="card-value {val_class}">{m['total_sg']:+.2f}</div>
+                    <div style="font-family:Inter;font-size:0.7rem;color:#888;margin-top:0.3rem;">
+                        {m['shots']} shots &middot; Prox: {m['prox']:.1f} ft &middot; GIR: {m['green_hit_pct']:.0f}%</div>
                 </div>
                 """, unsafe_allow_html=True)
 
     # Best / worst legend
     st.markdown(
         '<p style="font-family: Inter, sans-serif; font-size: 0.7rem; color: #999; margin-top: 0.5rem;">'
-        '<span style="color: #2d6a4f;">&FilledSmallSquare;</span> Best SG/Shot &nbsp;&nbsp;'
-        '<span style="color: #E03C31;">&FilledSmallSquare;</span> Worst SG/Shot</p>',
+        '<span style="color: #2d6a4f;">\u25aa</span> Best Total SG &nbsp;&nbsp;'
+        '<span style="color: #E03C31;">\u25aa</span> Worst Total SG</p>',
         unsafe_allow_html=True
     )
 
     # ------------------------------------------------------------
-    # SECTION 3: APPROACH PROFILE (horizontal bar charts)
+    # SECTION 3: APPROACH PROFILE (stacked horizontal bar charts)
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Approach Profile</p>', unsafe_allow_html=True)
 
@@ -1566,73 +1532,70 @@ def approach_tab(approach, num_rounds):
         profile_df['Label'] = profile_df.apply(
             lambda r: f"{r['Group']}: {r['Category']}", axis=1
         )
-        # Preserve category order
         label_order = profile_df['Label'].tolist()
 
-        col_gir, col_sg, col_prox = st.columns(3)
+        # --- Green Hit % ---
+        fig_gir = go.Figure(go.Bar(
+            y=profile_df['Label'],
+            x=profile_df['Green Hit %'],
+            orientation='h',
+            marker_color=[ODU_GOLD if g == 'Fairway / Tee' else ODU_RED
+                          for g in profile_df['Group']],
+            text=profile_df['Green Hit %'].apply(lambda v: f"{v:.0f}%"),
+            textposition='outside',
+            textfont=dict(family='Inter', size=12, color='#333'),
+        ))
+        fig_gir.update_layout(
+            **CHART_LAYOUT,
+            title=dict(text='Green Hit %', font=dict(size=14)),
+            yaxis=dict(categoryorder='array', categoryarray=label_order[::-1]),
+            xaxis=dict(title='', showticklabels=False),
+            margin=dict(t=40, b=20, l=160, r=60),
+            height=280,
+        )
+        st.plotly_chart(fig_gir, use_container_width=True)
 
-        with col_gir:
-            fig_gir = go.Figure(go.Bar(
-                y=profile_df['Label'],
-                x=profile_df['Green Hit %'],
-                orientation='h',
-                marker_color=[ODU_GOLD if g == 'Fairway / Tee' else ODU_RED
-                              for g in profile_df['Group']],
-                text=profile_df['Green Hit %'].apply(lambda v: f"{v:.0f}%"),
-                textposition='outside',
-                textfont=dict(family='Inter', size=11, color='#333'),
-            ))
-            fig_gir.update_layout(
-                **CHART_LAYOUT,
-                title=dict(text='Green Hit %', font=dict(size=14)),
-                yaxis=dict(categoryorder='array', categoryarray=label_order[::-1]),
-                xaxis=dict(title='', showticklabels=False),
-                margin=dict(t=40, b=20, l=140, r=50),
-                height=350,
-            )
-            st.plotly_chart(fig_gir, use_container_width=True)
+        # --- Total SG ---
+        bar_colors = [ODU_GREEN if v >= 0 else ODU_RED for v in profile_df['Total SG']]
+        fig_sg = go.Figure(go.Bar(
+            y=profile_df['Label'],
+            x=profile_df['Total SG'],
+            orientation='h',
+            marker_color=bar_colors,
+            text=profile_df['Total SG'].apply(lambda v: f"{v:+.2f}"),
+            textposition='outside',
+            textfont=dict(family='Inter', size=12, color='#333'),
+        ))
+        fig_sg.update_layout(
+            **CHART_LAYOUT,
+            title=dict(text='Total SG', font=dict(size=14)),
+            yaxis=dict(categoryorder='array', categoryarray=label_order[::-1]),
+            xaxis=dict(title='', showticklabels=False),
+            margin=dict(t=40, b=20, l=160, r=60),
+            height=280,
+        )
+        st.plotly_chart(fig_sg, use_container_width=True)
 
-        with col_sg:
-            bar_colors = [ODU_GREEN if v >= 0 else ODU_RED for v in profile_df['Total SG']]
-            fig_sg = go.Figure(go.Bar(
-                y=profile_df['Label'],
-                x=profile_df['Total SG'],
-                orientation='h',
-                marker_color=bar_colors,
-                text=profile_df['Total SG'].apply(lambda v: f"{v:+.2f}"),
-                textposition='outside',
-                textfont=dict(family='Inter', size=11, color='#333'),
-            ))
-            fig_sg.update_layout(
-                **CHART_LAYOUT,
-                title=dict(text='Total SG', font=dict(size=14)),
-                yaxis=dict(categoryorder='array', categoryarray=label_order[::-1]),
-                xaxis=dict(title='', showticklabels=False),
-                margin=dict(t=40, b=20, l=140, r=50),
-                height=350,
-            )
-            st.plotly_chart(fig_sg, use_container_width=True)
-
-        with col_prox:
-            fig_prox = go.Figure(go.Bar(
-                y=profile_df['Label'],
-                x=profile_df['Proximity'],
-                orientation='h',
-                marker_color=[ODU_GOLD if g == 'Fairway / Tee' else ODU_RED
-                              for g in profile_df['Group']],
-                text=profile_df['Proximity'].apply(lambda v: f"{v:.1f} ft"),
-                textposition='outside',
-                textfont=dict(family='Inter', size=11, color='#333'),
-            ))
-            fig_prox.update_layout(
-                **CHART_LAYOUT,
-                title=dict(text='Proximity (ft)', font=dict(size=14)),
-                yaxis=dict(categoryorder='array', categoryarray=label_order[::-1]),
-                xaxis=dict(title='', showticklabels=False),
-                margin=dict(t=40, b=20, l=140, r=50),
-                height=350,
-            )
-            st.plotly_chart(fig_prox, use_container_width=True)
+        # --- Proximity ---
+        fig_prox = go.Figure(go.Bar(
+            y=profile_df['Label'],
+            x=profile_df['Proximity'],
+            orientation='h',
+            marker_color=[ODU_GOLD if g == 'Fairway / Tee' else ODU_RED
+                          for g in profile_df['Group']],
+            text=profile_df['Proximity'].apply(lambda v: f"{v:.1f} ft"),
+            textposition='outside',
+            textfont=dict(family='Inter', size=12, color='#333'),
+        ))
+        fig_prox.update_layout(
+            **CHART_LAYOUT,
+            title=dict(text='Proximity (ft)', font=dict(size=14)),
+            yaxis=dict(categoryorder='array', categoryarray=label_order[::-1]),
+            xaxis=dict(title='', showticklabels=False),
+            margin=dict(t=40, b=20, l=160, r=60),
+            height=280,
+        )
+        st.plotly_chart(fig_prox, use_container_width=True)
 
     # ------------------------------------------------------------
     # SECTION 4: HEATMAP (Y=distance, X=location, with attempt counts)
@@ -1643,12 +1606,15 @@ def approach_tab(approach, num_rounds):
     heatmap_counts = approach["heatmap_counts"]
 
     if not heatmap_sg.empty:
-        # Build annotation text: SG value + attempt count
+        import numpy as np
+        # Build annotation text: SG value + attempt count (skip NaN cells)
         annotations = []
         for i, row_label in enumerate(heatmap_sg.index):
             for j, col_label in enumerate(heatmap_sg.columns):
                 sg_val = heatmap_sg.iloc[i, j]
                 cnt_val = int(heatmap_counts.iloc[i, j]) if not heatmap_counts.empty else 0
+                if np.isnan(sg_val):
+                    continue
                 annotations.append(
                     dict(
                         x=col_label, y=row_label,
