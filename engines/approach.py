@@ -5,6 +5,7 @@ import pandas as pd
 # ============================================================
 
 BUCKET_LABELS = ["50\u2013100", "100\u2013150", "150\u2013200", ">200"]
+ROUGH_BUCKET_LABELS = ["<150", ">150"]
 
 
 def _bucket(d):
@@ -20,6 +21,29 @@ def _bucket(d):
     return None
 
 
+def _rough_bucket(d):
+    """Assign rough-specific distance bucket."""
+    if d < 150:
+        return "<150"
+    return ">150"
+
+
+def _compute_bucket_metrics(bdf):
+    """Compute standard metrics for a bucket slice."""
+    if bdf.empty:
+        return {"total_sg": 0.0, "sg_per_shot": 0.0, "prox": 0.0,
+                "green_hit_pct": 0.0, "shots": 0}
+    shots = len(bdf)
+    greens = (bdf['Ending Location'] == 'Green').sum()
+    return {
+        "total_sg": bdf['Strokes Gained'].sum(),
+        "sg_per_shot": bdf['Strokes Gained'].mean(),
+        "prox": bdf['Ending Distance'].mean(),
+        "green_hit_pct": greens / shots * 100 if shots > 0 else 0.0,
+        "shots": shots,
+    }
+
+
 def build_approach_results(filtered_df, num_rounds):
     """
     Compute all approach analytics for the Approach tab.
@@ -28,21 +52,33 @@ def build_approach_results(filtered_df, num_rounds):
     df = filtered_df[filtered_df['Shot Type'] == 'Approach'].copy()
     num_approach = len(df)
 
-    empty_hero = {b: {"total_sg": 0.0, "sg_per_shot": 0.0, "prox": 0.0} for b in BUCKET_LABELS}
+    empty_return = {
+        "empty": True,
+        "df": df,
+        "total_sg": 0.0,
+        "sg_per_round": 0.0,
+        "sg_fairway": 0.0,
+        "sg_rough": 0.0,
+        "positive_shot_rate": 0.0,
+        "poor_shot_rate": 0.0,
+        "fairway_tee_metrics": {b: {"total_sg": 0.0, "sg_per_shot": 0.0,
+                                     "prox": 0.0, "green_hit_pct": 0.0,
+                                     "shots": 0} for b in BUCKET_LABELS},
+        "rough_metrics": {b: {"total_sg": 0.0, "sg_per_shot": 0.0,
+                               "prox": 0.0, "green_hit_pct": 0.0,
+                               "shots": 0} for b in ROUGH_BUCKET_LABELS},
+        "best_bucket": None,
+        "worst_bucket": None,
+        "profile_df": pd.DataFrame(),
+        "heatmap_sg": pd.DataFrame(),
+        "heatmap_counts": pd.DataFrame(),
+        "outcome_df": pd.DataFrame(),
+        "trend_df": pd.DataFrame(),
+        "detail_df": pd.DataFrame(),
+    }
 
     if num_approach == 0:
-        return {
-            "empty": True,
-            "df": df,
-            "total_sg": 0.0,
-            "sg_per_round": 0.0,
-            "hero_metrics": empty_hero,
-            "bucket_table": pd.DataFrame(),
-            "radar_df": pd.DataFrame(),
-            "scatter_df": pd.DataFrame(),
-            "heatmap_pivot": pd.DataFrame(),
-            "trend_df": pd.DataFrame()
-        }
+        return empty_return
 
     # Ensure distances are numeric
     df['Starting Distance'] = pd.to_numeric(df['Starting Distance'], errors='coerce')
@@ -52,74 +88,111 @@ def build_approach_results(filtered_df, num_rounds):
     total_sg = df['Strokes Gained'].sum()
     sg_per_round = total_sg / num_rounds if num_rounds > 0 else 0
 
+    # --- Section 1: Hero metrics ---
+    fairway_df = df[df['Starting Location'] == 'Fairway']
+    rough_df = df[df['Starting Location'] == 'Rough']
+
+    sg_fairway = fairway_df['Strokes Gained'].sum() if not fairway_df.empty else 0.0
+    sg_rough = rough_df['Strokes Gained'].sum() if not rough_df.empty else 0.0
+
+    positive_shot_rate = (df['Strokes Gained'] >= 0.0).sum() / num_approach * 100
+    poor_shot_rate = (df['Strokes Gained'] <= -0.15).sum() / num_approach * 100
+
     # --- Bucket assignment ---
     df['Bucket'] = df['Starting Distance'].apply(_bucket)
 
-    # --- Hero metrics per bucket ---
-    hero_metrics = {}
+    # --- Section 2: Fairway/Tee performance by distance ---
+    ft_df = df[df['Starting Location'].isin(['Fairway', 'Tee'])]
+    fairway_tee_metrics = {}
     for b in BUCKET_LABELS:
-        bdf = df[df['Bucket'] == b]
-        if bdf.empty:
-            hero_metrics[b] = {"total_sg": 0.0, "sg_per_shot": 0.0, "prox": 0.0}
+        bdf = ft_df[ft_df['Bucket'] == b]
+        fairway_tee_metrics[b] = _compute_bucket_metrics(bdf)
+
+    # --- Section 2: Rough performance by distance ---
+    rough_metrics = {}
+    for rb in ROUGH_BUCKET_LABELS:
+        if rb == "<150":
+            bdf = rough_df[rough_df['Starting Distance'] < 150]
         else:
-            hero_metrics[b] = {
-                "total_sg": bdf['Strokes Gained'].sum(),
-                "sg_per_shot": bdf['Strokes Gained'].mean(),
-                "prox": bdf['Ending Distance'].mean()
-            }
+            bdf = rough_df[rough_df['Starting Distance'] >= 150]
+        rough_metrics[rb] = _compute_bucket_metrics(bdf)
 
-    # --- Bucket table ---
-    bucket_agg = df.groupby('Bucket').agg(
-        Shots=('Strokes Gained', 'count'),
-        **{'Total SG': ('Strokes Gained', 'sum')},
-        **{'SG/Shot': ('Strokes Gained', 'mean')},
-        **{'Avg Proximity': ('Ending Distance', 'mean')},
-        GIR=('Ending Location', lambda x: (x == 'Green').sum())
-    ).reset_index()
+    # --- Section 2: Best / worst bucket by SG/Shot ---
+    all_buckets = {}
+    for b, m in fairway_tee_metrics.items():
+        if m["shots"] > 0:
+            all_buckets[f"FT|{b}"] = m["sg_per_shot"]
+    for b, m in rough_metrics.items():
+        if m["shots"] > 0:
+            all_buckets[f"R|{b}"] = m["sg_per_shot"]
 
-    if not bucket_agg.empty:
-        bucket_agg['GIR %'] = bucket_agg.apply(
-            lambda r: f"{r['GIR'] / r['Shots'] * 100:.0f}%" if r['Shots'] > 0 else "-", axis=1
-        )
+    best_bucket = max(all_buckets, key=all_buckets.get) if all_buckets else None
+    worst_bucket = min(all_buckets, key=all_buckets.get) if all_buckets else None
 
-    bucket_table = bucket_agg
-
-    # --- Radar data ---
-    radar_rows = []
+    # --- Section 3: Approach Profile (horizontal bar chart data) ---
+    profile_rows = []
     for b in BUCKET_LABELS:
-        bdf = df[df['Bucket'] == b]
-        if bdf.empty:
-            radar_rows.append({"Bucket": b, "SG/Shot": 0, "Proximity": 0, "GGIR%": 0})
+        bdf = ft_df[ft_df['Bucket'] == b]
+        m = _compute_bucket_metrics(bdf)
+        profile_rows.append({
+            "Category": f"{b}",
+            "Group": "Fairway / Tee",
+            "Green Hit %": m["green_hit_pct"],
+            "Total SG": m["total_sg"],
+            "Proximity": m["prox"],
+        })
+    for rb in ROUGH_BUCKET_LABELS:
+        if rb == "<150":
+            bdf = rough_df[rough_df['Starting Distance'] < 150]
         else:
-            gir_pct = (bdf['Ending Location'] == 'Green').sum() / len(bdf) * 100
-            radar_rows.append({
-                "Bucket": b,
-                "SG/Shot": bdf['Strokes Gained'].mean(),
-                "Proximity": bdf['Ending Distance'].mean(),
-                "GGIR%": gir_pct
-            })
-    radar_df = pd.DataFrame(radar_rows)
+            bdf = rough_df[rough_df['Starting Distance'] >= 150]
+        m = _compute_bucket_metrics(bdf)
+        profile_rows.append({
+            "Category": f"{rb}",
+            "Group": "Rough",
+            "Green Hit %": m["green_hit_pct"],
+            "Total SG": m["total_sg"],
+            "Proximity": m["prox"],
+        })
+    profile_df = pd.DataFrame(profile_rows)
 
-    # --- Scatter data ---
-    scatter_df = df[['Starting Distance', 'Strokes Gained', 'Starting Location',
-                     'Ending Distance', 'Ending Location']].copy()
+    # --- Section 4: Heatmap — Y=distance bucket, X=starting location ---
+    loc_order = ['Tee', 'Fairway', 'Rough', 'Sand']
+    heatmap_sg_data = df.groupby(['Bucket', 'Starting Location'])['Strokes Gained'].mean().reset_index()
+    heatmap_cnt_data = df.groupby(['Bucket', 'Starting Location'])['Strokes Gained'].count().reset_index()
+    heatmap_cnt_data.rename(columns={'Strokes Gained': 'Attempts'}, inplace=True)
 
-    # --- Heatmap: SG/shot by bucket x starting location ---
-    heatmap_data = df.groupby(['Bucket', 'Starting Location'])['Strokes Gained'].mean().reset_index()
-    if not heatmap_data.empty:
-        heatmap_pivot = heatmap_data.pivot_table(
-            index='Starting Location',
-            columns='Bucket',
-            values='Strokes Gained',
-            fill_value=0
+    if not heatmap_sg_data.empty:
+        heatmap_sg = heatmap_sg_data.pivot_table(
+            index='Bucket', columns='Starting Location',
+            values='Strokes Gained', fill_value=0
         )
-        # Reorder columns to match bucket order
-        ordered_cols = [b for b in BUCKET_LABELS if b in heatmap_pivot.columns]
-        heatmap_pivot = heatmap_pivot[ordered_cols]
+        ordered_cols = [c for c in loc_order if c in heatmap_sg.columns]
+        heatmap_sg = heatmap_sg[ordered_cols]
+        heatmap_sg = heatmap_sg.reindex([b for b in BUCKET_LABELS if b in heatmap_sg.index])
     else:
-        heatmap_pivot = pd.DataFrame()
+        heatmap_sg = pd.DataFrame()
 
-    # --- Trend by round ---
+    if not heatmap_cnt_data.empty:
+        heatmap_counts = heatmap_cnt_data.pivot_table(
+            index='Bucket', columns='Starting Location',
+            values='Attempts', fill_value=0
+        )
+        ordered_cols = [c for c in loc_order if c in heatmap_counts.columns]
+        heatmap_counts = heatmap_counts[ordered_cols]
+        heatmap_counts = heatmap_counts.reindex([b for b in BUCKET_LABELS if b in heatmap_counts.index])
+    else:
+        heatmap_counts = pd.DataFrame()
+
+    # --- Section 5: Outcome distribution by ending location ---
+    outcome_agg = df.groupby('Ending Location').agg(
+        Shots=('Strokes Gained', 'count'),
+        **{'Total SG': ('Strokes Gained', 'sum')}
+    ).reset_index()
+    outcome_agg['Pct'] = outcome_agg['Shots'] / num_approach * 100
+    outcome_df = outcome_agg.sort_values('Shots', ascending=False).reset_index(drop=True)
+
+    # --- Section 6: Trend by round (unchanged) ---
     round_trend = df.groupby('Round ID').agg(
         Date=('Date', 'first'),
         Course=('Course', 'first'),
@@ -131,17 +204,44 @@ def build_approach_results(filtered_df, num_rounds):
         lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
     )
 
+    # --- Section 7: Shot detail table ---
+    detail_df = df[['Player', 'Date', 'Course', 'Hole', 'Shot',
+                     'Starting Distance', 'Starting Location',
+                     'Ending Distance', 'Ending Location',
+                     'Penalty', 'Strokes Gained']].copy()
+    detail_df = detail_df.rename(columns={
+        'Starting Location': 'Starting Lie',
+        'Ending Location': 'Ending Lie',
+    })
+    detail_df = detail_df.sort_values(['Date', 'Course', 'Hole', 'Shot'],
+                                       ascending=[False, True, True, True])
+
     return {
         "empty": False,
         "df": df,
         "total_sg": total_sg,
         "sg_per_round": sg_per_round,
-        "hero_metrics": hero_metrics,
-        "bucket_table": bucket_table,
-        "radar_df": radar_df,
-        "scatter_df": scatter_df,
-        "heatmap_pivot": heatmap_pivot,
-        "trend_df": round_trend
+        # Section 1
+        "sg_fairway": sg_fairway,
+        "sg_rough": sg_rough,
+        "positive_shot_rate": positive_shot_rate,
+        "poor_shot_rate": poor_shot_rate,
+        # Section 2
+        "fairway_tee_metrics": fairway_tee_metrics,
+        "rough_metrics": rough_metrics,
+        "best_bucket": best_bucket,
+        "worst_bucket": worst_bucket,
+        # Section 3
+        "profile_df": profile_df,
+        # Section 4
+        "heatmap_sg": heatmap_sg,
+        "heatmap_counts": heatmap_counts,
+        # Section 5
+        "outcome_df": outcome_df,
+        # Section 6
+        "trend_df": round_trend,
+        # Section 7
+        "detail_df": detail_df,
     }
 
 
@@ -150,7 +250,10 @@ def build_approach_results(filtered_df, num_rounds):
 ##############################
 def approach_narrative(results):
     sg = results.get("sg_per_round", 0)
-    hero = results.get("hero_metrics", {})
+    sg_fw = results.get("sg_fairway", 0)
+    sg_rgh = results.get("sg_rough", 0)
+    pos_rate = results.get("positive_shot_rate", 0)
+    poor_rate = results.get("poor_shot_rate", 0)
 
     lines = ["Approach Performance:"]
 
@@ -161,8 +264,19 @@ def approach_narrative(results):
     else:
         lines.append(f"- Losing strokes on approach ({sg:.2f} per round).")
 
+    lines.append(f"- SG from Fairway: {sg_fw:.2f}, SG from Rough: {sg_rgh:.2f}")
+    lines.append(f"- Positive shot rate: {pos_rate:.0f}%, Poor shot rate: {poor_rate:.0f}%")
+
+    ft_metrics = results.get("fairway_tee_metrics", {})
     for b in BUCKET_LABELS:
-        m = hero.get(b, {})
-        lines.append(f"- {b}: SG/Shot {m.get('sg_per_shot', 0):.3f}, Proximity {m.get('prox', 0):.1f} ft")
+        m = ft_metrics.get(b, {})
+        lines.append(f"- Fairway/Tee {b}: SG/Shot {m.get('sg_per_shot', 0):.3f}, "
+                     f"Proximity {m.get('prox', 0):.1f} ft")
+
+    rough_metrics = results.get("rough_metrics", {})
+    for b in ROUGH_BUCKET_LABELS:
+        m = rough_metrics.get(b, {})
+        lines.append(f"- Rough {b}: SG/Shot {m.get('sg_per_shot', 0):.3f}, "
+                     f"Proximity {m.get('prox', 0):.1f} ft")
 
     return "\n".join(lines)
