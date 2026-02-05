@@ -906,74 +906,58 @@ def driving_tab(drive, num_rounds, hole_summary):
         return
 
     # ------------------------------------------------------------
-    # SECTION 1: HERO CARDS (5 across)
+    # SECTION 1: HERO CARDS (5 across — Tiger 5 style)
     # ------------------------------------------------------------
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value" style="color: {'#2d6a4f' if drive['driving_sg'] >= 0 else '#E03C31'};">
-                    {drive['driving_sg']:+.2f}
-                </div>
-                <div class="hero-label">SG Total</div>
-                <div class="hero-sub">{drive['driving_sg_per_round']:+.2f} per round</div>
+        _cls = "tiger-card-fail" if drive['driving_sg'] < 0 else "tiger-card-success"
+        st.markdown(f'''
+            <div class="{_cls}">
+                <div class="card-label">SG Total</div>
+                <div class="card-value">{drive['driving_sg']:+.2f}</div>
+                <div class="card-unit">{drive['driving_sg_per_round']:+.2f} per round</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
     with col2:
-        np_color = '#E03C31' if drive['non_playable_pct'] > 15 else '#FFC72C'
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {np_color};">
-                <div class="hero-value" style="color: {np_color};">{drive['non_playable_pct']:.0f}%</div>
-                <div class="hero-label" title="Percentage of drives ending in Recovery, Sand, or with a Penalty">Non-Playable Rate &#9432;</div>
-                <div class="hero-sub">{drive['non_playable_count']} of {drive['num_drives']} drives</div>
+        _cls = "tiger-card-fail" if drive['non_playable_pct'] > 15 else "tiger-card-success"
+        st.markdown(f'''
+            <div class="{_cls}" title="Percentage of drives ending in Recovery, Sand, or with a Penalty">
+                <div class="card-label">Non-Playable Rate &#9432;</div>
+                <div class="card-value">{drive['non_playable_pct']:.0f}%</div>
+                <div class="card-unit">{drive['non_playable_count']} of {drive['num_drives']} drives</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
     with col3:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value" style="color: {'#2d6a4f' if drive['sg_playable'] >= 0 else '#E03C31'};">
-                    {drive['sg_playable']:+.2f}
-                </div>
-                <div class="hero-label">SG Playable Drives</div>
-                <div class="hero-sub">{drive['sg_playable_per_round']:+.2f} per round</div>
+        _cls = "tiger-card-fail" if drive['sg_playable'] < 0 else "tiger-card-success"
+        st.markdown(f'''
+            <div class="{_cls}">
+                <div class="card-label">SG Playable Drives</div>
+                <div class="card-value">{drive['sg_playable']:+.2f}</div>
+                <div class="card-unit">{drive['sg_playable_per_round']:+.2f} per round</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
     with col4:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: #FFC72C;">
-                <div class="hero-value">{drive['driving_distance_p90']:.0f}</div>
-                <div class="hero-label">Driving Distance</div>
-                <div class="hero-sub">90th Percentile (yds)</div>
+        st.markdown(f'''
+            <div class="tiger-card-success">
+                <div class="card-label">Driving Distance</div>
+                <div class="card-value">{drive['driving_distance_p90']:.0f}</div>
+                <div class="card-unit">90th Percentile (yds)</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
     with col5:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: #FFC72C;">
-                <div class="hero-value">{drive['fairway_pct']:.0f}%</div>
-                <div class="hero-label">Fairways Hit</div>
-                <div class="hero-sub">{drive['fairway']} of {drive['num_drives']} drives</div>
+        _cls = "tiger-card-fail" if drive['fairway_pct'] < 50 else "tiger-card-success"
+        st.markdown(f'''
+            <div class="{_cls}">
+                <div class="card-label">Fairways Hit</div>
+                <div class="card-value">{drive['fairway_pct']:.0f}%</div>
+                <div class="card-unit">{drive['fairway']} of {drive['num_drives']} drives</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
     # ------------------------------------------------------------
     # SECTION 2: STROKES GAINED BY RESULT (Donut + Bar)
@@ -1068,16 +1052,15 @@ def driving_tab(drive, num_rounds, hole_summary):
     col_pen, col_obs, col_avoid = st.columns(3)
 
     with col_pen:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {'#E03C31' if total_penalty_count > 0 else '#FFC72C'};">
-                <div class="hero-label">Penalty Type</div>
-                <div class="hero-value" style="color: #E03C31;">{total_penalty_count}</div>
-                <div class="hero-sub">Total Penalties &middot; SG: {total_penalty_sg:+.2f}</div>
+        pen_cls = "negative" if total_penalty_count > 0 else "positive"
+        st.markdown(f"""
+            <div class="sg-card">
+                <div class="card-label">Penalty Type</div>
+                <div class="card-value {pen_cls}">{total_penalty_count}</div>
+                <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                     margin-top:0.3rem;">Total Penalties &middot; SG: {total_penalty_sg:+.2f}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
         st.markdown(
             f'''
             <table class="driving-table">
@@ -1090,30 +1073,26 @@ def driving_tab(drive, num_rounds, hole_summary):
         )
 
     with col_obs:
-        obs_color = '#E03C31' if drive['obstruction_pct'] > 10 else '#FFC72C'
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {obs_color};">
-                <div class="hero-label">Obstruction Rate</div>
-                <div class="hero-value" style="color: {obs_color};">{drive['obstruction_pct']:.0f}%</div>
-                <div class="hero-sub">{drive['obstruction_count']} of {drive['num_drives']} &middot; SG: {drive['obstruction_sg']:+.2f}</div>
+        obs_cls = "negative" if drive['obstruction_pct'] > 10 else "positive"
+        st.markdown(f"""
+            <div class="sg-card">
+                <div class="card-label">Obstruction Rate</div>
+                <div class="card-value {obs_cls}">{drive['obstruction_pct']:.0f}%</div>
+                <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                     margin-top:0.3rem;">{drive['obstruction_count']} of {drive['num_drives']} &middot; SG: {drive['obstruction_sg']:+.2f}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
     with col_avoid:
-        avoid_color = '#E03C31' if drive['avoidable_loss_pct'] > 10 else '#FFC72C'
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {avoid_color};">
-                <div class="hero-label" title="Drives with SG &le; -0.25 ending in Fairway, Rough, or Sand with no penalty">Avoidable Loss Rate &#9432;</div>
-                <div class="hero-value" style="color: {avoid_color};">{drive['avoidable_loss_pct']:.0f}%</div>
-                <div class="hero-sub">{drive['avoidable_loss_count']} of {drive['num_drives']} &middot; SG: {drive['avoidable_loss_sg']:+.2f}</div>
+        avoid_cls = "negative" if drive['avoidable_loss_pct'] > 10 else "positive"
+        st.markdown(f"""
+            <div class="sg-card" title="Drives with SG &le; -0.25 ending in Fairway, Rough, or Sand with no penalty">
+                <div class="card-label">Avoidable Loss Rate &#9432;</div>
+                <div class="card-value {avoid_cls}">{drive['avoidable_loss_pct']:.0f}%</div>
+                <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                     margin-top:0.3rem;">{drive['avoidable_loss_count']} of {drive['num_drives']} &middot; SG: {drive['avoidable_loss_sg']:+.2f}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
     # ------------------------------------------------------------
     # SECTION 4: DRIVING CONSISTENCY
@@ -1123,42 +1102,36 @@ def driving_tab(drive, num_rounds, hole_summary):
     col_con1, col_con2, col_con3 = st.columns(3)
 
     with col_con1:
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: #FFC72C;">
-                <div class="hero-label">Driving Consistency</div>
-                <div class="hero-value">{drive['sg_std']:.2f}</div>
-                <div class="hero-sub">SG Standard Deviation</div>
+        st.markdown(f"""
+            <div class="sg-card">
+                <div class="card-label">Driving Consistency</div>
+                <div class="card-value">{drive['sg_std']:.2f}</div>
+                <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                     margin-top:0.3rem;">SG Standard Deviation</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
     with col_con2:
-        pos_color = '#2d6a4f' if drive['positive_sg_pct'] >= 50 else '#E03C31'
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {pos_color};">
-                <div class="hero-label">Positive SG Drives</div>
-                <div class="hero-value" style="color: {pos_color};">{drive['positive_sg_pct']:.0f}%</div>
-                <div class="hero-sub">SG: {drive['positive_sg_total']:+.2f}</div>
+        pos_cls = "positive" if drive['positive_sg_pct'] >= 50 else "negative"
+        st.markdown(f"""
+            <div class="sg-card">
+                <div class="card-label">Positive SG Drives</div>
+                <div class="card-value {pos_cls}">{drive['positive_sg_pct']:.0f}%</div>
+                <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                     margin-top:0.3rem;">SG: {drive['positive_sg_total']:+.2f}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
     with col_con3:
-        poor_color = '#E03C31' if drive['poor_drive_pct'] > 20 else '#FFC72C'
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {poor_color};">
-                <div class="hero-label" title="Percentage of drives with SG &le; -0.15">Poor Drive Rate &#9432;</div>
-                <div class="hero-value" style="color: {poor_color};">{drive['poor_drive_pct']:.0f}%</div>
-                <div class="hero-sub">SG: {drive['poor_drive_sg']:+.2f}</div>
+        poor_cls = "negative" if drive['poor_drive_pct'] > 20 else "positive"
+        st.markdown(f"""
+            <div class="sg-card" title="Percentage of drives with SG &le; -0.15">
+                <div class="card-label">Poor Drive Rate &#9432;</div>
+                <div class="card-value {poor_cls}">{drive['poor_drive_pct']:.0f}%</div>
+                <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                     margin-top:0.3rem;">SG: {drive['poor_drive_sg']:+.2f}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
     # ------------------------------------------------------------
     # SECTION 5: SCORING IMPACTS
@@ -1168,34 +1141,26 @@ def driving_tab(drive, num_rounds, hole_summary):
     col_s1, col_s2 = st.columns(2)
 
     with col_s1:
-        # Trouble to Bogey
-        ttb_color = '#E03C31' if drive['trouble_to_bogey_pct'] > 50 else '#FFC72C'
-        ttb_sub = f"{drive['trouble_to_bogey_fails']} of {drive['trouble_to_bogey_attempts']} recovery drives"
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {ttb_color};">
-                <div class="hero-label" title="Percentage of recovery drives that lead to bogey or worse">Trouble to Bogey &#9432;</div>
-                <div class="hero-value" style="color: {ttb_color};">{drive['trouble_to_bogey_pct']:.0f}%</div>
-                <div class="hero-sub">{ttb_sub}</div>
+        ttb_cls = "negative" if drive['trouble_to_bogey_pct'] > 50 else "positive"
+        st.markdown(f"""
+            <div class="sg-card" title="Percentage of recovery drives that lead to bogey or worse">
+                <div class="card-label">Trouble to Bogey &#9432;</div>
+                <div class="card-value {ttb_cls}">{drive['trouble_to_bogey_pct']:.0f}%</div>
+                <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                     margin-top:0.3rem;">{drive['trouble_to_bogey_fails']} of {drive['trouble_to_bogey_attempts']} recovery drives</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
     with col_s2:
-        # Double+ rate on penalty holes
-        dp_color = '#E03C31' if drive['double_penalty_pct'] > 50 else '#FFC72C'
-        dp_sub = f"{drive['double_penalty_fails']} of {drive['double_penalty_attempts']} penalty holes (excl. OB)"
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {dp_color};">
-                <div class="hero-label" title="Percentage of non-OB penalty holes with double bogey or worse">Double+ on Penalty Holes &#9432;</div>
-                <div class="hero-value" style="color: {dp_color};">{drive['double_penalty_pct']:.0f}%</div>
-                <div class="hero-sub">{dp_sub}</div>
+        dp_cls = "negative" if drive['double_penalty_pct'] > 50 else "positive"
+        st.markdown(f"""
+            <div class="sg-card" title="Percentage of non-OB penalty holes with double bogey or worse">
+                <div class="card-label">Double+ on Penalty Holes &#9432;</div>
+                <div class="card-value {dp_cls}">{drive['double_penalty_pct']:.0f}%</div>
+                <div style="font-family:Inter;font-size:0.7rem;color:#888;
+                     margin-top:0.3rem;">{drive['double_penalty_fails']} of {drive['double_penalty_attempts']} penalty holes (excl. OB)</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        """, unsafe_allow_html=True)
 
     # Average score by drive ending location vs par (bar chart)
     avg_loc = drive['avg_score_by_end_loc']
@@ -1258,12 +1223,13 @@ def driving_tab(drive, num_rounds, hole_summary):
     fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
 
     fig_trend.add_trace(
-        go.Bar(
+        go.Scatter(
             x=trend['Label'],
             y=trend['SG'],
             name='SG Driving',
-            marker_color=[ODU_RED if x < 0 else ODU_GOLD for x in trend['SG']],
-            opacity=0.8
+            mode='lines+markers',
+            line=dict(color=ODU_GOLD, width=3),
+            marker=dict(size=8, color=ODU_GOLD)
         ),
         secondary_y=False
     )
