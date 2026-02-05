@@ -899,16 +899,16 @@ def strokes_gained_tab(
 # TAB: DRIVING
 # ============================================================
 
-def driving_tab(drive, num_rounds):
+def driving_tab(drive, num_rounds, hole_summary):
 
     if drive["num_drives"] == 0:
         st.warning("No driving data available for the selected filters.")
         return
 
     # ------------------------------------------------------------
-    # HERO CARDS
+    # SECTION 1: HERO CARDS (5 across)
     # ------------------------------------------------------------
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.markdown(
@@ -917,7 +917,7 @@ def driving_tab(drive, num_rounds):
                 <div class="hero-value" style="color: {'#2d6a4f' if drive['driving_sg'] >= 0 else '#E03C31'};">
                     {drive['driving_sg']:+.2f}
                 </div>
-                <div class="hero-label">Total SG Driving</div>
+                <div class="hero-label">SG Total</div>
                 <div class="hero-sub">{drive['driving_sg_per_round']:+.2f} per round</div>
             </div>
             """,
@@ -925,6 +925,45 @@ def driving_tab(drive, num_rounds):
         )
 
     with col2:
+        np_color = '#E03C31' if drive['non_playable_pct'] > 15 else '#FFC72C'
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {np_color};">
+                <div class="hero-value" style="color: {np_color};">{drive['non_playable_pct']:.0f}%</div>
+                <div class="hero-label" title="Percentage of drives ending in Recovery, Sand, or with a Penalty">Non-Playable Rate &#9432;</div>
+                <div class="hero-sub">{drive['non_playable_count']} of {drive['num_drives']} drives</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        st.markdown(
+            f"""
+            <div class="hero-stat">
+                <div class="hero-value" style="color: {'#2d6a4f' if drive['sg_playable'] >= 0 else '#E03C31'};">
+                    {drive['sg_playable']:+.2f}
+                </div>
+                <div class="hero-label">SG Playable Drives</div>
+                <div class="hero-sub">{drive['sg_playable_per_round']:+.2f} per round</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col4:
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: #FFC72C;">
+                <div class="hero-value">{drive['driving_distance_p90']:.0f}</div>
+                <div class="hero-label">Driving Distance</div>
+                <div class="hero-sub">90th Percentile (yds)</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col5:
         st.markdown(
             f"""
             <div class="hero-stat" style="border-color: #FFC72C;">
@@ -936,40 +975,14 @@ def driving_tab(drive, num_rounds):
             unsafe_allow_html=True
         )
 
-    with col3:
-        color = '#E03C31' if drive['obstruction_pct'] > 10 else '#FFC72C'
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {color};">
-                <div class="hero-value" style="color: {color};">{drive['obstruction_pct']:.0f}%</div>
-                <div class="hero-label">Obstruction Rate</div>
-                <div class="hero-sub">Sand + Recovery</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with col4:
-        color = '#E03C31' if drive['penalty_rate_pct'] > 5 else '#FFC72C'
-        st.markdown(
-            f"""
-            <div class="hero-stat" style="border-color: {color};">
-                <div class="hero-value" style="color: {color};">{drive['penalty_total']}</div>
-                <div class="hero-label">Penalties + OB</div>
-                <div class="hero-sub">{drive['penalty_rate_pct']:.0f}% of drives</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
     # ------------------------------------------------------------
-    # LANDING LOCATION DONUT + TABLE
+    # SECTION 2: STROKES GAINED BY RESULT (Donut + Bar)
     # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Where Are Your Drives Landing?</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">Strokes Gained by Result</p>', unsafe_allow_html=True)
 
-    col_viz, col_table = st.columns([1, 1])
+    col_donut, col_bar = st.columns([1, 1])
 
-    with col_viz:
+    with col_donut:
         labels = ['Fairway', 'Rough', 'Sand', 'Recovery', 'Green']
         values = [
             drive['fairway'], drive['rough'], drive['sand'],
@@ -998,7 +1011,7 @@ def driving_tab(drive, num_rounds):
             **CHART_LAYOUT,
             showlegend=False,
             margin=dict(t=40, b=40, l=40, r=40),
-            height=400,
+            height=350,
             annotations=[
                 dict(
                     text=f'<b>{drive["num_drives"]}</b><br>Drives',
@@ -1011,93 +1024,236 @@ def driving_tab(drive, num_rounds):
 
         st.plotly_chart(fig_donut, use_container_width=True)
 
-    with col_table:
+    with col_bar:
+        sg_df = drive["sg_by_result"].sort_values("Total SG", ascending=True)
+        colors_bar = [ODU_RED if x < 0 else ODU_GOLD for x in sg_df['Total SG']]
+
+        fig_sg_result = go.Figure(
+            data=[
+                go.Bar(
+                    y=sg_df['Result'],
+                    x=sg_df['Total SG'],
+                    orientation='h',
+                    marker_color=colors_bar,
+                    text=sg_df['Total SG'].apply(lambda x: f'{x:+.2f}'),
+                    textposition='outside',
+                    textfont=dict(family='Inter', size=12, color='#000')
+                )
+            ]
+        )
+
+        fig_sg_result.update_layout(
+            **CHART_LAYOUT,
+            xaxis=dict(
+                title='Strokes Gained',
+                gridcolor='#e8e8e8',
+                zerolinecolor=ODU_BLACK,
+                zerolinewidth=2
+            ),
+            yaxis=dict(title=''),
+            margin=dict(t=40, b=40, l=100, r=80),
+            height=350
+        )
+
+        st.plotly_chart(fig_sg_result, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # SECTION 3: PENALTY BREAKOUT
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Penalty Breakout</p>', unsafe_allow_html=True)
+
+    total_penalty_count = drive['penalty_count'] + drive['ob_count']
+    total_penalty_sg = drive['penalty_sg'] + drive['ob_sg']
+
+    col_pen, col_obs, col_avoid = st.columns(3)
+
+    with col_pen:
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {'#E03C31' if total_penalty_count > 0 else '#FFC72C'};">
+                <div class="hero-label">Penalty Type</div>
+                <div class="hero-value" style="color: #E03C31;">{total_penalty_count}</div>
+                <div class="hero-sub">Total Penalties &middot; SG: {total_penalty_sg:+.2f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
         st.markdown(
             f'''
             <table class="driving-table">
-                <tr><th style="text-align: left;">Metric</th><th>#</th><th>%</th><th>Per Round</th></tr>
-
-                <tr class="row-primary">
-                    <td><strong>Driving</strong></td>
-                    <td><strong>{drive['num_drives']}</strong></td>
-                    <td>-</td>
-                    <td><strong>{drive['num_drives']/num_rounds:.1f}</strong></td>
-                </tr>
-
-                <tr class="row-header"><td colspan="4">Ending Location</td></tr>
-
-                <tr><td class="indent">Fairway</td><td>{drive['fairway']}</td><td>{fmt_pct(drive['fairway'], drive['num_drives'])}</td><td>{fmt_pr(drive['fairway'], num_rounds)}</td></tr>
-                <tr><td class="indent">Rough</td><td>{drive['rough']}</td><td>{fmt_pct(drive['rough'], drive['num_drives'])}</td><td>{fmt_pr(drive['rough'], num_rounds)}</td></tr>
-                <tr><td class="indent">Sand</td><td>{drive['sand']}</td><td>{fmt_pct(drive['sand'], drive['num_drives'])}</td><td>{fmt_pr(drive['sand'], num_rounds)}</td></tr>
-                <tr><td class="indent">Recovery</td><td>{drive['recovery']}</td><td>{fmt_pct(drive['recovery'], drive['num_drives'])}</td><td>{fmt_pr(drive['recovery'], num_rounds)}</td></tr>
-
-                <tr class="row-highlight">
-                    <td><strong>Obstruction Rate</strong></td>
-                    <td><strong>{drive['obstruction_count']}</strong></td>
-                    <td><strong>{fmt_pct(drive['obstruction_count'], drive['num_drives'])}</strong></td>
-                    <td><strong>{fmt_pr(drive['obstruction_count'], num_rounds)}</strong></td>
-                </tr>
-
-                <tr class="row-header"><td colspan="4">Penalties</td></tr>
-
-                <tr><td class="indent">Penalty Strokes</td><td>{drive['penalty_count']}</td><td>{fmt_pct(drive['penalty_count'], drive['num_drives'])}</td><td>{fmt_pr(drive['penalty_count'], num_rounds)}</td></tr>
-                <tr><td class="indent">OB (Re-Tee)</td><td>{drive['ob_count']}</td><td>{fmt_pct(drive['ob_count'], drive['num_drives'])}</td><td>{fmt_pr(drive['ob_count'], num_rounds)}</td></tr>
-
-                <tr class="{ 'row-danger' if drive['penalty_total'] > 0 else 'row-highlight' }">
-                    <td><strong>Penalty Rate</strong></td>
-                    <td><strong>{drive['penalty_total']}</strong></td>
-                    <td><strong>{fmt_pct(drive['penalty_total'], drive['num_drives'])}</strong></td>
-                    <td><strong>{fmt_pr(drive['penalty_total'], num_rounds)}</strong></td>
-                </tr>
+                <tr><th style="text-align: left;">Type</th><th>#</th><th>SG</th></tr>
+                <tr><td>OB (Re-Tee)</td><td>{drive['ob_count']}</td><td>{drive['ob_sg']:+.2f}</td></tr>
+                <tr><td>Penalty</td><td>{drive['penalty_count']}</td><td>{drive['penalty_sg']:+.2f}</td></tr>
             </table>
             ''',
             unsafe_allow_html=True
         )
 
-    # ------------------------------------------------------------
-    # SG BY RESULT
-    # ------------------------------------------------------------
-    
-    st.markdown('<p class="section-title">Strokes Gained by Result</p>', unsafe_allow_html=True)
+    with col_obs:
+        obs_color = '#E03C31' if drive['obstruction_pct'] > 10 else '#FFC72C'
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {obs_color};">
+                <div class="hero-label">Obstruction Rate</div>
+                <div class="hero-value" style="color: {obs_color};">{drive['obstruction_pct']:.0f}%</div>
+                <div class="hero-sub">{drive['obstruction_count']} of {drive['num_drives']} &middot; SG: {drive['obstruction_sg']:+.2f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    sg_df = drive["sg_by_result"].sort_values("Total SG", ascending=True)
-    colors_bar = [ODU_RED if x < 0 else ODU_GOLD for x in sg_df['Total SG']]
-
-    fig_sg_result = go.Figure(
-        data=[
-            go.Bar(
-                y=sg_df['Result'],
-                x=sg_df['Total SG'],
-                orientation='h',
-                marker_color=colors_bar,
-                text=sg_df['Total SG'].apply(lambda x: f'{x:+.2f}'),
-                textposition='outside',
-                textfont=dict(family='Inter', size=12, color='#000')
-            )
-        ]
-    )
-
-    fig_sg_result.update_layout(
-        **CHART_LAYOUT,
-        xaxis=dict(
-            title='Strokes Gained',
-            gridcolor='#e8e8e8',
-            zerolinecolor=ODU_BLACK,
-            zerolinewidth=2
-        ),
-        yaxis=dict(title=''),
-        margin=dict(t=20, b=40, l=100, r=80),
-        height=250
-    )
-
-    st.plotly_chart(fig_sg_result, use_container_width=True)
+    with col_avoid:
+        avoid_color = '#E03C31' if drive['avoidable_loss_pct'] > 10 else '#FFC72C'
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {avoid_color};">
+                <div class="hero-label" title="Drives with SG &le; -0.25 ending in Fairway, Rough, or Sand with no penalty">Avoidable Loss Rate &#9432;</div>
+                <div class="hero-value" style="color: {avoid_color};">{drive['avoidable_loss_pct']:.0f}%</div>
+                <div class="hero-sub">{drive['avoidable_loss_count']} of {drive['num_drives']} &middot; SG: {drive['avoidable_loss_sg']:+.2f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     # ------------------------------------------------------------
-    # DRIVING TREND
+    # SECTION 4: DRIVING CONSISTENCY
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Driving Consistency</p>', unsafe_allow_html=True)
+
+    col_con1, col_con2, col_con3 = st.columns(3)
+
+    with col_con1:
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: #FFC72C;">
+                <div class="hero-label">Driving Consistency</div>
+                <div class="hero-value">{drive['sg_std']:.2f}</div>
+                <div class="hero-sub">SG Standard Deviation</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col_con2:
+        pos_color = '#2d6a4f' if drive['positive_sg_pct'] >= 50 else '#E03C31'
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {pos_color};">
+                <div class="hero-label">Positive SG Drives</div>
+                <div class="hero-value" style="color: {pos_color};">{drive['positive_sg_pct']:.0f}%</div>
+                <div class="hero-sub">SG: {drive['positive_sg_total']:+.2f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col_con3:
+        poor_color = '#E03C31' if drive['poor_drive_pct'] > 20 else '#FFC72C'
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {poor_color};">
+                <div class="hero-label" title="Percentage of drives with SG &le; -0.15">Poor Drive Rate &#9432;</div>
+                <div class="hero-value" style="color: {poor_color};">{drive['poor_drive_pct']:.0f}%</div>
+                <div class="hero-sub">SG: {drive['poor_drive_sg']:+.2f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # ------------------------------------------------------------
+    # SECTION 5: SCORING IMPACTS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Scoring Impacts</p>', unsafe_allow_html=True)
+
+    col_s1, col_s2 = st.columns(2)
+
+    with col_s1:
+        # Trouble to Bogey
+        ttb_color = '#E03C31' if drive['trouble_to_bogey_pct'] > 50 else '#FFC72C'
+        ttb_sub = f"{drive['trouble_to_bogey_fails']} of {drive['trouble_to_bogey_attempts']} recovery drives"
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {ttb_color};">
+                <div class="hero-label" title="Percentage of recovery drives that lead to bogey or worse">Trouble to Bogey &#9432;</div>
+                <div class="hero-value" style="color: {ttb_color};">{drive['trouble_to_bogey_pct']:.0f}%</div>
+                <div class="hero-sub">{ttb_sub}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col_s2:
+        # Double+ rate on penalty holes
+        dp_color = '#E03C31' if drive['double_penalty_pct'] > 50 else '#FFC72C'
+        dp_sub = f"{drive['double_penalty_fails']} of {drive['double_penalty_attempts']} penalty holes (excl. OB)"
+        st.markdown(
+            f"""
+            <div class="hero-stat" style="border-color: {dp_color};">
+                <div class="hero-label" title="Percentage of non-OB penalty holes with double bogey or worse">Double+ on Penalty Holes &#9432;</div>
+                <div class="hero-value" style="color: {dp_color};">{drive['double_penalty_pct']:.0f}%</div>
+                <div class="hero-sub">{dp_sub}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Average score by drive ending location vs par (bar chart)
+    avg_loc = drive['avg_score_by_end_loc']
+    if not avg_loc.empty:
+        loc_order = ['Fairway', 'Rough', 'Sand', 'Recovery']
+        avg_loc['Ending Location'] = pd.Categorical(avg_loc['Ending Location'], categories=loc_order, ordered=True)
+        avg_loc = avg_loc.sort_values('Ending Location')
+
+        bar_colors = [ODU_RED if v > 0 else ODU_GREEN for v in avg_loc['Avg vs Par']]
+
+        fig_avg = go.Figure(
+            data=[
+                go.Bar(
+                    x=avg_loc['Ending Location'],
+                    y=avg_loc['Avg vs Par'],
+                    marker_color=bar_colors,
+                    text=avg_loc['Avg vs Par'].apply(lambda x: f'{x:+.2f}'),
+                    textposition='outside',
+                    textfont=dict(family='Inter', size=12, color='#000')
+                )
+            ]
+        )
+
+        fig_avg.update_layout(
+            **CHART_LAYOUT,
+            yaxis=dict(
+                title='Avg Score vs Par',
+                gridcolor='#e8e8e8',
+                zerolinecolor=ODU_BLACK,
+                zerolinewidth=2
+            ),
+            xaxis=dict(title='Drive Ending Location'),
+            margin=dict(t=30, b=40, l=60, r=40),
+            height=300
+        )
+
+        st.plotly_chart(fig_avg, use_container_width=True)
+
+    # ------------------------------------------------------------
+    # SECTION 6: SG TREND (with moving average)
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Driving Performance Trend</p>', unsafe_allow_html=True)
 
     trend = drive["trend"]
+
+    if len(trend) > 1:
+        ma_options = [i for i in [3, 5, 7, 10] if i <= len(trend)]
+        if ma_options:
+            ma_window = st.selectbox(
+                "Moving Average Window",
+                options=ma_options,
+                index=0,
+                key="driving_ma_window"
+            )
+        else:
+            ma_window = None
+    else:
+        ma_window = None
 
     fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -1123,6 +1279,20 @@ def driving_tab(drive, num_rounds):
         ),
         secondary_y=True
     )
+
+    # Moving average line
+    if ma_window and len(trend) >= ma_window:
+        ma_values = trend['SG'].rolling(window=ma_window, min_periods=ma_window).mean()
+        fig_trend.add_trace(
+            go.Scatter(
+                x=trend['Label'],
+                y=ma_values,
+                name=f'SG {ma_window}-Round MA',
+                mode='lines',
+                line=dict(color=ODU_PURPLE, width=3, dash='dash'),
+            ),
+            secondary_y=False
+        )
 
     fig_trend.update_layout(
         **CHART_LAYOUT,
@@ -1157,7 +1327,7 @@ def driving_tab(drive, num_rounds):
     st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
 
     # ------------------------------------------------------------
-    # DETAIL TABLES
+    # SECTION 7: DETAIL TABLES
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Detailed Data</p>', unsafe_allow_html=True)
 
@@ -1197,7 +1367,7 @@ def driving_tab(drive, num_rounds):
             st.dataframe(ob_df, use_container_width=True, hide_index=True)
 
     if drive['obstruction_count'] > 0:
-        with st.expander(f"🏖️ Obstruction Shots ({drive['obstruction_count']} total)"):
+        with st.expander(f"🌲 Obstruction Shots ({drive['obstruction_count']} total)"):
 
             obs = drive["df"][
                 drive["df"]['Ending Location'].isin(['Sand', 'Recovery'])
@@ -1953,7 +2123,7 @@ num_rounds = filtered_df['Round ID'].nunique()
 hole_summary = build_hole_summary(filtered_df)
 
 # ---------- ENGINE CALLS ----------
-driving_results = build_driving_results(filtered_df, num_rounds)
+driving_results = build_driving_results(filtered_df, num_rounds, hole_summary)
 approach_results = build_approach_results(filtered_df, num_rounds)
 short_game_results = build_short_game_results(filtered_df, num_rounds)
 putting_results = build_putting_results(filtered_df, num_rounds)
@@ -1995,7 +2165,7 @@ with tab_sg:
     )
 
 with tab_driving:
-    driving_tab(driving_results, num_rounds)
+    driving_tab(driving_results, num_rounds, hole_summary)
 
 with tab_approach:
     approach_tab(approach_results, num_rounds)
