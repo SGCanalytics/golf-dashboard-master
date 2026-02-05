@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 # ============================================================
@@ -117,14 +118,14 @@ def build_approach_results(filtered_df, num_rounds):
             bdf = rough_df[rough_df['Starting Distance'] >= 150]
         rough_metrics[rb] = _compute_bucket_metrics(bdf)
 
-    # --- Section 2: Best / worst bucket by SG/Shot ---
+    # --- Section 2: Best / worst bucket by Total SG ---
     all_buckets = {}
     for b, m in fairway_tee_metrics.items():
         if m["shots"] > 0:
-            all_buckets[f"FT|{b}"] = m["sg_per_shot"]
+            all_buckets[f"FT|{b}"] = m["total_sg"]
     for b, m in rough_metrics.items():
         if m["shots"] > 0:
-            all_buckets[f"R|{b}"] = m["sg_per_shot"]
+            all_buckets[f"R|{b}"] = m["total_sg"]
 
     best_bucket = max(all_buckets, key=all_buckets.get) if all_buckets else None
     worst_bucket = min(all_buckets, key=all_buckets.get) if all_buckets else None
@@ -165,23 +166,22 @@ def build_approach_results(filtered_df, num_rounds):
     if not heatmap_sg_data.empty:
         heatmap_sg = heatmap_sg_data.pivot_table(
             index='Bucket', columns='Starting Location',
-            values='Strokes Gained', fill_value=0
+            values='Strokes Gained'
         )
-        ordered_cols = [c for c in loc_order if c in heatmap_sg.columns]
-        heatmap_sg = heatmap_sg[ordered_cols]
-        heatmap_sg = heatmap_sg.reindex([b for b in BUCKET_LABELS if b in heatmap_sg.index])
-    else:
-        heatmap_sg = pd.DataFrame()
-
-    if not heatmap_cnt_data.empty:
         heatmap_counts = heatmap_cnt_data.pivot_table(
             index='Bucket', columns='Starting Location',
             values='Attempts', fill_value=0
         )
-        ordered_cols = [c for c in loc_order if c in heatmap_counts.columns]
-        heatmap_counts = heatmap_counts[ordered_cols]
-        heatmap_counts = heatmap_counts.reindex([b for b in BUCKET_LABELS if b in heatmap_counts.index])
+        # Reindex to consistent order; missing combos stay NaN for SG, 0 for counts
+        ordered_cols = [c for c in loc_order if c in heatmap_sg.columns]
+        bucket_order = [b for b in BUCKET_LABELS if b in heatmap_sg.index]
+        heatmap_sg = heatmap_sg.reindex(index=bucket_order, columns=ordered_cols)
+        heatmap_counts = heatmap_counts.reindex(index=bucket_order, columns=ordered_cols,
+                                                 fill_value=0)
+        # Cells with 0 attempts should be NaN in SG so heatmap renders them blank
+        heatmap_sg = heatmap_sg.where(heatmap_counts > 0, other=np.nan)
     else:
+        heatmap_sg = pd.DataFrame()
         heatmap_counts = pd.DataFrame()
 
     # --- Section 5: Outcome distribution by ending location ---
