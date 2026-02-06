@@ -18,7 +18,7 @@ from engines.tiger5 import (
     build_tiger5_root_cause,
     build_tiger5_scoring_impact
 )
-from engines.coachs_corner import build_coachs_corner
+from engines.playerpath import build_playerpath
 from engines.overview import (
     overview_engine,
     build_sg_separators,
@@ -65,6 +65,7 @@ st.markdown("""
     .main-title { font-family: 'Playfair Display', Georgia, serif; font-size: 2.8rem; font-weight: 700; color: #000000; margin-bottom: 0.25rem; }
     .main-subtitle { font-family: 'Inter', sans-serif; font-size: 1rem; color: #666666; font-weight: 400; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 3px solid #FFC72C; }
     .section-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 600; color: #000000; margin: 2.5rem 0 1.5rem 0; padding-bottom: 0.75rem; border-bottom: 2px solid #FFC72C; }
+    .subsection-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.3rem; font-weight: 600; color: #000000; margin: 2rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #e8e8e8; }
 
     .tiger-card-success { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #FFC72C; margin-bottom: 1rem; }
     .tiger-card-success .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #FFC72C; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
@@ -106,6 +107,30 @@ st.markdown("""
 
     .streamlit-expanderHeader { font-family: 'Inter', sans-serif !important; font-weight: 500 !important; font-size: 0.9rem !important; background-color: #f8f8f8 !important; border-radius: 8px !important; }
     .stPlotlyChart { background: #ffffff; border-radius: 12px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8e8e8; }
+
+    .playerpath-hero-card { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 12px; padding: 1.5rem 1.25rem; text-align: center; border: 2px solid #FFC72C; margin-bottom: 1.5rem; }
+    .playerpath-hero-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600; color: #FFC72C; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+    .playerpath-hero-card .card-value { font-family: 'Playfair Display', serif; font-size: 2.5rem; font-weight: 700; color: #FFC72C; line-height: 1; margin-bottom: 0.5rem; }
+    .playerpath-hero-card .card-unit { font-family: 'Inter', sans-serif; font-size: 0.7rem; color: rgba(255,199,44,0.8); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .playerpath-narrative { background: #ffffff; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #FFC72C; font-family: 'Inter', sans-serif; font-size: 0.95rem; line-height: 1.7; color: #333333; }
+
+    .playerpath-strength-card { background: linear-gradient(135deg, #ffffff 0%, #f8f8f8 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #2d6a4f; margin-bottom: 1rem; }
+    .playerpath-strength-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #2d6a4f; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .playerpath-strength-card .card-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: #2d6a4f; line-height: 1; margin-bottom: 0.25rem; }
+    .playerpath-strength-card .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(45,106,79,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .playerpath-weakness-card { background: linear-gradient(135deg, #ffffff 0%, #f8f8f8 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #E03C31; margin-bottom: 1rem; }
+    .playerpath-weakness-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #E03C31; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .playerpath-weakness-card .card-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: #E03C31; line-height: 1; margin-bottom: 0.25rem; }
+    .playerpath-weakness-card .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(224,60,49,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .playerpath-metric-card { background: #ffffff; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8e8e8; margin-bottom: 1rem; }
+    .playerpath-metric-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #666666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .playerpath-metric-card .card-value { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: #000000; line-height: 1; margin-bottom: 0.25rem; }
+    .playerpath-metric-card .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: #888888; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .playerpath-section-divider { margin: 2.5rem 0; border-top: 2px solid #e8e8e8; }
 
     .par-score-card { background: #ffffff; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; border-left: 4px solid #FFC72C; display: flex; justify-content: space-between; align-items: center; }
     .par-score-card .par-label { font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 500; color: #333; }
@@ -2315,133 +2340,283 @@ def putting_tab(putting, num_rounds):
         st.info("No shot detail available.")
 
 # ============================================================
-# TAB: COACH'S CORNER
+# TAB: PLAYERPATH
 # ============================================================
 
-def coachs_corner_tab(cc):
-
-    st.markdown('<p class="section-title">Coach\'s Corner</p>', unsafe_allow_html=True)
-
+def playerpath_tab(pp):
+    """
+    PlayerPath Intelligence Layer - Central hub for game analysis.
+    """
+    
+    st.markdown('<p class="section-title">PlayerPath Intelligence</p>', unsafe_allow_html=True)
+    
     # ============================================================
-    # COACH SUMMARY
+    # GAME OVERVIEW INTELLIGENCE HUB
     # ============================================================
-    st.markdown('<p class="subsection-title">Coach Summary</p>', unsafe_allow_html=True)
-
-    summary = cc["coach_summary"]
-    st.markdown(f"<div class='coach-summary'>{summary}</div>", unsafe_allow_html=True)
-
+    st.markdown('<p class="subsection-title">Game Overview</p>', unsafe_allow_html=True)
+    
+    # Top narrative summary
+    game_overview_narrative = pp.get("narratives", {}).get("game_overview", "")
+    if game_overview_narrative:
+        st.markdown(f'<div class="playerpath-narrative">{game_overview_narrative}</div>', unsafe_allow_html=True)
+    
     st.markdown("---")
-
-    # ============================================================
-    # 1. STRENGTHS & WEAKNESSES
-    # ============================================================
+    
+    # Strengths & Weaknesses Cards
     st.markdown('<p class="subsection-title">Strengths & Weaknesses</p>', unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-
+    
+    strengths = pp.get("strengths", [])
+    weaknesses = pp.get("weaknesses", [])
+    
+    if strengths or weaknesses:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### Strengths")
+            if strengths:
+                for cat, sg in strengths[:3]:  # Top 3
+                    st.markdown(f'''
+                        <div class="playerpath-strength-card">
+                            <div class="card-label">{cat}</div>
+                            <div class="card-value">{sg:+.2f}</div>
+                            <div class="card-unit">Strokes Gained</div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+            else:
+                st.markdown("*No strengths identified.*")
+        
+        with col2:
+            st.markdown("### Weaknesses")
+            if weaknesses:
+                for cat, sg in weaknesses[:3]:  # Top 3
+                    st.markdown(f'''
+                        <div class="playerpath-weakness-card">
+                            <div class="card-label">{cat}</div>
+                            <div class="card-value">{sg:+.2f}</div>
+                            <div class="card-unit">Strokes Gained</div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+            else:
+                st.markdown("*No weaknesses identified.*")
+    
+    st.markdown("---")
+    
+    # ============================================================
+    # MENTAL STRENGTH CHARACTERISTICS
+    # ============================================================
+    st.markdown('<p class="subsection-title">Mental Strength Characteristics</p>', unsafe_allow_html=True)
+    
+    mental_metrics = pp.get("mental_metrics", {})
+    mental_narrative = pp.get("narratives", {}).get("mental_strength", "")
+    
+    if mental_narrative:
+        st.markdown(f'<div class="playerpath-narrative">{mental_narrative}</div>', unsafe_allow_html=True)
+    
+    # Mental strength metric cards
+    bounce_back = mental_metrics.get("bounce_back", {})
+    drop_off = mental_metrics.get("drop_off", {})
+    gas_pedal = mental_metrics.get("gas_pedal", {})
+    bogey_train = mental_metrics.get("bogey_train", {})
+    pressure_finish = mental_metrics.get("pressure_finish", {})
+    early_round = mental_metrics.get("early_round_composure", {})
+    mistake_penalty = mental_metrics.get("mistake_penalty_index", {})
+    
+    # Row 1: Bounce Back, Drop Off, Gas Pedal, Bogey Train
+    col1, col2, col3, col4 = st.columns(4)
+    
     with col1:
-        st.markdown("### Strengths")
-        for cat, sg in cc["strengths"]:
-            st.markdown(f"- **{cat}**: {sg:+.2f} SG")
-
+        bb_rate = bounce_back.get("rate", 0)
+        bb_opps = bounce_back.get("opportunities", 0)
+        card_class = "playerpath-strength-card" if bb_rate >= 25 else "playerpath-weakness-card"
+        st.markdown(f'''
+            <div class="{card_class}">
+                <div class="card-label">Bounce Back</div>
+                <div class="card-value">{bb_rate:.0f}%</div>
+                <div class="card-unit">{bounce_back.get("successes", 0)}/{bb_opps} opportunities</div>
+            </div>
+        ''', unsafe_allow_html=True)
+    
     with col2:
-        st.markdown("### Weaknesses")
-        for cat, sg in cc["weaknesses"]:
-            st.markdown(f"- **{cat}**: {sg:+.2f} SG")
-
+        do_rate = drop_off.get("rate", 0)
+        do_opps = drop_off.get("opportunities", 0)
+        card_class = "playerpath-strength-card" if do_rate <= 25 else "playerpath-weakness-card"
+        st.markdown(f'''
+            <div class="{card_class}">
+                <div class="card-label">Drop Off</div>
+                <div class="card-value">{do_rate:.0f}%</div>
+                <div class="card-unit">{drop_off.get("events", 0)}/{do_opps} opportunities</div>
+            </div>
+        ''', unsafe_allow_html=True)
+    
+    with col3:
+        gp_rate = gas_pedal.get("rate", 0)
+        gp_opps = gas_pedal.get("opportunities", 0)
+        card_class = "playerpath-strength-card" if gp_rate >= 30 else "playerpath-weakness-card"
+        st.markdown(f'''
+            <div class="{card_class}">
+                <div class="card-label">Gas Pedal</div>
+                <div class="card-value">{gp_rate:.0f}%</div>
+                <div class="card-unit">{gas_pedal.get("successes", 0)}/{gp_opps} opportunities</div>
+            </div>
+        ''', unsafe_allow_html=True)
+    
+    with col4:
+        bt_rate = bogey_train.get("rate", 0)
+        bt_holes = bogey_train.get("bogey_train_holes", 0)
+        card_class = "playerpath-strength-card" if bt_rate <= 30 else "playerpath-weakness-card"
+        st.markdown(f'''
+            <div class="{card_class}">
+                <div class="card-label">Bogey Train</div>
+                <div class="card-value">{bt_rate:.0f}%</div>
+                <div class="card-unit">{bt_holes} holes in streaks</div>
+            </div>
+        ''', unsafe_allow_html=True)
+    
+    # Row 2: Pressure Finish, Early Round, Mistake Penalty
+    col5, col6, col7 = st.columns(3)
+    
+    with col5:
+        pf_diff = pressure_finish.get("difference_score", 0)
+        card_class = "playerpath-strength-card" if pf_diff <= -0.1 else "playerpath-weakness-card"
+        st.markdown(f'''
+            <div class="{card_class}">
+                <div class="card-label">Pressure Finish</div>
+                <div class="card-value">{pf_diff:+.2f}</div>
+                <div class="card-unit">vs baseline (16-18)</div>
+            </div>
+        ''', unsafe_allow_html=True)
+    
+    with col6:
+        er_diff = early_round.get("difference_score", 0)
+        card_class = "playerpath-strength-card" if er_diff <= -0.1 else "playerpath-weakness-card"
+        st.markdown(f'''
+            <div class="{card_class}">
+                <div class="card-label">Early Round</div>
+                <div class="card-value">{er_diff:+.2f}</div>
+                <div class="card-unit">vs baseline (1-3)</div>
+            </div>
+        ''', unsafe_allow_html=True)
+    
+    with col7:
+        mp_index = mistake_penalty.get("index", 0)
+        card_class = "playerpath-strength-card" if mp_index <= 0.5 else "playerpath-weakness-card"
+        st.markdown(f'''
+            <div class="{card_class}">
+                <div class="card-label">Mistake Penalty</div>
+                <div class="card-value">{mp_index:+.2f}</div>
+                <div class="card-unit">strokes vs clean</div>
+            </div>
+        ''', unsafe_allow_html=True)
+    
     st.markdown("---")
-
+    
     # ============================================================
-    # 2. RED FLAGS
+    # CROSS-TAB INTELLIGENCE
     # ============================================================
-    st.markdown('<p class="subsection-title">Red Flags</p>', unsafe_allow_html=True)
-
-    # --- Approach Red Flags ---
-    st.markdown("### Approach (GIR < 50%)")
-    gir_flags = cc["gir_flags"]
-    if gir_flags:
-        for gf in gir_flags:
-            st.markdown(f"- **{gf['bucket']}**: {gf['gir_pct']:.0f}% GIR")
-    else:
-        st.markdown("*No GIR red flags.*")
-
-    # --- Short Game Red Flags ---
-    st.markdown("### Short Game (Inside 8 ft)")
-    sgf = cc["short_game_flags"]
-    st.markdown(f"- **Fairway/Rough**: {sgf['inside8_fr_pct']:.0f}% inside 8 ft")
-    st.markdown(f"- **Sand**: {sgf['inside8_sand_pct']:.0f}% inside 8 ft")
-
-    # --- Putting Red Flags ---
-    st.markdown("### Putting")
-    pf = cc["putting_flags"]
-    st.markdown(f"- **Make % (4–5 ft)**: {pf['make_45_pct']:.0f}%")
-    st.markdown(f"- **SG (5–10 ft)**: {pf['sg_510']:+.2f}")
-    st.markdown(f"- **Lag Miss % (>5 ft)**: {pf['lag_miss_pct']:.0f}%")
-    st.markdown(f"- **3-Putts Inside 20 ft**: {pf['three_putts_inside_20']}")
-
+    st.markdown('<p class="subsection-title">Cross-Tab Intelligence</p>', unsafe_allow_html=True)
+    
+    cross_tab_narrative = pp.get("narratives", {}).get("cross_tab_insights", "")
+    if cross_tab_narrative:
+        st.markdown(f'<div class="playerpath-narrative">{cross_tab_narrative}</div>', unsafe_allow_html=True)
+    
+    # Tiger 5 Root Cause Analysis
+    cross_tab_analysis = pp.get("cross_tab_analysis", {})
+    tiger5_analysis = cross_tab_analysis.get("tiger5_root_causes", {})
+    
+    if tiger5_analysis:
+        st.markdown("### Tiger 5 Root Cause Analysis")
+        
+        for category, analysis in tiger5_analysis.items():
+            fails = analysis.get("fails", 0)
+            if fails == 0:
+                continue
+            
+            shot_type_breakdown = analysis.get("shot_type_breakdown", {})
+            supporting_metrics = analysis.get("supporting_metrics", {})
+            
+            with st.expander(f"{category}: {fails} failures"):
+                # Root cause breakdown
+                if shot_type_breakdown:
+                    st.markdown("**Root Causes:**")
+                    for cause, count in sorted(shot_type_breakdown.items(), key=lambda x: x[1], reverse=True):
+                        st.markdown(f"- {cause}: {count} instances")
+                
+                # Supporting metrics
+                if supporting_metrics:
+                    st.markdown("**Supporting Metrics:**")
+                    for metric, value in supporting_metrics.items():
+                        if isinstance(value, float):
+                            st.markdown(f"- {metric}: {value:+.2f}")
+                        else:
+                            st.markdown(f"- {metric}: {value}")
+    
+    # Strokes Gained Separators Impact
+    sg_separators = cross_tab_analysis.get("sg_separators", [])
+    if sg_separators:
+        st.markdown("### Strokes Gained Separators Impact")
+        
+        # Show top 5 separators
+        top_separators = sg_separators[:5]
+        cols = st.columns(5)
+        for col, (label, val, pr) in zip(cols, top_separators):
+            val_class = "positive" if val >= 0 else "negative"
+            with col:
+                st.markdown(f'''
+                    <div class="playerpath-metric-card">
+                        <div class="card-label">{label}</div>
+                        <div class="card-value {val_class}">{val:+.2f}</div>
+                        <div class="card-unit">{pr:+.2f} per round</div>
+                    </div>
+                ''', unsafe_allow_html=True)
+    
     st.markdown("---")
-
+    
     # ============================================================
-    # 3. DECISION MAKING (DECADE-style)
+    # DEEP DIVE SECTIONS (Collapsible)
     # ============================================================
-    st.markdown('<p class="subsection-title">Decision Making</p>', unsafe_allow_html=True)
-
-    # --- Green / Yellow / Red SG ---
-    st.markdown("### Green / Yellow / Red SG")
-    for gy in cc["green_yellow_red"]:
-        st.markdown(f"- **{gy['light']} Light**: {gy['total_sg']:+.2f} SG")
-
-    # --- Bogey Avoidance ---
-    st.markdown("### Bogey Avoidance")
-    ba = cc["bogey_avoidance"]
-    st.markdown(f"- **Overall**: {ba['Overall']['bogey_rate']:.0f}% bogey rate")
-    st.markdown(f"- **Par 3**: {ba['Par3']['bogey_rate']:.0f}%")
-    st.markdown(f"- **Par 4**: {ba['Par4']['bogey_rate']:.0f}%")
-    st.markdown(f"- **Par 5**: {ba['Par5']['bogey_rate']:.0f}%")
-
-    # --- Birdie Opportunities ---
-    st.markdown("### Birdie Opportunities")
-    bo = cc["birdie_opportunities"]
-    st.markdown(f"- **Opportunities**: {bo['opportunities']}")
-    st.markdown(f"- **Conversions**: {bo['conversions']}")
-    st.markdown(f"- **Conversion %**: {bo['conversion_pct']:.0f}%")
-
-    st.markdown("---")
-
-    # ============================================================
-    # 4. ROUND FLOW
-    # ============================================================
-    st.markdown('<p class="subsection-title">Round Flow</p>', unsafe_allow_html=True)
-
-    fm = cc["flow_metrics"]
-
-    colA, colB, colC, colD = st.columns(4)
-
-    with colA:
-        st.metric("Bounce Back %", f"{fm['bounce_back_pct']:.0f}%")
-
-    with colB:
-        st.metric("Drop Off %", f"{fm['drop_off_pct']:.0f}%")
-
-    with colC:
-        st.metric("Gas Pedal %", f"{fm['gas_pedal_pct']:.0f}%")
-
-    with colD:
-        st.metric("Bogey Trains", f"{fm['bogey_train_count']}")
-
-    if fm["bogey_train_count"] > 0:
-        st.markdown(f"- **Longest Train**: {fm['longest_bogey_train']} holes")
-        st.markdown(f"- **Train Lengths**: {fm['bogey_trains']}")
-
-    st.markdown("---")
-
-    # ============================================================
-    # 5. PRACTICE PRIORITIES
-    # ============================================================
-    st.markdown('<p class="subsection-title">Practice Priorities</p>', unsafe_allow_html=True)
-
-    for p in cc["practice_priorities"]:
-        st.markdown(f"- {p}")
+    st.markdown('<p class="subsection-title">Deep Dive Analysis</p>', unsafe_allow_html=True)
+    
+    # Detailed breakdowns
+    with st.expander("Complete Strengths & Weaknesses Breakdown"):
+        sg_summary = pp.get("sg_summary", {})
+        if sg_summary:
+            for cat, val in sorted(sg_summary.items(), key=lambda x: x[1], reverse=True):
+                if val > 0:
+                    st.markdown(f"**{cat}**: {val:+.2f} SG (Strength)")
+                elif val < 0:
+                    st.markdown(f"**{cat}**: {val:+.2f} SG (Weakness)")
+                else:
+                    st.markdown(f"**{cat}**: {val:+.2f} SG (Neutral)")
+    
+    with st.expander("Mental Strength Details"):
+        st.markdown("**Bounce Back:**")
+        st.json(bounce_back)
+        st.markdown("**Drop Off:**")
+        st.json(drop_off)
+        st.markdown("**Gas Pedal:**")
+        st.json(gas_pedal)
+        st.markdown("**Bogey Train:**")
+        st.json(bogey_train)
+        st.markdown("**Pressure Finish:**")
+        st.json(pressure_finish)
+        st.markdown("**Early Round Composure:**")
+        st.json(early_round)
+        st.markdown("**Mistake Penalty Index:**")
+        st.json(mistake_penalty)
+    
+    with st.expander("Tiger 5 Complete Analysis"):
+        tiger5_results = pp.get("tiger5_results", {})
+        tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
+        for name in tiger5_names:
+            info = tiger5_results.get(name, {})
+            if isinstance(info, dict) and 'fails' in info:
+                st.markdown(f"**{name}**: {info.get('fails', 0)} failures out of {info.get('attempts', 0)} opportunities")
+    
+    grit_score = pp.get("grit_score", 0)
+    if grit_score > 0:
+        with st.expander("Grit Score"):
+            st.markdown(f"**Grit Score**: {grit_score:.1f}%")
+            st.markdown("This represents your success rate across all Tiger 5 categories.")
 
 # ============================================================
 # MAIN APP — CONTROLLER
@@ -2523,7 +2698,7 @@ putting_results = build_putting_results(filtered_df, num_rounds)
 
 tiger5_results, total_tiger5_fails, grit_score = build_tiger5_results(filtered_df, hole_summary)
 
-coachs_corner_results = build_coachs_corner(
+playerpath_results = build_playerpath(
     filtered_df,
     hole_summary,
     driving_results,
@@ -2531,15 +2706,16 @@ coachs_corner_results = build_coachs_corner(
     short_game_results,
     putting_results,
     tiger5_results,
-    grit_score
+    grit_score,
+    num_rounds
 )
 
 # ============================================================
 # TABS
 # ============================================================
 
-tab_tiger5, tab_sg, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
-    ["Tiger 5", "Strokes Gained", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
+tab_tiger5, tab_sg, tab_driving, tab_approach, tab_short_game, tab_putting, tab_playerpath = st.tabs(
+    ["Tiger 5", "Strokes Gained", "Driving", "Approach", "Short Game", "Putting", "PlayerPath"]
 )
 
 with tab_tiger5:
@@ -2569,5 +2745,5 @@ with tab_short_game:
 with tab_putting:
     putting_tab(putting_results, num_rounds)
 
-with tab_coach:
-    coachs_corner_tab(coachs_corner_results)
+with tab_playerpath:
+    playerpath_tab(playerpath_results)
