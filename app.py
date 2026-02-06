@@ -1985,95 +1985,170 @@ def putting_tab(putting, num_rounds):
         st.warning("No putting data available for the selected filters.")
         return
 
-    df = putting["df"]
     hero = putting["hero_metrics"]
+
+    def _sg_card_class(value, threshold=0):
+        return "sg-hero-positive" if value >= threshold else "sg-hero-negative"
 
     st.markdown('<p class="section-title">Putting Performance</p>', unsafe_allow_html=True)
 
     # ------------------------------------------------------------
-    # HERO CARDS
+    # SECTION 1 — HERO CARDS
     # ------------------------------------------------------------
     col1, col2, col3, col4, col5 = st.columns(5)
 
-    # Make % (4–5 ft)
+    # Card 1 — SG Putting (total, per-round subtext)
     with col1:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value">{hero['make_45_pct']:.0f}%</div>
-                <div class="hero-label">Make %</div>
-                <div class="hero-sub">4–5 ft</div>
+        cls = _sg_card_class(hero["sg_total"])
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">SG Putting</div>
+                <div class="card-value">{hero["sg_total"]:+.2f}</div>
+                <div class="card-unit">{hero["sg_per_round"]:+.2f} per round</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
-    # SG (5–10 ft)
+    # Card 2 — SG Putting 3–6 ft
     with col2:
-        color = "#2d6a4f" if hero["sg_510"] >= 0 else "#E03C31"
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value" style="color:{color};">{hero['sg_510']:+.2f}</div>
-                <div class="hero-label">SG Putting</div>
-                <div class="hero-sub">5–10 ft</div>
+        cls = _sg_card_class(hero["sg_3_6"])
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">SG Putting 3–6 ft</div>
+                <div class="card-value">{hero["sg_3_6"]:+.2f}</div>
+                <div class="card-unit">Made {hero["sg_3_6_made"]} / {hero["sg_3_6_attempts"]}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
-    # Total 3-putts
+    # Card 3 — SG Putting 7–10 ft
     with col3:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value">{hero['three_putts']}</div>
-                <div class="hero-label">3-Putts</div>
-                <div class="hero-sub">Total</div>
+        cls = _sg_card_class(hero["sg_7_10"])
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">SG Putting 7–10 ft</div>
+                <div class="card-value">{hero["sg_7_10"]:+.2f}</div>
+                <div class="card-unit">Made {hero["sg_7_10_made"]} / {hero["sg_7_10_attempts"]}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
-    # Lag Miss %
+    # Card 4 — Lag Putting (% of first putts leaving > 5 ft)
     with col4:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value">{hero['lag_miss_pct']:.0f}%</div>
-                <div class="hero-label">Lag Miss %</div>
-                <div class="hero-sub">Leaves >5 ft</div>
+        cls = _sg_card_class(100 - hero["lag_miss_pct"], threshold=80)
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">Lag Miss %</div>
+                <div class="card-value">{hero["lag_miss_pct"]:.0f}%</div>
+                <div class="card-unit">First putts &ge;20 ft leaving &gt;5 ft</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
-    # Clutch %
+    # Card 5 — Make % 0–3 ft
     with col5:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value">{hero['clutch_pct']:.0f}%</div>
-                <div class="hero-label">Clutch Index</div>
-                <div class="hero-sub">Birdie Putts ≤10 ft</div>
+        cls = _sg_card_class(hero["make_0_3_pct"], threshold=95)
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">Make % 0–3 ft</div>
+                <div class="card-value">{hero["make_0_3_pct"]:.0f}%</div>
+                <div class="card-unit">Made {hero["make_0_3_made"]} / {hero["make_0_3_attempts"]}</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
+
+    # Collapsible lag miss detail
+    lag_detail = putting["lag_miss_detail"]
+    if not lag_detail.empty:
+        with st.expander(f"Lag Putts Leaving > 5 ft ({len(lag_detail)} total)"):
+            st.dataframe(lag_detail, use_container_width=True, hide_index=True)
 
     # ------------------------------------------------------------
-    # DISTANCE BUCKET TABLE
+    # SECTION 2 — SG PUTTING BY DISTANCE
     # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Putting by Distance Bucket</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">SG Putting by Distance</p>', unsafe_allow_html=True)
 
     st.dataframe(
         putting["bucket_table"],
         use_container_width=True,
-        hide_index=True
+        hide_index=True,
     )
 
+    # Dual-axis chart: stacked bar (putt outcomes) + SG line
+    outcome_df = putting["outcome_chart_data"]
+    if not outcome_df.empty and outcome_df['holes'].sum() > 0:
+        fig_outcome = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Stacked bars — 1-putt, 2-putt, 3+ putt
+        fig_outcome.add_trace(
+            go.Bar(
+                x=outcome_df['Distance Bucket'],
+                y=outcome_df['pct_1putt'],
+                name='1-Putt',
+                marker_color=ODU_GREEN,
+                hovertemplate='%{y:.1f}%<extra>1-Putt</extra>',
+            ),
+            secondary_y=False,
+        )
+        fig_outcome.add_trace(
+            go.Bar(
+                x=outcome_df['Distance Bucket'],
+                y=outcome_df['pct_2putt'],
+                name='2-Putt',
+                marker_color=ODU_GOLD,
+                hovertemplate='%{y:.1f}%<extra>2-Putt</extra>',
+            ),
+            secondary_y=False,
+        )
+        fig_outcome.add_trace(
+            go.Bar(
+                x=outcome_df['Distance Bucket'],
+                y=outcome_df['pct_3plus'],
+                name='3+ Putt',
+                marker_color=ODU_RED,
+                hovertemplate='%{y:.1f}%<extra>3+ Putt</extra>',
+            ),
+            secondary_y=False,
+        )
+
+        # SG smooth line
+        fig_outcome.add_trace(
+            go.Scatter(
+                x=outcome_df['Distance Bucket'],
+                y=outcome_df['sg'],
+                name='SG',
+                mode='lines+markers',
+                line=dict(color=ODU_BLACK, width=3, shape='spline'),
+                marker=dict(size=8, color=ODU_BLACK),
+                hovertemplate='%{y:+.2f}<extra>SG</extra>',
+            ),
+            secondary_y=True,
+        )
+
+        fig_outcome.update_layout(
+            **CHART_LAYOUT,
+            barmode='stack',
+            legend=dict(
+                orientation='h', yanchor='bottom', y=1.02,
+                xanchor='right', x=1,
+            ),
+            margin=dict(t=60, b=60, l=60, r=60),
+            height=400,
+            hovermode='x unified',
+        )
+        fig_outcome.update_yaxes(
+            title_text='% of Holes',
+            range=[0, 105],
+            gridcolor='#e8e8e8',
+            secondary_y=False,
+        )
+        fig_outcome.update_yaxes(
+            title_text='Strokes Gained',
+            showgrid=False,
+            zerolinecolor=ODU_BLACK,
+            zerolinewidth=1,
+            secondary_y=True,
+        )
+
+        st.plotly_chart(fig_outcome, use_container_width=True, config={'displayModeBar': False})
+
     # ------------------------------------------------------------
-    # LAG METRICS
+    # SECTION 3 — LAG PUTTING
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Lag Putting</p>', unsafe_allow_html=True)
 
@@ -2082,49 +2157,162 @@ def putting_tab(putting, num_rounds):
     colA, colB, colC = st.columns(3)
 
     with colA:
-        st.metric("Avg Leave Distance", f"{lag['avg_leave']:.1f} ft")
+        st.markdown(f'''
+            <div class="sg-card">
+                <div class="card-label">Avg Leave Distance</div>
+                <div class="card-value">{lag["avg_leave"]:.1f} ft</div>
+                <div class="card-unit">Putts &ge;20 ft</div>
+            </div>
+        ''', unsafe_allow_html=True)
 
     with colB:
-        st.metric("Leaves Inside 3 ft", f"{lag['pct_inside_3']:.0f}%")
+        cls = _sg_card_class(lag["pct_inside_3"], threshold=50)
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">Leaves Inside 3 ft</div>
+                <div class="card-value">{lag["pct_inside_3"]:.0f}%</div>
+                <div class="card-unit">Putts &ge;20 ft</div>
+            </div>
+        ''', unsafe_allow_html=True)
 
     with colC:
-        st.metric("Leaves Over 5 ft", f"{lag['pct_over_5']:.0f}%")
+        cls = _sg_card_class(100 - lag["pct_over_5"], threshold=80)
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">Leaves Over 5 ft</div>
+                <div class="card-value">{lag["pct_over_5"]:.0f}%</div>
+                <div class="card-unit">Putts &ge;20 ft</div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+    # Donut charts — side by side
+    three_putt_starts = putting["three_putt_starts"]
+    leave_dist = putting["leave_distribution"]
+
+    col_d1, col_d2 = st.columns(2)
+
+    # Donut A — 3-putt first-putt starting distance
+    with col_d1:
+        if not three_putt_starts.empty and three_putt_starts['Count'].sum() > 0:
+            chart_a = three_putt_starts[three_putt_starts['Count'] > 0]
+            total_3putts = int(chart_a['Count'].sum())
+            donut_colors_a = [ODU_GREEN, ODU_GOLD, ODU_DARK_GOLD, ODU_RED]
+            fig_a = go.Figure(data=[go.Pie(
+                labels=chart_a['Bucket'],
+                values=chart_a['Count'],
+                hole=0.6,
+                marker_colors=donut_colors_a[:len(chart_a)],
+                textinfo='label+percent',
+                textposition='outside',
+                textfont=dict(family='Inter', size=12),
+                pull=[0.02] * len(chart_a),
+            )])
+            fig_a.update_layout(
+                **CHART_LAYOUT,
+                showlegend=False,
+                margin=dict(t=40, b=40, l=40, r=40),
+                height=350,
+                annotations=[dict(
+                    text=f'<b>{total_3putts}</b><br>3-Putts',
+                    x=0.5, y=0.5,
+                    font=dict(family='Playfair Display', size=22, color='#000'),
+                    showarrow=False,
+                )],
+            )
+            st.markdown(
+                '<p style="text-align:center;font-weight:600;font-size:0.9rem;">'
+                '3-Putt: First Putt Starting Distance</p>',
+                unsafe_allow_html=True,
+            )
+            st.plotly_chart(fig_a, use_container_width=True, config={'displayModeBar': False})
+        else:
+            st.info("No 3-putt data available.")
+
+    # Donut B — leave distance distribution (putts > 20 ft)
+    with col_d2:
+        if not leave_dist.empty and leave_dist['Count'].sum() > 0:
+            chart_b = leave_dist[leave_dist['Count'] > 0]
+            total_lag = int(chart_b['Count'].sum())
+            donut_colors_b = [ODU_GREEN, ODU_GOLD, ODU_DARK_GOLD, ODU_RED]
+            fig_b = go.Figure(data=[go.Pie(
+                labels=chart_b['Bucket'],
+                values=chart_b['Count'],
+                hole=0.6,
+                marker_colors=donut_colors_b[:len(chart_b)],
+                textinfo='label+percent',
+                textposition='outside',
+                textfont=dict(family='Inter', size=12),
+                pull=[0.02] * len(chart_b),
+            )])
+            fig_b.update_layout(
+                **CHART_LAYOUT,
+                showlegend=False,
+                margin=dict(t=40, b=40, l=40, r=40),
+                height=350,
+                annotations=[dict(
+                    text=f'<b>{total_lag}</b><br>Putts',
+                    x=0.5, y=0.5,
+                    font=dict(family='Playfair Display', size=22, color='#000'),
+                    showarrow=False,
+                )],
+            )
+            st.markdown(
+                '<p style="text-align:center;font-weight:600;font-size:0.9rem;">'
+                'Leave Distance Distribution (&gt;20 ft putts)</p>',
+                unsafe_allow_html=True,
+            )
+            st.plotly_chart(fig_b, use_container_width=True, config={'displayModeBar': False})
+        else:
+            st.info("No lag putting data available.")
 
     # ------------------------------------------------------------
-    # TREND CHART
+    # SECTION 4 — SG PUTTING TREND
     # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Putting Trend by Round</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">SG Putting Trend</p>', unsafe_allow_html=True)
 
     trend_df = putting["trend_df"]
 
-    use_ma = st.checkbox("Apply Moving Average", value=False, key="putting_ma")
+    if not trend_df.empty:
+        use_ma = st.checkbox("Apply Moving Average", value=False, key="putting_ma")
 
-    if use_ma:
-        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0, key="putting_ma_window")
-        trend_df["SG_MA"] = trend_df["SG"].rolling(window=window).mean()
-        y_col = "SG_MA"
+        if use_ma:
+            window = st.selectbox(
+                "Moving Average Window", [3, 5, 10], index=0, key="putting_ma_window"
+            )
+            trend_df = trend_df.copy()
+            trend_df["SG_MA"] = trend_df["SG"].rolling(window=window).mean()
+            y_col = "SG_MA"
+        else:
+            y_col = "SG"
+
+        fig_trend = px.line(
+            trend_df,
+            x="Label",
+            y=y_col,
+            markers=True,
+            title="SG: Putting Trend",
+            color_discrete_sequence=[ODU_BLACK],
+        )
+
+        fig_trend.update_layout(
+            **CHART_LAYOUT,
+            xaxis_title='',
+            yaxis_title='Strokes Gained',
+            height=400,
+        )
+        fig_trend.update_xaxes(tickangle=-45)
+
+        st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
     else:
-        y_col = "SG"
+        st.info("No trend data available.")
 
-    fig_trend = px.line(
-        trend_df,
-        x="Label",
-        y=y_col,
-        markers=True,
-        title="SG: Putting Trend",
-        color_discrete_sequence=[ODU_BLACK]
-    )
-
-    fig_trend.update_layout(
-        **CHART_LAYOUT,
-        xaxis_title='',
-        yaxis_title='Strokes Gained',
-        height=400
-    )
-
-    fig_trend.update_xaxes(tickangle=-45)
-
-    st.plotly_chart(fig_trend, use_container_width=True)
+    # Collapsible shot detail table
+    shot_detail = putting["shot_detail"]
+    if not shot_detail.empty:
+        with st.expander(f"All Putting Shots ({len(shot_detail)} total)"):
+            st.dataframe(shot_detail, use_container_width=True, hide_index=True)
+    else:
+        st.info("No shot detail available.")
 
 # ============================================================
 # TAB: COACH'S CORNER
