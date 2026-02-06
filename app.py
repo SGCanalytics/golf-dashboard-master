@@ -76,6 +76,16 @@ st.markdown("""
     .tiger-card-fail .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #ffffff; line-height: 1; margin-bottom: 0.25rem; }
     .tiger-card-fail .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
 
+    .sg-hero-positive { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #2d6a4f; margin-bottom: 1rem; }
+    .sg-hero-positive .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #2d6a4f; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .sg-hero-positive .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #2d6a4f; line-height: 1; margin-bottom: 0.25rem; }
+    .sg-hero-positive .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(45,106,79,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .sg-hero-negative { background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: 2px solid #E03C31; margin-bottom: 1rem; }
+    .sg-hero-negative .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: #E03C31; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .sg-hero-negative .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #E03C31; line-height: 1; margin-bottom: 0.25rem; }
+    .sg-hero-negative .card-unit { font-family: 'Inter', sans-serif; font-size: 0.65rem; color: rgba(224,60,49,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
+
     .grit-card { background: linear-gradient(135deg, #FFC72C 0%, #e6b327 100%); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; border: none; margin-bottom: 1rem; }
     .grit-card .card-label { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: rgba(0,0,0,0.7); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
     .grit-card .card-value { font-family: 'Playfair Display', serif; font-size: 2.25rem; font-weight: 700; color: #000000; line-height: 1; margin-bottom: 0.25rem; }
@@ -1707,157 +1717,262 @@ def short_game_tab(sg, num_rounds):
         st.warning("No short game data available for the selected filters.")
         return
 
-    df = sg["df"]
     hero = sg["hero_metrics"]
 
     st.markdown('<p class="section-title">Short Game Performance</p>', unsafe_allow_html=True)
 
     # ------------------------------------------------------------
-    # HERO CARDS
+    # SECTION 1 — HERO CARDS (5 columns, Tiger-5 style)
     # ------------------------------------------------------------
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
-    # SG: Around the Green
+    # Helper: pick CSS class based on value vs threshold
+    def _sg_card_class(value, threshold=0):
+        return "sg-hero-positive" if value >= threshold else "sg-hero-negative"
+
+    # Card 1 — SG Short Game (total, with per-round sub-text)
     with col1:
-        color = "#2d6a4f" if hero["sg_total"] >= 0 else "#E03C31"
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value" style="color:{color};">{hero['sg_total']:+.2f}</div>
-                <div class="hero-label">SG: Around the Green</div>
-                <div class="hero-sub">Total</div>
+        cls = _sg_card_class(hero["sg_total"])
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">SG Short Game</div>
+                <div class="card-value">{hero["sg_total"]:+.2f}</div>
+                <div class="card-unit">{hero["sg_per_round"]:+.2f} per round</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
-    # Shots inside 8 ft (Fairway + Rough)
+    # Card 2 — SG 25–50
     with col2:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value">{hero['inside_8_fr']}</div>
-                <div class="hero-label">Inside 8 ft</div>
-                <div class="hero-sub">Fairway + Rough</div>
+        cls = _sg_card_class(hero["sg_25_50"])
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">SG 25–50</div>
+                <div class="card-value">{hero["sg_25_50"]:+.2f}</div>
+                <div class="card-unit">Total</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
-    # Shots inside 8 ft (Sand)
+    # Card 3 — SG ARG (<25)
     with col3:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value">{hero['inside_8_sand']}</div>
-                <div class="hero-label">Inside 8 ft</div>
-                <div class="hero-sub">Sand</div>
+        cls = _sg_card_class(hero["sg_arg"])
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">SG ARG</div>
+                <div class="card-value">{hero["sg_arg"]:+.2f}</div>
+                <div class="card-unit">Total</div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        ''', unsafe_allow_html=True)
 
-    # Avg Proximity
+    # Card 4 — % Inside 8 ft (Fairway & Rough)
     with col4:
-        st.markdown(
-            f"""
-            <div class="hero-stat">
-                <div class="hero-value">{hero['avg_proximity']:.1f} ft</div>
-                <div class="hero-label">Avg Proximity</div>
-                <div class="hero-sub">All Short Game Shots</div>
+        cls = _sg_card_class(hero["pct_inside_8_fr"], threshold=60)
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">% Inside 8 ft</div>
+                <div class="card-value">{hero["pct_inside_8_fr"]:.0f}%</div>
+                <div class="card-unit">Fairway & Rough</div>
             </div>
-            """,
-            unsafe_allow_html=True
+        ''', unsafe_allow_html=True)
+
+    # Card 5 — % Inside 8 ft (Sand)
+    with col5:
+        cls = _sg_card_class(hero["pct_inside_8_sand"], threshold=60)
+        st.markdown(f'''
+            <div class="{cls}">
+                <div class="card-label">% Inside 8 ft</div>
+                <div class="card-value">{hero["pct_inside_8_sand"]:.0f}%</div>
+                <div class="card-unit">Bunker</div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # SECTION 2 — HEAT MAP + COLLAPSIBLE DETAIL TABLE
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Short Game Heat Map</p>', unsafe_allow_html=True)
+
+    sg_pivot = sg["heatmap_sg_pivot"]
+    count_pivot = sg["heatmap_count_pivot"]
+
+    if not sg_pivot.empty:
+        import numpy as np
+
+        # Build text matrix: show shot count in each cell, blank if 0/NaN
+        count_filled = count_pivot.fillna(0).astype(int)
+        text_matrix = count_filled.astype(str)
+        text_matrix = text_matrix.where(count_filled > 0, "")
+        text_vals = text_matrix.values.tolist()
+
+        # Format hover text with shot count detail
+        hover_matrix = []
+        for i, lie in enumerate(sg_pivot.index):
+            row = []
+            for j, bucket in enumerate(sg_pivot.columns):
+                sg_val = sg_pivot.iloc[i, j]
+                cnt = count_filled.iloc[i, j]
+                if cnt > 0 and not np.isnan(sg_val):
+                    row.append(
+                        f"Lie: {lie}<br>Distance: {bucket}<br>"
+                        f"SG/Shot: {sg_val:+.3f}<br>Shots: {cnt}"
+                    )
+                else:
+                    row.append("")
+            hover_matrix.append(row)
+
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=sg_pivot.values,
+            x=sg_pivot.columns.tolist(),
+            y=sg_pivot.index.tolist(),
+            text=text_vals,
+            texttemplate="%{text}",
+            textfont=dict(size=14, color="#ffffff"),
+            colorscale=[
+                [0.0, '#E03C31'],
+                [0.5, '#f5f5f5'],
+                [1.0, '#2d6a4f'],
+            ],
+            zmid=0,
+            colorbar=dict(title="SG/Shot"),
+            hovertext=hover_matrix,
+            hovertemplate="%{hovertext}<extra></extra>",
+        ))
+
+        fig_heat.update_layout(
+            **CHART_LAYOUT,
+            xaxis_title="Distance (yards)",
+            yaxis_title="Starting Lie",
+            height=300,
+            margin=dict(t=40, b=60, l=100, r=40),
         )
 
-    # ------------------------------------------------------------
-    # DISTANCE × LIE TABLE
-    # ------------------------------------------------------------
-    st.markdown('<p class="section-title">Performance by Distance & Lie</p>', unsafe_allow_html=True)
+        st.plotly_chart(fig_heat, use_container_width=True, config={'displayModeBar': False})
+    else:
+        st.info("No heat map data available.")
 
-    st.dataframe(
-        sg["distance_lie_table"],
-        use_container_width=True,
-        hide_index=True
-    )
+    # Collapsible detail table
+    with st.expander("View Detailed Performance by Distance & Lie"):
+        if not sg["distance_lie_table"].empty:
+            st.dataframe(sg["distance_lie_table"], use_container_width=True, hide_index=True)
+        else:
+            st.info("No data available.")
 
     # ------------------------------------------------------------
-    # TREND CHART
+    # SECTION 3 — LEAVE DISTANCE DISTRIBUTION
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Leave Distance Distribution</p>', unsafe_allow_html=True)
+
+    leave = sg["leave_distribution"]
+
+    if not leave.empty and leave['Shots'].sum() > 0:
+        fig_leave = go.Figure(data=go.Bar(
+            x=leave['Leave Bucket'],
+            y=leave['Shots'],
+            marker_color=ODU_GOLD,
+            text=leave['Shots'],
+            textposition='outside',
+            textfont=dict(size=13, family='Inter'),
+        ))
+
+        fig_leave.update_layout(
+            **CHART_LAYOUT,
+            xaxis_title="Leave Distance (ft)",
+            yaxis_title="Number of Shots",
+            height=350,
+            margin=dict(t=40, b=60, l=60, r=40),
+            showlegend=False,
+        )
+
+        st.plotly_chart(fig_leave, use_container_width=True, config={'displayModeBar': False})
+    else:
+        st.info("No leave distance data available.")
+
+    # ------------------------------------------------------------
+    # SECTION 4 — SG SHORT GAME TREND LINE (preserved)
     # ------------------------------------------------------------
     st.markdown('<p class="section-title">Short Game Trend by Round</p>', unsafe_allow_html=True)
 
     trend_df = sg["trend_df"]
 
-    use_ma = st.checkbox("Apply Moving Average", value=False, key="sg_ma")
+    if not trend_df.empty:
+        use_ma = st.checkbox("Apply Moving Average", value=False, key="sg_ma")
 
-    if use_ma:
-        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0, key="sg_ma_window")
-        trend_df["SG_MA"] = trend_df["SG"].rolling(window=window).mean()
-        trend_df["Inside8_MA"] = trend_df["Inside8 %"].rolling(window=window).mean()
-        y1 = "SG_MA"
-        y2 = "Inside8_MA"
+        if use_ma:
+            window = st.selectbox("Moving Average Window", [3, 5, 10], index=0, key="sg_ma_window")
+            trend_df = trend_df.copy()
+            trend_df["SG_MA"] = trend_df["SG"].rolling(window=window).mean()
+            trend_df["Inside8_MA"] = trend_df["Inside8 %"].rolling(window=window).mean()
+            y1 = "SG_MA"
+            y2 = "Inside8_MA"
+        else:
+            y1 = "SG"
+            y2 = "Inside8 %"
+
+        fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
+
+        fig_trend.add_trace(
+            go.Bar(
+                x=trend_df["Label"],
+                y=trend_df[y1],
+                name="SG: Short Game",
+                marker_color=ODU_GOLD,
+                opacity=0.85
+            ),
+            secondary_y=False
+        )
+
+        fig_trend.add_trace(
+            go.Scatter(
+                x=trend_df["Label"],
+                y=trend_df[y2],
+                name="% Inside 8 ft",
+                mode="lines+markers",
+                line=dict(color=ODU_BLACK, width=3),
+                marker=dict(size=9, color=ODU_BLACK)
+            ),
+            secondary_y=True
+        )
+
+        fig_trend.update_layout(
+            **CHART_LAYOUT,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            margin=dict(t=60, b=80, l=60, r=60),
+            height=350,
+            hovermode="x unified",
+            xaxis=dict(tickangle=-45)
+        )
+
+        fig_trend.update_yaxes(
+            title_text="Strokes Gained",
+            gridcolor="#e8e8e8",
+            zerolinecolor=ODU_BLACK,
+            zerolinewidth=2,
+            secondary_y=False
+        )
+
+        fig_trend.update_yaxes(
+            title_text="% Inside 8 ft",
+            range=[0, 100],
+            showgrid=False,
+            secondary_y=True
+        )
+
+        st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
     else:
-        y1 = "SG"
-        y2 = "Inside8 %"
+        st.info("No trend data available.")
 
-    fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
-
-    # SG bar chart
-    fig_trend.add_trace(
-        go.Bar(
-            x=trend_df["Label"],
-            y=trend_df[y1],
-            name="SG: Short Game",
-            marker_color=ODU_GOLD,
-            opacity=0.85
-        ),
-        secondary_y=False
-    )
-
-    # Inside 8 ft line
-    fig_trend.add_trace(
-        go.Scatter(
-            x=trend_df["Label"],
-            y=trend_df[y2],
-            name="% Inside 8 ft",
-            mode="lines+markers",
-            line=dict(color=ODU_BLACK, width=3),
-            marker=dict(size=9, color=ODU_BLACK)
-        ),
-        secondary_y=True
-    )
-
-    fig_trend.update_layout(
-        **CHART_LAYOUT,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
-        ),
-        margin=dict(t=60, b=80, l=60, r=60),
-        height=350,
-        hovermode="x unified",
-        xaxis=dict(tickangle=-45)
-    )
-
-    fig_trend.update_yaxes(
-        title_text="Strokes Gained",
-        gridcolor="#e8e8e8",
-        zerolinecolor=ODU_BLACK,
-        zerolinewidth=2,
-        secondary_y=False
-    )
-
-    fig_trend.update_yaxes(
-        title_text="% Inside 8 ft",
-        range=[0, 100],
-        showgrid=False,
-        secondary_y=True
-    )
-
-    st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
+    # ------------------------------------------------------------
+    # SECTION 5 — ALL SHORT GAME SHOTS (collapsible)
+    # ------------------------------------------------------------
+    with st.expander("View All Short Game Shots"):
+        if not sg["shot_detail"].empty:
+            st.dataframe(sg["shot_detail"], use_container_width=True, hide_index=True)
+        else:
+            st.info("No shot data available.")
 
 
 # ============================================================
