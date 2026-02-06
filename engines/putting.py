@@ -1,8 +1,10 @@
 import pandas as pd
+from engines.helpers import safe_divide
 
 # ============================================================
-# PUTTING ENGINE 
+# PUTTING ENGINE
 # ============================================================
+
 
 def _enrich_putting_df(filtered_df):
     """Filter to putts and add computed columns."""
@@ -22,18 +24,364 @@ def _enrich_putting_df(filtered_df):
         putting_df['Round ID'].astype(str) + '|' +
         putting_df['Hole'].astype(str)
     )
+
+    # Putt ordinal within each hole (1st putt, 2nd putt, etc.)
+    putting_df = putting_df.sort_values(['Hole Key', 'Shot'])
+    putting_df['Putt Number'] = putting_df.groupby('Hole Key').cumcount() + 1
+
+    # Total putts on the hole (joined back to every row)
+    putting_df['Putts On Hole'] = putting_df.groupby('Hole Key')['Shot'].transform('count')
+
     return putting_df
 
 
+# ============================================================
+# HERO METRICS
+# ============================================================
+
+def _build_hero_metrics(putting_df, num_rounds):
+    """Compute the five hero card metrics."""
+    sg_total = putting_df['Strokes Gained'].sum()
+    sg_per_round = safe_divide(sg_total, num_rounds)
+
+    # SG Putting 3-6 ft
+    m36 = putting_df[
+        (putting_df['Starting Distance'] >= 3) &
+        (putting_df['Starting Distance'] <= 6)
+    ]
+    sg_3_6 = m36['Strokes Gained'].sum() if not m36.empty else 0.0
+    sg_3_6_made = int(m36['Made'].sum()) if not m36.empty else 0
+    sg_3_6_attempts = len(m36)
+
+    # SG Putting 7-10 ft
+    m710 = putting_df[
+        (putting_df['Starting Distance'] >= 7) &
+        (putting_df['Starting Distance'] <= 10)
+    ]
+    sg_7_10 = m710['Strokes Gained'].sum() if not m710.empty else 0.0
+    sg_7_10_made = int(m710['Made'].sum()) if not m710.empty else 0
+    sg_7_10_attempts = len(m710)
+
+    # Lag Miss % — first putts >= 20 ft that leave > 5 ft
+    first_putts = putting_df[putting_df['Putt Number'] == 1]
+    lag_first = first_putts[first_putts['Starting Distance'] >= 20]
+    lag_miss_pct = (
+        safe_divide((lag_first['Ending Distance'] > 5).sum(), len(lag_first)) * 100
+    )
+
+    # Make % 0-3 ft
+    m03 = putting_df[
+        (putting_df['Starting Distance'] > 0) &
+        (putting_df['Starting Distance'] <= 3)
+    ]
+    make_0_3_pct = safe_divide(m03['Made'].sum(), len(m03)) * 100
+    make_0_3_made = int(m03['Made'].sum()) if not m03.empty else 0
+    make_0_3_attempts = len(m03)
+
+    return {
+        "sg_total": sg_total,
+        "sg_per_round": sg_per_round,
+        "sg_3_6": sg_3_6,
+        "sg_3_6_made": sg_3_6_made,
+        "sg_3_6_attempts": sg_3_6_attempts,
+        "sg_7_10": sg_7_10,
+        "sg_7_10_made": sg_7_10_made,
+        "sg_7_10_attempts": sg_7_10_attempts,
+        "lag_miss_pct": lag_miss_pct,
+        "make_0_3_pct": make_0_3_pct,
+        "make_0_3_made": make_0_3_made,
+        "make_0_3_attempts": make_0_3_attempts,
+    }
+
+
+# ============================================================
+# BUCKET TABLE (Section 2 — table)
+# ============================================================
+
+def _build_bucket_table(putting_df):
+    """Make %, SG, and attempts by distance bucket."""
+    if putting_df.empty:
+        return pd.DataFrame(
+            columns=['Distance Bucket', 'Attempts', 'SG', 'Makes', 'Make %']
+        )
+
+    bins = [0, 4, 7, 11, 21, 31, 1000]
+    labels = ['0–3', '4–6', '7–10', '10–20', '20–30', '30+']
+
+    df = putting_df.copy()
+    df['Distance Bucket'] = pd.cut(
+        df['Starting Distance'],
+        bins=bins,
+        labels=labels,
+        right=False,
+    )
+
+    grouped = df.groupby('Distance Bucket', observed=False).agg(
+        Attempts=('Made', 'count'),
+        SG=('Strokes Gained', 'sum'),
+        Makes=('Made', 'sum'),
+    ).reset_index()
+
+    grouped['Make %'] = grouped.apply(
+        lambda row: f"{safe_divide(row['Makes'], row['Attempts']) * 100:.1f}%"
+        if row['Attempts'] > 0 else "-",
+        axis=1,
+    )
+    grouped['SG'] = grouped['SG'].apply(lambda x: f"{x:+.2f}")
+
+    return grouped
+
+
+# ============================================================
+# PUTT OUTCOME CHART DATA (Section 2 — dual-axis chart)
+# ============================================================
+
+def _build_outcome_chart_data(putting_df):
+    """
+    Stacked bar (1-putt / 2-putt / 3+ %) plus SG line, grouped by
+    first-putt starting distance.
+    """
+    if putting_df.empty:
+        return pd.DataFrame()
+
+    first_putts = putting_df[putting_df['Putt Number'] == 1].copy()
+    if first_putts.empty:
+        return pd.DataFrame()
+
+    bins = [0, 4, 7, 11, 21, 31, 1000]
+    labels = ['0–3', '4–6', '7–10', '10–20', '20–30', '30+']
+
+    first_putts['Distance Bucket'] = pd.cut(
+        first_putts['Starting Distance'],
+        bins=bins,
+        labels=labels,
+        right=False,
+    )
+
+    # Classify hole outcome by total putts on the hole
+    first_putts['Outcome'] = first_putts['Putts On Hole'].apply(
+        lambda x: '1-Putt' if x == 1 else ('2-Putt' if x == 2 else '3+ Putt')
+    )
+
+    # Total SG per hole (all putts on that hole)
+    hole_sg = (
+        putting_df.groupby('Hole Key')['Strokes Gained']
+        .sum()
+        .reset_index()
+        .rename(columns={'Strokes Gained': 'Hole SG'})
+    )
+    first_putts = first_putts.merge(hole_sg, on='Hole Key', how='left')
+
+    # Aggregate by bucket
+    rows = []
+    for bucket in labels:
+        bucket_df = first_putts[first_putts['Distance Bucket'] == bucket]
+        total_holes = len(bucket_df)
+        if total_holes == 0:
+            rows.append({
+                'Distance Bucket': bucket,
+                'pct_1putt': 0, 'pct_2putt': 0, 'pct_3plus': 0,
+                'sg': 0.0, 'holes': 0,
+            })
+            continue
+
+        rows.append({
+            'Distance Bucket': bucket,
+            'pct_1putt': (bucket_df['Outcome'] == '1-Putt').sum() / total_holes * 100,
+            'pct_2putt': (bucket_df['Outcome'] == '2-Putt').sum() / total_holes * 100,
+            'pct_3plus': (bucket_df['Outcome'] == '3+ Putt').sum() / total_holes * 100,
+            'sg': bucket_df['Hole SG'].sum(),
+            'holes': total_holes,
+        })
+
+    return pd.DataFrame(rows)
+
+
+# ============================================================
+# LAG METRICS (Section 3 — stat cards)
+# ============================================================
+
+def _build_lag_metrics(putting_df):
+    """Stat cards for putts starting >= 20 ft."""
+    lag = putting_df[putting_df['Starting Distance'] >= 20]
+    if lag.empty:
+        return {"avg_leave": 0.0, "pct_inside_3": 0.0, "pct_over_5": 0.0}
+
+    return {
+        "avg_leave": lag['Ending Distance'].mean(),
+        "pct_inside_3": safe_divide(
+            (lag['Ending Distance'] <= 3).sum(), len(lag)
+        ) * 100,
+        "pct_over_5": safe_divide(
+            (lag['Ending Distance'] > 5).sum(), len(lag)
+        ) * 100,
+    }
+
+
+# ============================================================
+# LAG MISS DETAIL (collapsible list under hero cards)
+# ============================================================
+
+def _build_lag_miss_detail(putting_df):
+    """First putts >= 20 ft that leave > 5 ft."""
+    first_putts = putting_df[putting_df['Putt Number'] == 1]
+    lag_misses = first_putts[
+        (first_putts['Starting Distance'] >= 20) &
+        (first_putts['Ending Distance'] > 5)
+    ].copy()
+
+    if lag_misses.empty:
+        return pd.DataFrame(columns=[
+            'Player', 'Course', 'Hole',
+            'Start Dist (ft)', 'Leave Dist (ft)', 'SG',
+        ])
+
+    detail = lag_misses[[
+        'Player', 'Date', 'Course', 'Hole',
+        'Starting Distance', 'Ending Distance', 'Strokes Gained',
+    ]].copy()
+    detail = detail.sort_values(
+        ['Date', 'Course', 'Hole'], ascending=[False, True, True]
+    )
+    detail = detail.rename(columns={
+        'Starting Distance': 'Start Dist (ft)',
+        'Ending Distance': 'Leave Dist (ft)',
+        'Strokes Gained': 'SG',
+    })
+    detail = detail.drop(columns=['Date'])
+    return detail
+
+
+# ============================================================
+# THREE-PUTT START DISTRIBUTION (Section 3 — donut a)
+# ============================================================
+
+def _build_three_putt_starts(putting_df):
+    """First-putt starting distance on holes with 3+ putts."""
+    first_putts = putting_df[putting_df['Putt Number'] == 1]
+    three_putt_firsts = first_putts[first_putts['Putts On Hole'] >= 3].copy()
+
+    if three_putt_firsts.empty:
+        return pd.DataFrame(columns=['Bucket', 'Count'])
+
+    bins = [0, 20, 30, 40, 1000]
+    labels = ['<20 ft', '20–30 ft', '30–40 ft', '40+ ft']
+
+    three_putt_firsts['Bucket'] = pd.cut(
+        three_putt_firsts['Starting Distance'],
+        bins=bins,
+        labels=labels,
+        right=False,
+    )
+
+    return (
+        three_putt_firsts
+        .groupby('Bucket', observed=False)
+        .size()
+        .reset_index(name='Count')
+    )
+
+
+# ============================================================
+# LEAVE DISTANCE DISTRIBUTION (Section 3 — donut b)
+# ============================================================
+
+def _build_leave_distribution(putting_df):
+    """Ending-distance distribution for putts starting > 20 ft."""
+    lag = putting_df[putting_df['Starting Distance'] > 20].copy()
+    if lag.empty:
+        return pd.DataFrame(columns=['Bucket', 'Count'])
+
+    bins = [0, 4, 7, 11, 1000]
+    labels = ['0–3 ft', '4–6 ft', '7–10 ft', '10+ ft']
+
+    lag['Bucket'] = pd.cut(
+        lag['Ending Distance'],
+        bins=bins,
+        labels=labels,
+        right=False,
+    )
+
+    return (
+        lag.groupby('Bucket', observed=False)
+        .size()
+        .reset_index(name='Count')
+    )
+
+
+# ============================================================
+# SG TREND BY ROUND (Section 4)
+# ============================================================
+
+def _build_trend_df(putting_df):
+    """SG Putting per round for the trend chart."""
+    if putting_df.empty:
+        return pd.DataFrame(columns=['Round ID', 'Date', 'Course', 'SG', 'Label'])
+
+    grouped = putting_df.groupby('Round ID').agg(
+        Date=('Date', 'first'),
+        Course=('Course', 'first'),
+        SG=('Strokes Gained', 'sum'),
+    ).reset_index()
+
+    grouped['Date'] = pd.to_datetime(grouped['Date'])
+    grouped = grouped.sort_values('Date')
+    grouped['Label'] = grouped.apply(
+        lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
+    )
+
+    return grouped
+
+
+# ============================================================
+# SHOT DETAIL TABLE (Section 4 — collapsible)
+# ============================================================
+
+def _build_shot_detail(putting_df):
+    """Every putt for the detail expander."""
+    if putting_df.empty:
+        return pd.DataFrame(columns=[
+            'Player', 'Course', 'Hole', 'Shot #',
+            'Starting Distance', 'Ending Distance', 'SG',
+        ])
+
+    detail = putting_df[[
+        'Player', 'Date', 'Course', 'Hole', 'Shot',
+        'Starting Distance', 'Ending Distance', 'Strokes Gained',
+    ]].copy()
+    detail = detail.rename(columns={
+        'Shot': 'Shot #',
+        'Strokes Gained': 'SG',
+    })
+    detail = detail.sort_values(
+        ['Date', 'Course', 'Hole', 'Shot #'],
+        ascending=[False, True, True, True],
+    )
+    detail = detail.drop(columns=['Date'])
+    return detail
+
+
+# ============================================================
+# MAIN ENTRY POINT
+# ============================================================
+
 def build_putting_results(filtered_df, num_rounds):
     """
-    Return a rich dict consumed by putting_tab and overview_engine.
+    Return a rich dict consumed by putting_tab, overview_engine,
+    and coachs_corner.
+
+    Downstream keys preserved:
+        - total_sg_putting   (used by overview_engine, coachs_corner)
+        - df                 (enriched putting DataFrame)
     """
     putting_df = _enrich_putting_df(filtered_df)
 
     empty_hero = {
-        "make_45_pct": 0.0, "sg_510": 0.0,
-        "three_putts": 0, "lag_miss_pct": 0.0, "clutch_pct": 0.0
+        "sg_total": 0.0, "sg_per_round": 0.0,
+        "sg_3_6": 0.0, "sg_3_6_made": 0, "sg_3_6_attempts": 0,
+        "sg_7_10": 0.0, "sg_7_10_made": 0, "sg_7_10_attempts": 0,
+        "lag_miss_pct": 0.0,
+        "make_0_3_pct": 0.0, "make_0_3_made": 0, "make_0_3_attempts": 0,
     }
     empty_lag = {"avg_leave": 0.0, "pct_inside_3": 0.0, "pct_over_5": 0.0}
 
@@ -44,266 +392,28 @@ def build_putting_results(filtered_df, num_rounds):
             "total_sg_putting": 0.0,
             "hero_metrics": empty_hero,
             "bucket_table": pd.DataFrame(),
+            "outcome_chart_data": pd.DataFrame(),
             "lag_metrics": empty_lag,
-            "trend_df": pd.DataFrame()
+            "lag_miss_detail": pd.DataFrame(),
+            "three_putt_starts": pd.DataFrame(),
+            "leave_distribution": pd.DataFrame(),
+            "trend_df": pd.DataFrame(),
+            "shot_detail": pd.DataFrame(),
         }
 
     total_sg = putting_df['Strokes Gained'].sum()
-
-    # --- Hero metrics ---
-    # Make % 4-5 ft
-    m45 = putting_df[(putting_df['Starting Distance'] >= 4) & (putting_df['Starting Distance'] <= 5)]
-    make_45_pct = (m45['Made'].sum() / len(m45) * 100) if len(m45) > 0 else 0.0
-
-    # SG 5-10 ft
-    m510 = putting_df[(putting_df['Starting Distance'] >= 5) & (putting_df['Starting Distance'] <= 10)]
-    sg_510 = m510['Strokes Gained'].sum() if not m510.empty else 0.0
-
-    # 3-putts (count holes with 3+ putts)
-    putt_counts = putting_df.groupby('Hole Key').size()
-    three_putts = int((putt_counts >= 3).sum())
-
-    # Lag miss % (putts starting >= 30 ft that leave > 5 ft)
-    lag_putts = putting_df[putting_df['Starting Distance'] >= 30]
-    if not lag_putts.empty:
-        lag_miss_pct = (lag_putts['Ending Distance'] > 5).sum() / len(lag_putts) * 100
-    else:
-        lag_miss_pct = 0.0
-
-    # Clutch % (birdie putts inside 10 ft — make %)
-    clutch_putts = putting_df[putting_df['Starting Distance'] <= 10]
-    clutch_pct = (clutch_putts['Made'].sum() / len(clutch_putts) * 100) if len(clutch_putts) > 0 else 0.0
-
-    hero = {
-        "make_45_pct": make_45_pct,
-        "sg_510": sg_510,
-        "three_putts": three_putts,
-        "lag_miss_pct": lag_miss_pct,
-        "clutch_pct": clutch_pct
-    }
-
-    # --- Bucket table ---
-    bucket_table = putting_make_pct_by_distance(putting_df)
-
-    # --- Lag metrics ---
-    if not lag_putts.empty:
-        lag_metrics = {
-            "avg_leave": lag_putts['Ending Distance'].mean(),
-            "pct_inside_3": (lag_putts['Ending Distance'] <= 3).sum() / len(lag_putts) * 100,
-            "pct_over_5": (lag_putts['Ending Distance'] > 5).sum() / len(lag_putts) * 100
-        }
-    else:
-        lag_metrics = empty_lag
-
-    # --- Trend ---
-    trend_df = putting_sg_by_round(putting_df)
-    if not trend_df.empty:
-        trend_df['Label'] = trend_df.apply(
-            lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
-        )
-        trend_df = trend_df.rename(columns={'SG_Putting': 'SG'})
 
     return {
         "empty": False,
         "df": putting_df,
         "total_sg_putting": total_sg,
-        "hero_metrics": hero,
-        "bucket_table": bucket_table,
-        "lag_metrics": lag_metrics,
-        "trend_df": trend_df
+        "hero_metrics": _build_hero_metrics(putting_df, num_rounds),
+        "bucket_table": _build_bucket_table(putting_df),
+        "outcome_chart_data": _build_outcome_chart_data(putting_df),
+        "lag_metrics": _build_lag_metrics(putting_df),
+        "lag_miss_detail": _build_lag_miss_detail(putting_df),
+        "three_putt_starts": _build_three_putt_starts(putting_df),
+        "leave_distribution": _build_leave_distribution(putting_df),
+        "trend_df": _build_trend_df(putting_df),
+        "shot_detail": _build_shot_detail(putting_df),
     }
-
-
-# ============================================================
-# PUTTING HERO METRICS
-# ============================================================
-
-def putting_hero_metrics(putting_df, num_rounds):
-    """
-    Compute high-level putting hero metrics:
-        - Total SG Putting
-        - Make % 4–5 ft
-        - SG 5–10 ft
-        - 3-Putts per round
-        - Lag misses per round
-    Returns a dict of metrics for easy card rendering.
-    """
-    metrics = {
-        'total_sg_putting': 0.0,
-        'make_pct_4_5': "-",
-        'sg_5_10': 0.0,
-        'three_putts_per_round': "-",
-        'lag_misses_per_round': "-"
-    }
-
-    if putting_df.empty or num_rounds == 0:
-        return metrics
-
-    # Total SG Putting
-    metrics['total_sg_putting'] = putting_df['Strokes Gained'].sum()
-
-    # Make % 4–5 ft
-    mask_4_5 = (putting_df['Starting Distance'] >= 4) & (putting_df['Starting Distance'] <= 5)
-    subset_4_5 = putting_df[mask_4_5]
-    if not subset_4_5.empty:
-        attempts_4_5 = len(subset_4_5)
-        makes_4_5 = subset_4_5['Made'].sum()
-        metrics['make_pct_4_5'] = f"{makes_4_5 / attempts_4_5 * 100:.1f}%"
-
-    # SG 5–10 ft
-    mask_5_10 = (putting_df['Starting Distance'] >= 5) & (putting_df['Starting Distance'] <= 10)
-    subset_5_10 = putting_df[mask_5_10]
-    if not subset_5_10.empty:
-        metrics['sg_5_10'] = subset_5_10['Strokes Gained'].sum()
-
-    # 3-Putts per round
-    hole_putt_counts = putting_df.groupby('Hole Key').agg(
-        putts=('Score', 'max')
-    ).reset_index()
-
-    three_putt_holes = hole_putt_counts[hole_putt_counts['putts'] >= 3]
-    metrics['three_putts_per_round'] = (
-        f"{len(three_putt_holes) / num_rounds:.1f}"
-    )
-
-    # Lag misses per round (start >= 30 ft, end > 3 ft)
-    lag_mask = (putting_df['Starting Distance'] >= 30) & (putting_df['Ending Distance'] > 3)
-    lag_misses = putting_df[lag_mask]
-    metrics['lag_misses_per_round'] = (
-        f"{len(lag_misses) / num_rounds:.1f}"
-    )
-
-    return metrics
-
-
-# ============================================================
-# MAKE % TABLES
-# ============================================================
-
-def putting_make_pct_by_distance(putting_df, bins=None, labels=None):
-    """
-    Build a make % table by distance buckets.
-    Returns DataFrame with:
-        - Distance Bucket
-        - Attempts
-        - Makes
-        - Make %
-    """
-    if putting_df.empty:
-        return pd.DataFrame(columns=['Distance Bucket', 'Attempts', 'Makes', 'Make %'])
-
-    if bins is None:
-        bins = [0, 3, 5, 8, 10, 15, 20, 30, 1000]
-    if labels is None:
-        labels = ['0–3', '3–5', '5–8', '8–10', '10–15', '15–20', '20–30', '30+']
-
-    df = putting_df.copy()
-    df['Distance Bucket'] = pd.cut(
-        df['Starting Distance'],
-        bins=bins,
-        labels=labels,
-        right=False
-    )
-
-    grouped = df.groupby('Distance Bucket').agg(
-        Attempts=('Made', 'count'),
-        Makes=('Made', 'sum')
-    ).reset_index()
-
-    grouped['Make %'] = grouped.apply(
-        lambda row: f"{row['Makes'] / row['Attempts'] * 100:.1f}%" if row['Attempts'] > 0 else "-",
-        axis=1
-    )
-
-    return grouped
-
-
-# ============================================================
-# LAG SCATTER DATA
-# ============================================================
-
-def putting_lag_scatter_data(putting_df):
-    """
-    Prepare data for lag putting scatter:
-        x = Starting Distance
-        y = Ending Distance
-        color = Strokes Gained or Made
-    """
-    if putting_df.empty:
-        return putting_df
-
-    return putting_df[['Starting Distance', 'Ending Distance', 'Strokes Gained', 'Made']].copy()
-
-
-# ============================================================
-# SG TREND BY ROUND
-# ============================================================
-
-def putting_sg_by_round(putting_df):
-    """
-    Compute SG Putting per round for trendline chart.
-    Returns DataFrame with:
-        Round ID, Date, Course, SG Putting
-    """
-    if putting_df.empty:
-        return pd.DataFrame(columns=['Round ID', 'Date', 'Course', 'SG Putting'])
-
-    grouped = putting_df.groupby('Round ID').agg(
-        Date=('Date', 'first'),
-        Course=('Course', 'first'),
-        SG_Putting=('Strokes Gained', 'sum')
-    ).reset_index()
-
-    grouped['Date'] = pd.to_datetime(grouped['Date'])
-    grouped = grouped.sort_values('Date')
-
-    return grouped
-
-
-# ============================================================
-# CLUTCH INDEX
-# ============================================================
-
-def putting_clutch_index(putting_df):
-    """
-    Example clutch index:
-        - Focus on putts inside 10 ft
-        - Weight makes more when SG is high
-    Returns a single float.
-    """
-    if putting_df.empty:
-        return 0.0
-
-    close_putts = putting_df[putting_df['Starting Distance'] <= 10].copy()
-    if close_putts.empty:
-        return 0.0
-
-    made_close = close_putts[close_putts['Made'] == 1]
-    if made_close.empty:
-        return 0.0
-
-    return made_close['Strokes Gained'].mean()
-
-######################
-#AI Narative
-########################
-def putting_narrative(results):
-    sg = results.get("total_sg_putting", 0)
-    make_4_5 = results.get("make_pct_4_5", "-")
-    three_putts = results.get("three_putts_per_round", "-")
-    lag_misses = results.get("lag_misses_per_round", "-")
-
-    lines = ["Putting Performance:"]
-
-    if sg > 0.25:
-        lines.append(f"- Excellent putting, gaining {sg:.2f} strokes per round.")
-    elif sg > 0:
-        lines.append(f"- Slightly positive SG putting at {sg:.2f}.")
-    else:
-        lines.append(f"- Losing strokes on the greens ({sg:.2f}).")
-
-    lines.append(f"- Make % from 4–5 ft: {make_4_5}.")
-    lines.append(f"- 3-putts per round: {three_putts}.")
-    lines.append(f"- Lag misses per round: {lag_misses}.")
-
-    return "\n".join(lines)
