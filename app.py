@@ -314,10 +314,10 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
         filtered_df, tiger5_results, hole_summary
     )
 
-    # 4 shot-type cards
-    rc_cols = st.columns(4)
-    rc_types = ['Driving', 'Approach', 'Short Game', 'Putt']
-    rc_colors = [ODU_GOLD, ODU_BLACK, ODU_GREEN, ODU_PURPLE]
+    # 5 shot-type cards
+    rc_cols = st.columns(5)
+    rc_types = ['Driving', 'Approach', 'Short Game', 'Short Putts', 'Lag Putts']
+    rc_colors = [ODU_GOLD, ODU_BLACK, ODU_GREEN, ODU_PURPLE, ODU_METALLIC_GOLD]
 
     for col, stype, color in zip(rc_cols, rc_types, rc_colors):
         count = shot_type_counts.get(stype, 0)
@@ -351,9 +351,9 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
                 other = len(items) - lag - short
                 parts = []
                 if lag:
-                    parts.append(f"Poor Lag Putt (left >5ft): **{lag}**")
+                    parts.append(f"Poor Lag Putt (left >=6ft): **{lag}**")
                 if short:
-                    parts.append(f"Missed Short Putt (<=5ft): **{short}**")
+                    parts.append(f"Missed Short Putt (<6ft): **{short}**")
                 if other:
                     parts.append(f"Other: **{other}**")
                 for p in parts:

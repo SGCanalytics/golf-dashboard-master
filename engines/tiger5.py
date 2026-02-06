@@ -248,12 +248,12 @@ def build_tiger5_root_cause(df, tiger5_results, hole_summary):
         'Driving': 'Driving',
         'Approach': 'Approach',
         'Short Game': 'Short Game',
-        'Putt': 'Putt',
         'Recovery': 'Short Game',
         'Other': 'Other'
     }
 
-    shot_type_counts = {'Driving': 0, 'Approach': 0, 'Short Game': 0, 'Putt': 0}
+    shot_type_counts = {'Driving': 0, 'Approach': 0, 'Short Game': 0,
+                        'Short Putts': 0, 'Lag Putts': 0}
     detail_by_type = {}
 
     tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
@@ -284,20 +284,33 @@ def build_tiger5_root_cause(df, tiger5_results, hole_summary):
                 putts_end = pd.to_numeric(putts['Ending Distance'], errors='coerce')
                 if len(putts) >= 2:
                     first_end = putts_end.iloc[0]
-                    if first_end > 5:
-                        cause = 'Poor Lag Putt'
-                    else:
+                    if pd.notna(first_end) and first_end < 6:
                         cause = 'Missed Short Putt'
+                        putt_cat = 'Short Putts'
+                    else:
+                        cause = 'Poor Lag Putt'
+                        putt_cat = 'Lag Putts'
                 else:
-                    cause = 'Putt'
-                shot_type_counts['Putt'] += 1
-                items.append({'cause': cause, 'shot_type': 'Putt'})
+                    putt_cat = 'Lag Putts'
+                    cause = 'Poor Lag Putt'
+                shot_type_counts[putt_cat] += 1
+                items.append({'cause': cause, 'shot_type': putt_cat})
 
             elif stat_name in ('Double Bogey', 'Par 5 Bogey'):
                 worst_idx = sg_numeric.idxmin()
                 worst_row = hole_shots.loc[worst_idx]
                 raw_type = worst_row['Shot Type']
-                mapped = cat_map.get(raw_type, 'Other')
+                if raw_type == 'Putt':
+                    start_dist = pd.to_numeric(
+                        worst_row.get('Starting Distance', 0),
+                        errors='coerce'
+                    )
+                    if pd.notna(start_dist) and start_dist < 6:
+                        mapped = 'Short Putts'
+                    else:
+                        mapped = 'Lag Putts'
+                else:
+                    mapped = cat_map.get(raw_type, 'Other')
                 if mapped in shot_type_counts:
                     shot_type_counts[mapped] += 1
                 items.append({
@@ -316,8 +329,17 @@ def build_tiger5_root_cause(df, tiger5_results, hole_summary):
                 putts = hole_shots[hole_shots['Shot Type'] == 'Putt']
                 if len(putts) >= 3:
                     cause = 'Three Putt'
-                    shot_type_counts['Putt'] += 1
-                    items.append({'cause': cause, 'shot_type': 'Putt'})
+                    # Determine lag vs short putt root cause
+                    putts_end = pd.to_numeric(
+                        putts['Ending Distance'], errors='coerce'
+                    )
+                    first_end = putts_end.iloc[0] if len(putts) >= 2 else None
+                    if pd.notna(first_end) and first_end < 6:
+                        putt_cat = 'Short Putts'
+                    else:
+                        putt_cat = 'Lag Putts'
+                    shot_type_counts[putt_cat] += 1
+                    items.append({'cause': cause, 'shot_type': putt_cat})
                 else:
                     # Find worst SG among approach/short game/putt shots
                     relevant = hole_shots[
@@ -331,7 +353,17 @@ def build_tiger5_root_cause(df, tiger5_results, hole_summary):
                         )
                         worst_idx = rel_sg.idxmin()
                         raw_type = relevant.loc[worst_idx, 'Shot Type']
-                        mapped = cat_map.get(raw_type, 'Other')
+                        if raw_type == 'Putt':
+                            start_dist = pd.to_numeric(
+                                relevant.loc[worst_idx, 'Starting Distance'],
+                                errors='coerce'
+                            )
+                            if pd.notna(start_dist) and start_dist < 6:
+                                mapped = 'Short Putts'
+                            else:
+                                mapped = 'Lag Putts'
+                        else:
+                            mapped = cat_map.get(raw_type, 'Other')
                         if mapped in shot_type_counts:
                             shot_type_counts[mapped] += 1
                         items.append({
