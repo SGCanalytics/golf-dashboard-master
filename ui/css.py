@@ -6,7 +6,7 @@ import streamlit as st
 from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, SLATE, WHITE, OFF_WHITE, WARM_GRAY,
     BORDER_LIGHT, ACCENT_PRIMARY, ACCENT_SECONDARY, ACCENT_MUTED,
-    ACCENT_PALE, POSITIVE, NEGATIVE,
+    ACCENT_PALE, POSITIVE, NEGATIVE, NEGATIVE_BG,
     FONT_HEADING, FONT_BODY, CARD_RADIUS,
 )
 
@@ -123,8 +123,6 @@ _CSS = f"""
 </style>
 """
 
-# Need NEGATIVE_BG from theme — import it
-from ui.theme import NEGATIVE_BG
 
 
 def inject_css():
