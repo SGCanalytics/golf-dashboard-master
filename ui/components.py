@@ -2,12 +2,13 @@
 # SHARED UI COMPONENTS
 # ============================================================
 # Reusable, themeable building blocks for every tab.
+# Light, airy aesthetic — white cards with subtle borders.
 # ============================================================
 
 import streamlit as st
 from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, SLATE, WHITE, BORDER_LIGHT,
-    ACCENT_PRIMARY, ACCENT_SECONDARY, ACCENT_MUTED,
+    ACCENT_PRIMARY, ACCENT_SECONDARY, ACCENT_MUTED, ACCENT_PALE,
     POSITIVE, NEGATIVE, NEUTRAL, WARNING,
     FONT_HEADING, FONT_BODY, CARD_RADIUS, CARD_PADDING,
     THRESHOLDS,
@@ -39,21 +40,25 @@ _SENTIMENT_COLORS = {
 
 def premium_hero_card(label, value, unit="", sentiment="neutral"):
     """
-    Dark-background hero metric card with coloured border + text.
+    Light-background hero metric card with coloured left border.
+
+    White card with a 3px left accent border for sentiment.
+    Clean, muted, premium feel — no dark backgrounds.
 
     sentiment: "positive" | "negative" | "neutral" | "accent" | "warning"
     """
     color = _SENTIMENT_COLORS.get(sentiment, ACCENT_PRIMARY)
     st.markdown(f'''
-        <div style="background:linear-gradient(135deg,{CHARCOAL} 0%,{CHARCOAL_LIGHT} 100%);
+        <div style="background:{WHITE};
              border-radius:{CARD_RADIUS};padding:{CARD_PADDING};text-align:center;
-             border:2px solid {color};margin-bottom:1rem;">
-            <div style="font-family:{FONT_BODY};font-size:0.7rem;font-weight:600;
-                 color:{color};text-transform:uppercase;letter-spacing:0.08em;
+             border:1px solid {BORDER_LIGHT};border-left:4px solid {color};
+             box-shadow:0 1px 4px rgba(0,0,0,0.04);margin-bottom:1rem;">
+            <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
+                 color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
                  margin-bottom:0.5rem;">{label}</div>
-            <div style="font-family:{FONT_HEADING};font-size:2.25rem;font-weight:700;
+            <div style="font-family:{FONT_HEADING};font-size:2.1rem;font-weight:700;
                  color:{color};line-height:1;margin-bottom:0.25rem;">{value}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.65rem;
+            <div style="font-family:{FONT_BODY};font-size:0.6rem;
                  color:{SLATE};text-transform:uppercase;
                  letter-spacing:0.05em;">{unit}</div>
         </div>
@@ -77,14 +82,14 @@ def premium_stat_card(label, value, subtitle="", sentiment="neutral"):
     st.markdown(f'''
         <div style="background:{WHITE};border-radius:{CARD_RADIUS};
              padding:{CARD_PADDING};text-align:center;
-             box-shadow:0 2px 8px rgba(0,0,0,0.06);
+             box-shadow:0 1px 4px rgba(0,0,0,0.04);
              border:1px solid {BORDER_LIGHT};margin-bottom:1rem;">
-            <div style="font-family:{FONT_BODY};font-size:0.7rem;font-weight:600;
+            <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
                  color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
                  margin-bottom:0.5rem;">{label}</div>
             <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
                  color:{value_color};line-height:1;">{value}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};
+            <div style="font-family:{FONT_BODY};font-size:0.65rem;color:{SLATE};
                  margin-top:0.3rem;">{subtitle}</div>
         </div>
     ''', unsafe_allow_html=True)
@@ -130,7 +135,7 @@ def sidebar_title(text):
     st.markdown(
         f'<p style="font-family:{FONT_HEADING};font-size:1.4rem;font-weight:600;'
         f'color:{ACCENT_PRIMARY};margin-bottom:0.5rem;padding-bottom:1rem;'
-        f'border-bottom:1px solid #444;">{text}</p>',
+        f'border-bottom:1px solid {BORDER_LIGHT};">{text}</p>',
         unsafe_allow_html=True,
     )
 
@@ -138,7 +143,7 @@ def sidebar_title(text):
 def sidebar_label(text):
     st.markdown(
         f'<p style="font-family:{FONT_BODY};font-size:0.75rem;font-weight:500;'
-        f'color:{ACCENT_MUTED};text-transform:uppercase;letter-spacing:0.08em;'
+        f'color:{ACCENT_SECONDARY};text-transform:uppercase;letter-spacing:0.08em;'
         f'margin-bottom:0.5rem;margin-top:1.25rem;">{text}</p>',
         unsafe_allow_html=True,
     )
