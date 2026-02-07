@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from ui.formatters import round_label
 
 # ============================================================
 # APPROACH ENGINE
@@ -201,7 +202,7 @@ def build_approach_results(filtered_df, num_rounds):
     round_trend['Date'] = pd.to_datetime(round_trend['Date'])
     round_trend = round_trend.sort_values('Date')
     round_trend['Label'] = round_trend.apply(
-        lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
+        lambda r: round_label(r['Date'], r['Course']), axis=1
     )
 
     # --- Section 7: Shot detail table ---

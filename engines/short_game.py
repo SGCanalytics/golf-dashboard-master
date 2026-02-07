@@ -1,5 +1,6 @@
 import pandas as pd
 from engines.helpers import sg_distance_bucket
+from ui.formatters import round_label
 
 # ============================================================
 # SHORT GAME ENGINE
@@ -136,7 +137,7 @@ def _build_trend(df):
         axis=1,
     )
     round_trend['Label'] = round_trend.apply(
-        lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
+        lambda r: round_label(r['Date'], r['Course']), axis=1
     )
     return round_trend
 
