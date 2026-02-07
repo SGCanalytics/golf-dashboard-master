@@ -1,4 +1,5 @@
 import pandas as pd
+from ui.formatters import round_label, format_date
 
 # ============================================================
 # OVERVIEW ENGINE
@@ -209,7 +210,7 @@ def build_sg_trend(df):
     trend['Date'] = pd.to_datetime(trend['Date'])
     trend = trend.sort_values('Date')
     trend['Label'] = trend.apply(
-        lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
+        lambda r: round_label(r['Date'], r['Course']), axis=1
     )
 
     for cat in ['Driving', 'Approach', 'Short Game', 'Putting']:
@@ -400,7 +401,7 @@ def build_tiger5_fail_shots(df, tiger5_results):
                 ).round(2)
 
                 holes_list.append({
-                    'date': pd.to_datetime(date).strftime('%m/%d/%y'),
+                    'date': format_date(pd.to_datetime(date)),
                     'course': course,
                     'hole': int(hole),
                     'shots': shots_data
@@ -431,7 +432,7 @@ def build_shot_detail(df):
 
     for _, r in round_info.iterrows():
         rid = r['Round ID']
-        label = f"{r['Date'].strftime('%m/%d/%y')} - {r['Course']}"
+        label = f"{format_date(r['Date'])} - {r['Course']}"
 
         round_shots = df[df['Round ID'] == rid][[
             'Hole', 'Par', 'Shot', 'Starting Distance', 'Starting Location',

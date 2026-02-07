@@ -1,4 +1,5 @@
 import pandas as pd
+from ui.formatters import round_label
 
 # ============================================================
 # TIGER 5 ENGINE — CENTRALIZED & REUSABLE
@@ -191,7 +192,7 @@ def tiger5_by_round(df, hole_summary):
     for _, r in round_info.iterrows():
         rid = r['Round ID']
         date_obj = pd.to_datetime(r['Date'])
-        label = f"{date_obj.strftime('%m/%d/%y')} {r['Course']}"
+        label = round_label(date_obj, r['Course'])
 
         round_df = df[df['Round ID'] == rid]
         round_holes = hole_summary[hole_summary['Round ID'] == rid]

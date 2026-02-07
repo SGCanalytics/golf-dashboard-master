@@ -1,5 +1,6 @@
 import pandas as pd
 from engines.helpers import safe_divide
+from ui.formatters import round_label
 
 # ============================================================
 # PUTTING ENGINE
@@ -327,7 +328,7 @@ def _build_trend_df(putting_df):
     grouped['Date'] = pd.to_datetime(grouped['Date'])
     grouped = grouped.sort_values('Date')
     grouped['Label'] = grouped.apply(
-        lambda r: f"{r['Date'].strftime('%m/%d/%y')} {r['Course']}", axis=1
+        lambda r: round_label(r['Date'], r['Course']), axis=1
     )
 
     return grouped
