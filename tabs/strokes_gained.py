@@ -158,12 +158,12 @@ def strokes_gained_tab(
                 label_style = (
                     f'font-weight:500;color:{CHARCOAL};font-size:0.72rem;'
                     f'padding:0.4rem 0.25rem;text-align:left;'
-                    f'border-bottom:1px solid #f0f0f0;position:sticky;left:0;'
+                    f'border-bottom:1px solid {BORDER_LIGHT};position:sticky;left:0;'
                     f'background:{WHITE};width:{label_w};'
                 )
                 cell_base = (
                     'font-size:0.72rem;padding:0.4rem 0.15rem;'
-                    'text-align:center;border-bottom:1px solid #f0f0f0;'
+                    f'text-align:center;border-bottom:1px solid {BORDER_LIGHT};'
                 )
 
             html += f'<tr style="{row_bg}">'
@@ -267,7 +267,7 @@ def strokes_gained_tab(
                 labels=chart_data['Score'],
                 values=chart_data['Count'],
                 hole=0.6,
-                marker_colors=[OUTCOME_COLORS.get(s, '#999')
+                marker_colors=[OUTCOME_COLORS.get(s, SLATE)
                                for s in chart_data['Score']],
                 textinfo='label+percent',
                 textposition='outside',
@@ -302,16 +302,17 @@ def strokes_gained_tab(
 
             sg_color = POSITIVE if overall_sg >= 0 else NEGATIVE
             st.markdown(f'''
-                <div style="background:linear-gradient(135deg,{CHARCOAL} 0%,{CHARCOAL_LIGHT} 100%);
-                     border-radius:12px;padding:1rem 1.25rem;
-                     border:2px solid {ACCENT_PRIMARY};margin-bottom:0.75rem;
+                <div style="background:{WHITE};border-radius:12px;
+                     padding:1rem 1.25rem;
+                     border:1px solid {BORDER_LIGHT};border-left:4px solid {ACCENT_PRIMARY};
+                     box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:0.75rem;
                      display:flex;justify-content:space-between;align-items:center;">
                     <div>
                         <div style="font-family:{FONT_BODY};font-size:0.7rem;font-weight:600;
                              color:{ACCENT_PRIMARY};text-transform:uppercase;
                              letter-spacing:0.08em;">Overall</div>
                         <div style="font-family:{FONT_HEADING};font-size:1.8rem;
-                             font-weight:700;color:{ACCENT_PRIMARY};line-height:1.1;">
+                             font-weight:700;color:{CHARCOAL};line-height:1.1;">
                             {overall_avg:.2f}</div>
                         <div style="font-family:{FONT_BODY};font-size:0.65rem;
                              color:{SLATE};">Scoring Avg</div>
@@ -353,7 +354,7 @@ def strokes_gained_tab(
                                  text-transform:uppercase;
                                  letter-spacing:0.06em;">
                                 Par {par_val}
-                                <span style="color:#bbb;font-weight:400;">
+                                <span style="color:{SLATE};font-weight:400;">
                                     &middot; {holes_n} holes</span></div>
                             <div style="font-family:{FONT_HEADING};
                                  font-size:1.5rem;font-weight:700;
@@ -362,20 +363,20 @@ def strokes_gained_tab(
                                 <span style="font-size:0.8rem;color:{SLATE};">
                                     ({vs_par:+.2f})</span></div>
                             <div style="font-family:{FONT_BODY};font-size:0.6rem;
-                                 color:#aaa;">Scoring Avg (vs Par)</div>
+                                 color:{SLATE};">Scoring Avg (vs Par)</div>
                         </div>
                         <div style="text-align:right;">
                             <div style="font-family:{FONT_HEADING};
                                  font-size:1.2rem;font-weight:700;
                                  color:{sg_color_p};">{t_sg:+.2f}</div>
                             <div style="font-family:{FONT_BODY};font-size:0.6rem;
-                                 color:#aaa;">Total SG</div>
+                                 color:{SLATE};">Total SG</div>
                             <div style="font-family:{FONT_HEADING};
                                  font-size:0.95rem;font-weight:600;
                                  color:{sg_color_p};margin-top:0.15rem;">
                                 {sg_h:+.2f}</div>
                             <div style="font-family:{FONT_BODY};font-size:0.6rem;
-                                 color:#aaa;">SG / Hole</div>
+                                 color:{SLATE};">SG / Hole</div>
                         </div>
                     </div>
                 ''', unsafe_allow_html=True)

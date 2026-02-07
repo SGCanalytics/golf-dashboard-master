@@ -9,7 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from ui.theme import (
-    CHARCOAL, SLATE, ACCENT_PRIMARY, ACCENT_SECONDARY,
+    CHARCOAL, SLATE, WHITE, ACCENT_PRIMARY, ACCENT_SECONDARY,
     POSITIVE, NEGATIVE, BORDER_LIGHT,
     THRESHOLDS,
 )
@@ -91,10 +91,10 @@ def approach_tab(approach, num_rounds):
 
         with col:
             st.markdown(f'''
-                <div style="background:#fff;border-radius:12px;
+                <div style="background:{WHITE};border-radius:12px;
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
-                     border:1px solid #e2e2e2;margin-bottom:1rem;{border_style}">
+                     border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
                     <div style="font-family:Inter,sans-serif;font-size:0.7rem;
                          font-weight:600;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
@@ -134,10 +134,10 @@ def approach_tab(approach, num_rounds):
 
         with col:
             st.markdown(f'''
-                <div style="background:#fff;border-radius:12px;
+                <div style="background:{WHITE};border-radius:12px;
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
-                     border:1px solid #e2e2e2;margin-bottom:1rem;{border_style}">
+                     border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
                     <div style="font-family:Inter,sans-serif;font-size:0.7rem;
                          font-weight:600;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
@@ -154,7 +154,7 @@ def approach_tab(approach, num_rounds):
 
     # Best / worst legend
     st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:#999;'
+        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:{SLATE};'
         f'margin-top:0.5rem;">'
         f'<span style="color:{POSITIVE};">\u25aa</span> Best Total SG &nbsp;&nbsp;'
         f'<span style="color:{NEGATIVE};">\u25aa</span> Worst Total SG</p>',
@@ -262,7 +262,7 @@ def approach_tab(approach, num_rounds):
                     text=f"{sg_val:+.2f}<br><span style='font-size:10px'>"
                          f"({cnt_val})</span>",
                     showarrow=False,
-                    font=dict(family='Inter', size=12, color='#000'),
+                    font=dict(family='Inter', size=12, color=CHARCOAL),
                 ))
 
         fig_heat = px.imshow(

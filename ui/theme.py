@@ -1,43 +1,44 @@
 # ============================================================
-# DESIGN TOKENS — PREMIUM NEUTRAL PALETTE
+# DESIGN TOKENS — PREMIUM GREEN PALETTE
 # ============================================================
-# Single source of truth for all visual constants.
-# No school-specific colors. Neutral, sophisticated, timeless.
+# Inspired by private golf club aesthetics: clean whites,
+# deep olive/forest greens, warm grays, elegant serif headings.
 # ============================================================
 
 # --- PRIMARY PALETTE ---
-CHARCOAL       = "#2B2B2B"
-CHARCOAL_LIGHT = "#3D3D3D"
-SLATE          = "#64748B"
+CHARCOAL       = "#333333"     # text color — warm dark gray (not black)
+CHARCOAL_LIGHT = "#555555"     # secondary text
+SLATE          = "#6B7280"     # muted labels
 WHITE          = "#FFFFFF"
-OFF_WHITE      = "#FAFAFA"
-WARM_GRAY      = "#F5F3F0"
-BORDER_LIGHT   = "#E2E2E2"
-BORDER_MEDIUM  = "#D1D5DB"
+OFF_WHITE      = "#F8F7F4"     # warm off-white page background
+WARM_GRAY      = "#F2F0EC"     # card/table header backgrounds
+BORDER_LIGHT   = "#E0DDD7"     # warm light border
+BORDER_MEDIUM  = "#C9C5BC"     # medium border
 
-# --- ACCENT COLORS ---
-ACCENT_PRIMARY   = "#3B82F6"   # vivid blue — primary accent
-ACCENT_SECONDARY = "#6366F1"   # indigo — secondary accent
-ACCENT_MUTED     = "#93C5FD"   # light blue for subtle highlights
+# --- ACCENT COLORS (deep olive/forest green) ---
+ACCENT_PRIMARY   = "#3D5A3E"   # deep forest green — primary accent
+ACCENT_SECONDARY = "#5A7A5C"   # medium sage — secondary accent
+ACCENT_MUTED     = "#8FA890"   # light sage for subtle highlights
+ACCENT_PALE      = "#E8EDE8"   # very pale green for card backgrounds
 
 # --- SEMANTIC / CONDITIONAL FORMATTING COLORS ---
-POSITIVE       = "#059669"     # emerald green
+POSITIVE       = "#2D6A4F"     # deep green (positive SG / good)
 POSITIVE_BG    = "#D1FAE5"     # light green cell background
 POSITIVE_TEXT  = "#065F46"     # dark green cell text
-NEGATIVE       = "#DC2626"     # red
-NEGATIVE_BG    = "#FEE2E2"     # light red cell background
-NEGATIVE_TEXT  = "#991B1B"     # dark red cell text
+NEGATIVE       = "#C53030"     # muted red (negative SG / bad)
+NEGATIVE_BG    = "#FED7D7"     # light red cell background
+NEGATIVE_TEXT  = "#9B2C2C"     # dark red cell text
 NEUTRAL        = "#6B7280"     # gray for zero/neutral values
-WARNING        = "#F59E0B"     # amber for caution states
+WARNING        = "#B7791F"     # muted amber for caution states
 
 # --- CHART CATEGORY COLORS ---
 CHART_PALETTE = [
-    "#3B82F6",  # blue
-    "#2B2B2B",  # charcoal
-    "#059669",  # green
-    "#8B5CF6",  # violet
-    "#DC2626",  # red
-    "#F59E0B",  # amber
+    "#3D5A3E",  # deep green (driving)
+    "#8B6F47",  # warm brown (approach)
+    "#2D6A4F",  # forest green (short game)
+    "#7C6F9B",  # muted violet (putting)
+    "#C53030",  # muted red (fail/recovery)
+    "#B7791F",  # muted amber (secondary)
 ]
 
 CHART_DRIVING    = CHART_PALETTE[0]
@@ -49,21 +50,21 @@ CHART_SECONDARY  = CHART_PALETTE[5]
 
 # --- DONUT / OUTCOME CHART COLORS ---
 OUTCOME_COLORS = {
-    "Eagle":            "#F59E0B",
-    "Birdie":           "#059669",
-    "Par":              "#2B2B2B",
-    "Bogey":            "#DC2626",
-    "Double or Worse":  "#8B5CF6",
+    "Eagle":            "#B7791F",
+    "Birdie":           "#2D6A4F",
+    "Par":              "#3D5A3E",
+    "Bogey":            "#C53030",
+    "Double or Worse":  "#7C6F9B",
 }
 
-DONUT_SEQUENCE = ["#059669", "#3B82F6", "#F59E0B", "#DC2626"]
+DONUT_SEQUENCE = ["#2D6A4F", "#3D5A3E", "#B7791F", "#C53030"]
 
 # --- TYPOGRAPHY ---
 FONT_HEADING = "'Playfair Display', Georgia, serif"
 FONT_BODY    = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
 
 # --- SPACING ---
-CARD_RADIUS  = "12px"
+CARD_RADIUS  = "10px"
 CARD_PADDING = "1.25rem 1rem"
 SECTION_GAP  = "2.5rem"
 

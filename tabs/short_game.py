@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from ui.theme import (
-    CHARCOAL, ACCENT_PRIMARY, POSITIVE, NEGATIVE,
+    CHARCOAL, WHITE, ACCENT_PRIMARY, POSITIVE, NEGATIVE,
     BORDER_LIGHT, THRESHOLDS,
 )
 from ui.chart_config import CHART_LAYOUT, SG_HEATMAP_COLORSCALE
@@ -104,7 +104,7 @@ def short_game_tab(sg, num_rounds):
             y=sg_pivot.index.tolist(),
             text=text_vals,
             texttemplate="%{text}",
-            textfont=dict(size=14, color="#ffffff"),
+            textfont=dict(size=14, color=WHITE),
             colorscale=SG_HEATMAP_COLORSCALE,
             zmid=0,
             colorbar=dict(title="SG/Shot"),

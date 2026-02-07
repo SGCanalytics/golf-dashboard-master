@@ -3,7 +3,7 @@
 # ============================================================
 
 from ui.theme import (
-    WHITE, CHARCOAL, BORDER_LIGHT, POSITIVE, POSITIVE_BG,
+    WHITE, CHARCOAL, BORDER_LIGHT, WARM_GRAY, POSITIVE, POSITIVE_BG,
     POSITIVE_TEXT, NEGATIVE, NEGATIVE_BG, NEGATIVE_TEXT,
     FONT_BODY, THRESHOLDS,
 )
@@ -52,17 +52,17 @@ def sg_cell_style(val):
     if v > strong:
         return f"background:{POSITIVE_BG};color:{POSITIVE_TEXT};font-weight:600;"
     if v > 0:
-        return f"background:#E8F5E9;color:{POSITIVE};"
+        return f"background:{POSITIVE_BG};color:{POSITIVE};"
     if v < -strong:
         return f"background:{NEGATIVE_BG};color:{NEGATIVE_TEXT};font-weight:600;"
     if v < 0:
-        return f"background:#FCE4EC;color:{NEGATIVE};"
+        return f"background:{NEGATIVE_BG};color:{NEGATIVE};"
     return f"color:{CHARCOAL};"
 
 
 # Diverging heatmap colorscale centred on zero
 SG_HEATMAP_COLORSCALE = [
     [0.0, NEGATIVE],
-    [0.5, "#f5f5f5"],
+    [0.5, WARM_GRAY],
     [1.0, POSITIVE],
 ]
