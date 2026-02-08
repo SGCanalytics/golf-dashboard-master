@@ -1,5 +1,6 @@
 import pandas as pd
 
+from ui.formatters import format_sg
 from ui.theme import (
     POSITIVE, NEGATIVE, NEUTRAL, ACCENT_PRIMARY, SLATE,
     FONT_BODY, FONT_HEADING, CARD_RADIUS, CARD_PADDING
