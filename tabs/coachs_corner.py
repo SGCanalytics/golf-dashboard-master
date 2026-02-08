@@ -70,53 +70,34 @@ def tiger5_root_cause_card(item, show_detail=False):
     White background with RED accent/border color.
     Can optionally show shot-level detail for the worst SG shot.
     """
-    border_color = NEGATIVE  # Red accent only
-    count = item.get('count', 0)
-    
-    title = item.get('title', '')
-    detail_text = item.get('detail', '')
-    narrative = item.get('narrative', '')
-    shot_detail = item.get('shot_detail', '')
-    
-    card_html = f'''
-        <div style="background:{WHITE};border-radius:{CARD_RADIUS};
-             padding:{CARD_PADDING};margin-bottom:1rem;
-             border-left:4px solid {border_color};
-             box-shadow:0 1px 4px rgba(0,0,0,0.04);">
-            <div style="font-family:{FONT_BODY};font-size:0.6rem;
-                 color:{SLATE};text-transform:uppercase;
-                 letter-spacing:0.08em;">{item.get('type', 'Root Cause')}</div>
-            <div style="font-family:{FONT_HEADING};font-size:1rem;font-weight:600;
-                 color:{CHARCOAL};margin:0.5rem 0;">{title}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.85rem;
-                 color:{ACCENT_PRIMARY};margin-bottom:0.5rem;
-                 font-weight:500;">{detail_text}</div>
-    '''
-    
-    if show_detail and shot_detail:
-        card_html += f'''
-            <div style="background:#FFF5F5;padding:0.75rem;border-radius:6px;
-                 margin-top:0.75rem;border:1px solid #FFCDD2;">
-                <div style="font-family:{FONT_BODY};font-size:0.6rem;
-                     color:{NEGATIVE};text-transform:uppercase;
-                     letter-spacing:0.08em;margin-bottom:0.3rem;">
-                    Worst Shot
+    with st.container(border=True):
+        # Custom styling via markdown for the border color
+        st.markdown(f'''
+            <style>
+            .tiger5-card {{
+                background:{WHITE};
+                border-radius:{CARD_RADIUS};
+                padding:{CARD_PADDING};
+                margin-bottom:1rem;
+                border-left:4px solid {NEGATIVE};
+            }}
+            </style>
+        ''', unsafe_allow_html=True)
+        
+        # Card content using native Streamlit components
+        st.markdown(f'<div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;">{item.get("type", "Root Cause")}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-family:{FONT_HEADING};font-size:1rem;font-weight:600;color:{CHARCOAL};margin:0.5rem 0;">{item.get("title", "")}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-family:{FONT_BODY};font-size:0.85rem;color:{ACCENT_PRIMARY};margin-bottom:0.5rem;font-weight:500;">{item.get("detail", "")}</div>', unsafe_allow_html=True)
+        
+        if show_detail and item.get('shot_detail'):
+            st.markdown(f'''
+                <div style="background:#FFF5F5;padding:0.75rem;border-radius:6px;margin-top:0.75rem;border:1px solid #FFCDD2;">
+                    <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{NEGATIVE};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem;">Worst Shot</div>
+                    <div style="font-family:{FONT_BODY};font-size:0.8rem;color:{CHARCOAL};line-height:1.5;">{item.get("shot_detail", "")}</div>
                 </div>
-                <div style="font-family:{FONT_BODY};font-size:0.8rem;
-                     color:{CHARCOAL};line-height:1.5;">{shot_detail}</div>
-            </div>
-        '''
-    else:
-        if narrative:
-            card_html += f'''
-                <div style="font-family:{FONT_BODY};font-size:0.75rem;
-                     color:{SLATE};font-style:italic;
-                     line-height:1.4;margin-top:0.5rem;">{narrative}</div>
-            '''
-    
-    card_html += '</div>'
-    
-    st.markdown(card_html, unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
+        elif item.get('narrative'):
+            st.markdown(f'<div style="font-family:{FONT_BODY};font-size:0.75rem;color:{SLATE};font-style:italic;line-height:1.4;margin-top:0.5rem;">{item.get("narrative", "")}</div>', unsafe_allow_html=True)
 
 
 def dynamic_narrative_card(item, is_positive=True, force_negative=False):
@@ -126,24 +107,12 @@ def dynamic_narrative_card(item, is_positive=True, force_negative=False):
     else:
         border_color = POSITIVE if is_positive else NEGATIVE
     
-    st.markdown(f'''
-        <div style="background:{WHITE};border-radius:{CARD_RADIUS};
-             padding:{CARD_PADDING};margin-bottom:1rem;
-             border-left:4px solid {border_color};
-             box-shadow:0 1px 4px rgba(0,0,0,0.04);">
-            <div style="font-family:{FONT_BODY};font-size:0.6rem;
-                 color:{SLATE};text-transform:uppercase;
-                 letter-spacing:0.08em;">{item['type']}</div>
-            <div style="font-family:{FONT_HEADING};font-size:1rem;font-weight:600;
-                 color:{CHARCOAL};margin:0.5rem 0;">{item['title']}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.85rem;
-                 color:{ACCENT_PRIMARY};margin-bottom:0.5rem;
-                 font-weight:500;">{item['detail']}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.75rem;
-                 color:{SLATE};font-style:italic;
-                 line-height:1.4;">{item['narrative']}</div>
-        </div>
-    ''', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(f'<div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;">{item["type"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-family:{FONT_HEADING};font-size:1rem;font-weight:600;color:{CHARCOAL};margin:0.5rem 0;">{item["title"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-family:{FONT_BODY};font-size:0.85rem;color:{ACCENT_PRIMARY};margin-bottom:0.5rem;font-weight:500;">{item["detail"]}</div>', unsafe_allow_html=True)
+        if item.get('narrative'):
+            st.markdown(f'<div style="font-family:{FONT_BODY};font-size:0.75rem;color:{SLATE};font-style:italic;line-height:1.4;">{item["narrative"]}</div>', unsafe_allow_html=True)
 
 
 def driver_card(driver):
