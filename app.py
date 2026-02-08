@@ -15,7 +15,7 @@ from engines.driving import build_driving_results
 from engines.approach import build_approach_results
 from engines.short_game import build_short_game_results
 from engines.putting import build_putting_results
-from engines.tiger5 import build_tiger5_results
+from engines.tiger5 import build_tiger5_results, build_tiger5_root_cause
 from engines.coachs_corner import build_coachs_corner
 from engines.strokes_gained import BENCHMARK_FILES, apply_benchmark_sg
 
@@ -134,6 +134,9 @@ tiger5_results, total_tiger5_fails, grit_score = build_tiger5_results(
     filtered_df, hole_summary
 )
 
+# Build Tiger 5 root causes for Coach's Corner
+tiger5_root_causes = build_tiger5_root_cause(filtered_df, tiger5_results, hole_summary)
+
 coachs_corner_results = build_coachs_corner(
     filtered_df,
     hole_summary,
@@ -143,6 +146,7 @@ coachs_corner_results = build_coachs_corner(
     putting_results,
     tiger5_results,
     grit_score,
+    tiger5_root_causes=tiger5_root_causes,
 )
 
 # ============================================================
