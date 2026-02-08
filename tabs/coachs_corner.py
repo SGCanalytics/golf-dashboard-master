@@ -107,11 +107,12 @@ def tiger5_root_cause_card(item, show_detail=False):
             </div>
         '''
     else:
-        card_html += f'''
-            <div style="font-family:{FONT_BODY};font-size:0.75rem;
-                 color:{SLATE};font-style:italic;
-                 line-height:1.4;margin-top:0.5rem;">{narrative}</div>
-        '''
+        if narrative:
+            card_html += f'''
+                <div style="font-family:{FONT_BODY};font-size:0.75rem;
+                     color:{SLATE};font-style:italic;
+                     line-height:1.4;margin-top:0.5rem;">{narrative}</div>
+            '''
     
     card_html += '</div>'
     
