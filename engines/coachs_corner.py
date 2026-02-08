@@ -312,10 +312,11 @@ def _mistake_penalty_index(hole_summary, tiger5_results):
 # ============================================================
 
 
-def _generate_tiger5_narrative(tiger5_results, shot_type_counts):
+def _generate_tiger5_narrative(tiger5_results, shot_type_counts, filtered_df=None):
     """
     Generate dynamic Tiger 5 root causes narrative.
-    Similar structure to the Tiger 5 root cause analysis.
+    - Shows top 3 causes only (no 4th summary line)
+    - First card includes shot detail for worst SG shot
     """
     narrative = []
     
@@ -328,17 +329,31 @@ def _generate_tiger5_narrative(tiger5_results, shot_type_counts):
         reverse=True
     )
     
-    total_fails = sum(shot_type_counts.values())
+    # Find worst shot detail for first item
+    worst_shot_detail = None
+    if filtered_df is not None and sorted_causes[0][1] > 0:
+        primary_cause = sorted_causes[0][0]
+        cause_shots = filtered_df[filtered_df['Shot Type'] == primary_cause].copy()
+        if not cause_shots.empty:
+            sg = pd.to_numeric(cause_shots['Strokes Gained'], errors='coerce')
+            if sg.notna().any():
+                worst_idx = sg.idxmin()
+                worst_row = cause_shots.loc[worst_idx]
+                worst_shot_detail = (
+                    f"Hole {int(worst_row['Hole'])}: {primary_cause} "
+                    f"from {int(worst_row['Starting Distance'])} yards "
+                    f"({format_sg(sg.min())} SG)"
+                )
     
-    # Main challenge bullet
+    # Main challenge bullet (with shot detail)
     if sorted_causes[0][1] > 0:
         top_cause = sorted_causes[0]
         narrative.append({
             "type": "Primary Challenge",
             "title": f"{top_cause[0]} Vulnerability",
             "detail": f"{top_cause[1]} Tiger 5 fails linked to {top_cause[0].lower()}",
-            "narrative": f"{top_cause[0]} is your biggest source of Tiger 5 mistakes, "
-                        f"contributing to {top_cause[1]} failures across all categories."
+            "narrative": "",
+            "shot_detail": worst_shot_detail
         })
     
     # Secondary challenge
@@ -348,8 +363,9 @@ def _generate_tiger5_narrative(tiger5_results, shot_type_counts):
             "type": "Secondary Issue",
             "title": f"{second[0]} Consistency",
             "detail": f"{second[1]} Tiger 5 fails from {second[0].lower()}",
-            "narrative": f"{second[0]} also contributes to scoring issues, "
-                        f"accounting for {second[1]} additional failures."
+            "narrative": f"{second[0]} contributes to scoring issues, "
+                        f"accounting for {second[1]} additional failures.",
+            "shot_detail": None
         })
     
     # Tertiary if exists
@@ -359,17 +375,9 @@ def _generate_tiger5_narrative(tiger5_results, shot_type_counts):
             "type": "Tertiary Factor",
             "title": f"{third[0]} Management",
             "detail": f"{third[1]} fails from {third[0].lower()}",
-            "narrative": f"Watch {third[0].lower()} situations to prevent compounding errors."
+            "narrative": f"Watch {third[0].lower()} situations to prevent compounding errors.",
+            "shot_detail": None
         })
-    
-    # Total context
-    narrative.append({
-        "type": "Total Impact",
-        "title": "Tiger 5 Summary",
-        "detail": f"{total_fails} total Tiger 5 failures",
-        "narrative": f"Reducing Tiger 5 mistakes by just 50% could lower scores by "
-                    f"{int(total_fails * 0.5)} strokes across your rounds."
-    })
     
     return narrative
 
@@ -544,84 +552,59 @@ def _generate_game_overview_narrative(tiger5_results, sg_summary,
 def _generate_performance_drivers(tiger5_results, sg_summary, mental_metrics,
                                    shot_type_counts, hole_summary):
     """
-    "Impress Me" section: Identify top 3 drivers of final score
-    and provide actionable recommendations.
+    "Impress Me" section: Identify top 3 drivers from Strokes Gained data.
+    Uses ONLY SG metrics for recommendations.
     """
     drivers = []
     
-    # Calculate total Tiger 5 impact
-    total_t5_fails = sum(
-        v.get('fails', 0) for k, v in tiger5_results.items()
-        if isinstance(v, dict) and k not in ['grit_score', 'by_round']
-    )
+    if not sg_summary:
+        return drivers
     
-    # Driver 1: Tiger 5 Discipline
-    if total_t5_fails >= 2:
-        impact_score = min(3, total_t5_fails / 2)  # Scale 0-3
+    # Get all SG categories sorted by strokes lost
+    sg_sorted = sorted(sg_summary.items(), key=lambda x: x[1])
+    
+    # Driver 1: Worst SG category
+    if sg_sorted[0][1] < -0.3:
+        worst_sg = sg_sorted[0]
+        impact_score = min(3, abs(worst_sg[1]))
         drivers.append({
             'rank': 1,
-            'factor': 'Tiger 5 Discipline',
+            'factor': f"{worst_sg[0]} Performance",
             'impact_score': impact_score,
-            'detail': f"{total_t5_fails} Tiger 5 failures",
-            'recommendation': 'Eliminate one Tiger 5 mistake per round through focused practice. '
-                             'Review each failure for a common pattern.',
-            'priority': 'HIGH'
+            'detail': f"Losing {abs(worst_sg[1]):.2f} strokes in {worst_sg[0]}",
+            'recommendation': f'Prioritize {worst_sg[0].lower()} practice sessions '
+                             f'to improve fundamentals and reduce strokes lost.',
+            'priority': 'HIGH' if abs(worst_sg[1]) > 1 else 'MEDIUM'
         })
     
-    # Driver 2: Primary SG Weakness
-    if sg_summary:
-        worst_sg = min(sg_summary.items(), key=lambda x: x[1])
-        if worst_sg[1] < -0.5:
-            drivers.append({
-                'rank': 2,
-                'factor': f"{worst_sg[0]} Performance",
-                'impact_score': min(3, abs(worst_sg[1])),
-                'detail': f"Losing {abs(worst_sg[1]):.2f} strokes in {worst_sg[0]}",
-                'recommendation': f'Prioritize {worst_sg[0].lower()} practice. '
-                                 f'Set specific targets for improvement.',
-                'priority': 'HIGH' if abs(worst_sg[1]) > 1 else 'MEDIUM'
-            })
-    
-    # Driver 3: Mental Flow (Bounce Back or Bogey Trains)
-    bounce_back = mental_metrics.get('bounce_back', {}).get('rate', 50)
-    bogey_train = mental_metrics.get('bogey_train_rate', {}).get('btr', 0)
-    
-    if bounce_back < 15:
+    # Driver 2: Second worst SG category
+    if len(sg_sorted) > 1 and sg_sorted[1][1] < -0.3:
+        second_worst = sg_sorted[1]
+        impact_score = min(3, abs(second_worst[1]))
         drivers.append({
-            'rank': 3,
-            'factor': 'Mental Resilience',
-            'impact_score': 2,
-            'detail': f"Only {bounce_back:.0f}% bounce-back rate",
-            'recommendation': 'Develop a post-mistake routine. '
-                             'Visualize success before the next shot.',
-            'priority': 'MEDIUM'
-        })
-    elif bogey_train > 50:
-        drivers.append({
-            'rank': 3,
-            'factor': 'Streak Management',
-            'impact_score': 2,
-            'detail': f"{bogey_train:.0f}% bogey train rate",
-            'recommendation': 'Focus on getting "up and down" on the first bogey '
-                             'to prevent streak continuation.',
+            'rank': 2,
+            'factor': f"{second_worst[0]} Performance",
+            'impact_score': impact_score,
+            'detail': f"Losing {abs(second_worst[1]):.2f} strokes in {second_worst[0]}",
+            'recommendation': f'Work on {second_worst[0].lower()} technique '
+                             f'to gain more strokes in this area.',
             'priority': 'MEDIUM'
         })
     
-    # Driver 4: Closing Ability
-    finish_sg = mental_metrics.get('pressure_finish', {}).get('sg_vs_baseline', 0)
-    if finish_sg < -0.2:
+    # Driver 3: Third worst SG category
+    if len(sg_sorted) > 2 and sg_sorted[2][1] < -0.3:
+        third_worst = sg_sorted[2]
+        impact_score = min(3, abs(third_worst[1]))
         drivers.append({
-            'rank': 4,
-            'factor': 'Pressure Finish',
-            'impact_score': 1.5,
-            'detail': f"{-finish_sg:.2f} SG drop on holes 16-18",
-            'recommendation': 'Practice pressure putts and closing birdie chances. '
-                             'Play "what if" scenarios on the practice green.',
+            'rank': 3,
+            'factor': f"{third_worst[0]} Performance",
+            'impact_score': impact_score,
+            'detail': f"Losing {abs(third_worst[1]):.2f} strokes in {third_worst[0]}",
+            'recommendation': f'Targeted practice on {third_worst[0].lower()} '
+                             f'can help reduce scoring variability.',
             'priority': 'LOW'
         })
     
-    # Sort by impact score and return top 3
-    drivers.sort(key=lambda x: x['impact_score'], reverse=True)
     return drivers[:3]
 
 
@@ -983,7 +966,9 @@ def build_coachs_corner(filtered_df, hole_summary,
     }
     
     # --- Generate dynamic narratives ---
-    tiger5_narrative = _generate_tiger5_narrative(tiger5_results, shot_type_counts)
+    tiger5_narrative = _generate_tiger5_narrative(
+        tiger5_results, shot_type_counts, filtered_df
+    )
     
     game_overview = _generate_game_overview_narrative(
         tiger5_results, sg_summary, shot_type_counts, 

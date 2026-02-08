@@ -697,3 +697,92 @@ flowchart TD
 - [`engines/coachs_corner.py`](engines/coachs_corner.py) - Engine logic updates
 - [`tabs/coachs_corner.py`](tabs/coachs_corner.py) - Complete UI rewrite
 - [`ui/components.py`](ui/components.py) - Add definition_block component
+
+---
+
+# PLAN UPDATES - Rev 2
+
+## Update 1: Tiger 5 Root Causes Narrative
+**Changes:**
+- Remove 4th line (Total Impact summary)
+- Add shot-level detail for the worst SG shot on first card
+- Only the ACCENT/BORDER color is red (not the whole card)
+- Function: `_generate_tiger5_narrative()`
+
+**UI Component:**
+```python
+def tiger5_root_cause_card(item, show_detail=False):
+    """
+    Tiger 5 root cause card with red BORDER only.
+    White background, red left border accent.
+    """
+    border_color = NEGATIVE  # Red accent only
+    # Card has white background with red left border
+```
+
+## Update 2: Mental Characteristics Definitions
+**Changes:**
+- Combine TWO separate expanders into ONE collapsible section
+- Improve styling with better formatting
+- Use consistent font matching theme
+
+**UI:**
+```python
+# Single expander at bottom of Mental Characteristics section
+definition_expander(
+    "Mental Characteristics Definitions",
+    """
+    <strong>Round Flow Metrics</strong><br><br>
+    <strong>Bounce Back %</strong>: Definition...<br><br>
+    <strong>Drop Off %</strong>: Definition...<br><br>
+    ...
+    """
+)
+```
+
+## Update 3: Game Overview Weakness Color
+**Changes:**
+- Change weakness cards from standard green/red to ALWAYS RED
+- Use `force_negative=True` for weakness cards
+
+**UI:**
+```python
+# In render_game_overview()
+for item in weaknesses[:4]:
+    dynamic_narrative_card(item, is_positive=False, force_negative=True)
+```
+
+## Update 4: Performance Drivers (Strokes Gained ONLY)
+**Changes:**
+- KEEP recommendations (not remove them)
+- Use ONLY Strokes Gained data for drivers
+- Remove Tiger 5, Mental, Pressure Finish factors
+
+**Algorithm:**
+```python
+def _generate_performance_drivers(tiger5_results, sg_summary, mental_metrics,
+                                   shot_type_counts, hole_summary):
+    # ONLY use sg_summary data
+    # Get worst SG categories (top 3 by strokes lost)
+    # Each driver includes:
+    #   - factor: "Driving Performance", "Approach Performance", etc.
+    #   - impact_score: 1-3 based on strokes lost
+    #   - detail: "Losing X strokes in Driving"
+    #   - recommendation: SG-based practice recommendation
+    #   - priority: HIGH/MEDIUM/LOW
+```
+
+## Update 5: Shot Characteristics Table
+**Changes:**
+- Remove "Category" column from all tables
+- Use standard shot types: `Driving`, `Approach`, `Short Game`, `Putt`, `Recovery`, `Other`
+- Keep Recovery/Penalty/Other grouping
+
+**UI:**
+```python
+# In render_shot_characteristics()
+# Standard shot types already exist in data
+display_cols = ['Hole', 'Shot', 'Shot Type', 'Starting Location', 
+                'Starting Distance', 'Ending Location', 'Ending Distance', 'Strokes Gained']
+st.dataframe(data[display_cols]...)
+```
