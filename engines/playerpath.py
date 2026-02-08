@@ -1,5 +1,4 @@
 import pandas as pd
-from engines.tiger5 import build_tiger5_root_cause
 from engines.overview import build_sg_separators
 
 # ============================================================
@@ -308,79 +307,6 @@ def _calculate_mistake_penalty_index(filtered_df, hole_summary, tiger5_results):
         "clean_holes_count": len(clean_holes)
     }
 
-
-# ============================================================
-# CROSS-TAB REASONING
-# ============================================================
-
-def _analyze_tiger5_root_causes(filtered_df, hole_summary, tiger5_results, putting_results, driving_results, approach_results, short_game_results):
-    """
-    For each Tiger 5 category, drill down into specific tab data to identify root causes.
-    Returns detailed analysis for each category with fails.
-    """
-    analysis = {}
-    
-    # Use existing root cause function
-    shot_type_counts, detail_by_type = build_tiger5_root_cause(filtered_df, tiger5_results, hole_summary)
-    
-    tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
-    
-    for stat_name in tiger5_names:
-        info = tiger5_results.get(stat_name, {})
-        if not isinstance(info, dict) or info.get('fails', 0) == 0:
-            continue
-        
-        fails = info['fails']
-        root_causes = detail_by_type.get(stat_name, [])
-        
-        category_analysis = {
-            "fails": fails,
-            "root_causes": root_causes,
-            "shot_type_breakdown": {},
-            "supporting_metrics": {}
-        }
-        
-        # Count root causes by type
-        cause_counts = {}
-        for cause_item in root_causes:
-            cause_type = cause_item.get('cause', 'Unknown')
-            if cause_type not in cause_counts:
-                cause_counts[cause_type] = 0
-            cause_counts[cause_type] += 1
-        
-        category_analysis["shot_type_breakdown"] = cause_counts
-        
-        # Add supporting metrics based on category
-        if stat_name == '3 Putts':
-            # Check putting metrics
-            hero = putting_results.get('hero_metrics', {})
-            category_analysis["supporting_metrics"] = {
-                "sg_3_6": hero.get('sg_3_6', 0.0),
-                "sg_3_6_attempts": hero.get('sg_3_6_attempts', 0),
-                "lag_miss_pct": putting_results.get('lag_metrics', {}).get('pct_over_5', 0.0)
-            }
-        
-        elif stat_name in ('Double Bogey', '125yd Bogey'):
-            # Check driving and approach metrics
-            category_analysis["supporting_metrics"] = {
-                "non_playable_pct": driving_results.get('non_playable_pct', 0.0),
-                "sg_playable": driving_results.get('sg_playable', 0.0),
-                "sg_approach": approach_results.get('total_sg', 0.0)
-            }
-        
-        elif stat_name == 'Missed Green':
-            # Check short game metrics
-            hero = short_game_results.get('hero_metrics', {})
-            category_analysis["supporting_metrics"] = {
-                "sg_arg": hero.get('sg_arg', 0.0),
-                "pct_inside_8_fr": hero.get('pct_inside_8_fr', 0.0)
-            }
-        
-        analysis[stat_name] = category_analysis
-    
-    return analysis
-
-
 def _analyze_sg_separators(filtered_df, num_rounds):
     """
     Identify which SG separators are causing most variance.
@@ -451,12 +377,11 @@ def _extract_hero_card_insights(driving_results, approach_results, short_game_re
 
 def _generate_game_overview_narrative(playerpath_data):
     """
-    Generate natural language summary covering:
-    - Top strengths
-    - Largest weaknesses
-    - What's helping score
-    - What's hurting score
-    - What to work on next
+    Generate structured game overview covering:
+    1. Tiger 5 Performance Summary (total fails, highest fail category)
+    2. Root Cause Analysis (what's driving poor performance)
+    3. Hero Card Insights (which tabs to focus on based on root causes)
+    4. Strokes Gained Separators Review (poor performance areas)
     """
     lines = []
     
@@ -464,50 +389,137 @@ def _generate_game_overview_narrative(playerpath_data):
     weaknesses = playerpath_data.get('weaknesses', [])
     sg_summary = playerpath_data.get('sg_summary', {})
     tiger5_results = playerpath_data.get('tiger5_results', {})
+    hero_insights = playerpath_data.get('hero_insights', {})
+    sg_separators = playerpath_data.get('sg_separators', [])
     
-    # Top strengths
-    if strengths:
-        top_strength = strengths[0]
-        lines.append(f"**Top Strength:** {top_strength[0]} is your strongest area, gaining {top_strength[1]:+.2f} strokes.")
-    
-    # Largest weaknesses
-    if weaknesses:
-        worst_weakness = weaknesses[0]
-        lines.append(f"**Biggest Opportunity:** {worst_weakness[0]} is costing you {abs(worst_weakness[1]):.2f} strokes.")
-    
-    # What's helping score
-    helping = []
-    for cat, val in sg_summary.items():
-        if val > 0:
-            helping.append(f"{cat} (+{val:.2f} SG)")
-    if helping:
-        lines.append(f"**What's Helping:** {', '.join(helping)}")
-    
-    # What's hurting score
-    hurting = []
-    for cat, val in sg_summary.items():
-        if val < 0:
-            hurting.append(f"{cat} ({val:.2f} SG)")
-    if hurting:
-        lines.append(f"**What's Hurting:** {', '.join(hurting)}")
-    
-    # What to work on next
-    priorities = []
-    if weaknesses:
-        priorities.append(f"Focus on {weaknesses[0][0].lower()} to reduce {abs(weaknesses[0][1]):.2f} strokes lost")
-    
-    # Tiger 5 priorities
+    # ============================================================
+    # SECTION 1: TIGER 5 PERFORMANCE SUMMARY
+    # ============================================================
     tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey', 'Missed Green', '125yd Bogey']
+    
+    # Calculate total Tiger 5 fails
+    total_fails = 0
+    fail_counts = {}
     for name in tiger5_names:
         info = tiger5_results.get(name, {})
-        if isinstance(info, dict) and info.get('fails', 0) > 0:
-            priorities.append(f"Reduce {name.lower()} ({info['fails']} failures this season)")
-            break  # Only include top priority
+        if isinstance(info, dict):
+            fails = info.get('fails', 0)
+            fail_counts[name] = fails
+            total_fails += fails
     
-    if priorities:
-        lines.append(f"**Priority Focus:** {priorities[0]}")
+    # Find highest Tiger 5 fail
+    highest_fail = None
+    highest_count = 0
+    for name, count in fail_counts.items():
+        if count > highest_count:
+            highest_count = count
+            highest_fail = name
     
-    return "\n\n".join(lines) if lines else "Analyzing your game data..."
+    # Add Tiger 5 summary to narrative
+    lines.append("**Tiger 5 Performance Summary**")
+    lines.append(f"Total Tiger 5 Fails: **{total_fails}**")
+    
+    if highest_fail and highest_count > 0:
+        lines.append(f"Highest Tiger 5 Fail: **{highest_fail}** ({highest_count} failures)")
+    
+    # List all fail categories
+    fail_parts = []
+    for name, count in fail_counts.items():
+        if count > 0:
+            fail_parts.append(f"{name}: {count}")
+    if fail_parts:
+        lines.append(f"Breakdown: {', '.join(fail_parts)}")
+    
+    lines.append("")  # Add spacing
+    
+    # ============================================================
+    # SECTION 2: ROOT CAUSE ANALYSIS
+    # ============================================================
+    lines.append("**Root Cause Analysis**")
+    
+    # Identify primary root causes based on fail counts
+    primary_causes = []
+    if fail_counts.get('3 Putts', 0) > 0:
+        primary_causes.append("Putting (3 Putts)")
+    if fail_counts.get('Double Bogey', 0) > 0:
+        primary_causes.append("Scoring on difficult holes (Double Bogey)")
+    if fail_counts.get('Par 5 Bogey', 0) > 0:
+        primary_causes.append("Par 5 performance")
+    if fail_counts.get('Missed Green', 0) > 0:
+        primary_causes.append("Short Game (Missed Green)")
+    if fail_counts.get('125yd Bogey', 0) > 0:
+        primary_causes.append("Approach shots inside 125 yards")
+    
+    if primary_causes:
+        lines.append(f"Primary concerns: {', '.join(primary_causes)}")
+    else:
+        lines.append("No significant Tiger 5 failures identified.")
+    
+    lines.append("")  # Add spacing
+    
+    # ============================================================
+    # SECTION 3: HERO CARD INSIGHTS (FROM OTHER TABS)
+    # ============================================================
+    lines.append("**Hero Card Insights**")
+    
+    # Check each tab for insights based on root causes
+    insights_parts = []
+    
+    # Putting insights (if 3 Putts is a concern)
+    if fail_counts.get('3 Putts', 0) > 0:
+        putting = hero_insights.get('putting', {})
+        if putting:
+            sg_3_6 = putting.get('sg_3_6', 0)
+            lag_miss = putting.get('lag_miss_pct', 0)
+            insights_parts.append(f"Putting: SG 3-6ft = {sg_3_6:+.2f}, Lag Miss % = {lag_miss:.0f}%")
+    
+    # Driving/Approach insights (if Double Bogey or 125yd Bogey are concerns)
+    if fail_counts.get('Double Bogey', 0) > 0 or fail_counts.get('125yd Bogey', 0) > 0:
+        driving = hero_insights.get('driving', {})
+        approach = hero_insights.get('approach', {})
+        if driving:
+            non_playable = driving.get('non_playable_pct', 0)
+            sg_playable = driving.get('sg_playable', 0)
+            insights_parts.append(f"Driving: Non-Playable % = {non_playable:.0f}%, SG Playable = {sg_playable:+.2f}")
+        if approach:
+            sg_fairway = approach.get('sg_fairway', 0)
+            sg_rough = approach.get('sg_rough', 0)
+            insights_parts.append(f"Approach: SG Fairway = {sg_fairway:+.2f}, SG Rough = {sg_rough:+.2f}")
+    
+    # Short Game insights (if Missed Green is a concern)
+    if fail_counts.get('Missed Green', 0) > 0:
+        short_game = hero_insights.get('short_game', {})
+        if short_game:
+            sg_arg = short_game.get('sg_arg', 0)
+            pct_inside_8 = short_game.get('pct_inside_8_fr', 0)
+            insights_parts.append(f"Short Game: SG ARG = {sg_arg:+.2f}, % Inside 8ft = {pct_inside_8:.0f}%")
+    
+    if insights_parts:
+        for part in insights_parts:
+            lines.append(f"• {part}")
+    else:
+        lines.append("Review individual tabs for detailed hero card metrics.")
+    
+    lines.append("")  # Add spacing
+    
+    # ============================================================
+    # SECTION 4: STROKES GAINED SEPARATORS REVIEW
+    # ============================================================
+    lines.append("**Strokes Gained Separators Review**")
+    
+    # Find separators with poor performance (negative values)
+    poor_separators = [(label, val, pr) for label, val, pr in sg_separators if val < 0]
+    
+    if poor_separators:
+        # Sort by most negative
+        poor_separators.sort(key=lambda x: x[1])
+        lines.append("Poor performance areas:")
+        for label, val, pr in poor_separators[:5]:  # Top 5 worst
+            lines.append(f"• {label}: {val:+.2f} ({pr:+.2f} per round)")
+    else:
+        lines.append("No significantly poor Strokes Gained separators identified.")
+    
+    return "\n".join(lines) if lines else "Analyzing your game data..."
 
 
 def _generate_mental_strength_narrative(mental_metrics):
@@ -586,57 +598,7 @@ def _generate_mental_strength_narrative(mental_metrics):
     else:
         lines.append(f"**Mistake Cost:** Low penalty ({penalty_index:.2f} strokes) — you recover well from mistakes.")
     
-    return "\n\n".join(lines) if lines else "Analyzing mental strength characteristics..."
-
-
-def _generate_cross_tab_insights(cross_tab_analysis):
-    """
-    Generate narrative connecting Tiger 5 fails to specific tab findings.
-    """
-    lines = []
-    
-    tiger5_analysis = cross_tab_analysis.get('tiger5_root_causes', {})
-    
-    for category, analysis in tiger5_analysis.items():
-        fails = analysis.get('fails', 0)
-        if fails == 0:
-            continue
-        
-        shot_type_breakdown = analysis.get('shot_type_breakdown', {})
-        supporting_metrics = analysis.get('supporting_metrics', {})
-        
-        # Build root cause summary
-        cause_parts = []
-        for cause, count in sorted(shot_type_breakdown.items(), key=lambda x: x[1], reverse=True):
-            cause_parts.append(f"{count} from {cause}")
-        
-        if cause_parts:
-            cause_summary = ", ".join(cause_parts[:3])  # Top 3 causes
-            lines.append(f"**{category}:** {fails} failures — {cause_summary}.")
-            
-            # Add supporting metrics
-            if category == '3 Putts':
-                sg_3_6 = supporting_metrics.get('sg_3_6', 0)
-                if sg_3_6 < -0.5:
-                    lines.append(f"  → SG Putting 3-6ft: {sg_3_6:+.2f} (needs improvement)")
-                lag_pct = supporting_metrics.get('lag_miss_pct', 0)
-                if lag_pct > 30:
-                    lines.append(f"  → Lag miss rate: {lag_pct:.0f}% (poor lag putting)")
-            
-            elif category in ('Double Bogey', '125yd Bogey'):
-                non_playable = supporting_metrics.get('non_playable_pct', 0)
-                if non_playable > 15:
-                    lines.append(f"  → Non-playable drive rate: {non_playable:.0f}% (driving issues)")
-                sg_app = supporting_metrics.get('sg_approach', 0)
-                if sg_app < -0.5:
-                    lines.append(f"  → SG Approach: {sg_app:+.2f} (approach struggles)")
-            
-            elif category == 'Missed Green':
-                sg_arg = supporting_metrics.get('sg_arg', 0)
-                if sg_arg < -0.3:
-                    lines.append(f"  → SG Around the Green: {sg_arg:+.2f} (short game struggles)")
-    
-    return "\n\n".join(lines) if lines else "No significant Tiger 5 failures identified."
+    return "\n".join(lines) if lines else "Analyzing mental strength characteristics..."
 
 
 # ============================================================
@@ -680,30 +642,25 @@ def build_playerpath(filtered_df, hole_summary, driving_results, approach_result
     }
     
     # Cross-tab analysis
-    cross_tab_analysis = {
-        "tiger5_root_causes": _analyze_tiger5_root_causes(
-            filtered_df, hole_summary, tiger5_results, putting_results,
-            driving_results, approach_results, short_game_results
-        ),
-        "sg_separators": _analyze_sg_separators(filtered_df, num_rounds),
-        "hero_card_insights": _extract_hero_card_insights(
-            driving_results, approach_results, short_game_results, putting_results
-        )
-    }
+    sg_separators = _analyze_sg_separators(filtered_df, num_rounds)
+    hero_insights = _extract_hero_card_insights(
+        driving_results, approach_results, short_game_results, putting_results
+    )
     
-    # Narrative generation
+    # Narrative generation - Build comprehensive playerpath_data
     playerpath_data = {
         "strengths": strengths,
         "weaknesses": weaknesses,
         "sg_summary": sg_summary,
         "tiger5_results": tiger5_results,
-        "grit_score": grit_score
+        "grit_score": grit_score,
+        "hero_insights": hero_insights,
+        "sg_separators": sg_separators
     }
     
     narratives = {
         "game_overview": _generate_game_overview_narrative(playerpath_data),
-        "mental_strength": _generate_mental_strength_narrative(mental_metrics),
-        "cross_tab_insights": _generate_cross_tab_insights(cross_tab_analysis)
+        "mental_strength": None  # Removed - now using metric explanations only
     }
     
     return {
@@ -711,7 +668,8 @@ def build_playerpath(filtered_df, hole_summary, driving_results, approach_result
         "weaknesses": weaknesses,
         "sg_summary": sg_summary,
         "mental_metrics": mental_metrics,
-        "cross_tab_analysis": cross_tab_analysis,
+        "hero_insights": hero_insights,
+        "sg_separators": sg_separators,
         "narratives": narratives,
         "grit_score": grit_score,
         "tiger5_results": tiger5_results

@@ -2355,14 +2355,16 @@ def playerpath_tab(pp):
     # ============================================================
     st.markdown('<p class="subsection-title">Game Overview</p>', unsafe_allow_html=True)
     
-    # Top narrative summary
+    # Structured game overview narrative
     game_overview_narrative = pp.get("narratives", {}).get("game_overview", "")
     if game_overview_narrative:
         st.markdown(f'<div class="playerpath-narrative">{game_overview_narrative}</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Strengths & Weaknesses Cards
+    # ============================================================
+    # STRENGTHS & WEAKNESSES CARDS
+    # ============================================================
     st.markdown('<p class="subsection-title">Strengths & Weaknesses</p>', unsafe_allow_html=True)
     
     strengths = pp.get("strengths", [])
@@ -2407,10 +2409,6 @@ def playerpath_tab(pp):
     st.markdown('<p class="subsection-title">Mental Strength Characteristics</p>', unsafe_allow_html=True)
     
     mental_metrics = pp.get("mental_metrics", {})
-    mental_narrative = pp.get("narratives", {}).get("mental_strength", "")
-    
-    if mental_narrative:
-        st.markdown(f'<div class="playerpath-narrative">{mental_narrative}</div>', unsafe_allow_html=True)
     
     # Mental strength metric cards
     bounce_back = mental_metrics.get("bounce_back", {})
@@ -2508,71 +2506,26 @@ def playerpath_tab(pp):
             </div>
         ''', unsafe_allow_html=True)
     
-    st.markdown("---")
-    
     # ============================================================
-    # CROSS-TAB INTELLIGENCE
+    # MENTAL STRENGTH METRIC EXPLANATIONS
     # ============================================================
-    st.markdown('<p class="subsection-title">Cross-Tab Intelligence</p>', unsafe_allow_html=True)
-    
-    cross_tab_narrative = pp.get("narratives", {}).get("cross_tab_insights", "")
-    if cross_tab_narrative:
-        st.markdown(f'<div class="playerpath-narrative">{cross_tab_narrative}</div>', unsafe_allow_html=True)
-    
-    # Tiger 5 Root Cause Analysis
-    cross_tab_analysis = pp.get("cross_tab_analysis", {})
-    tiger5_analysis = cross_tab_analysis.get("tiger5_root_causes", {})
-    
-    if tiger5_analysis:
-        st.markdown("### Tiger 5 Root Cause Analysis")
-        
-        for category, analysis in tiger5_analysis.items():
-            fails = analysis.get("fails", 0)
-            if fails == 0:
-                continue
-            
-            shot_type_breakdown = analysis.get("shot_type_breakdown", {})
-            supporting_metrics = analysis.get("supporting_metrics", {})
-            
-            with st.expander(f"{category}: {fails} failures"):
-                # Root cause breakdown
-                if shot_type_breakdown:
-                    st.markdown("**Root Causes:**")
-                    for cause, count in sorted(shot_type_breakdown.items(), key=lambda x: x[1], reverse=True):
-                        st.markdown(f"- {cause}: {count} instances")
-                
-                # Supporting metrics
-                if supporting_metrics:
-                    st.markdown("**Supporting Metrics:**")
-                    for metric, value in supporting_metrics.items():
-                        if isinstance(value, float):
-                            st.markdown(f"- {metric}: {value:+.2f}")
-                        else:
-                            st.markdown(f"- {metric}: {value}")
-    
-    # Strokes Gained Separators Impact
-    sg_separators = cross_tab_analysis.get("sg_separators", [])
-    if sg_separators:
-        st.markdown("### Strokes Gained Separators Impact")
-        
-        # Show top 5 separators
-        top_separators = sg_separators[:5]
-        cols = st.columns(5)
-        for col, (label, val, pr) in zip(cols, top_separators):
-            val_class = "positive" if val >= 0 else "negative"
-            with col:
-                st.markdown(f'''
-                    <div class="playerpath-metric-card">
-                        <div class="card-label">{label}</div>
-                        <div class="card-value {val_class}">{val:+.2f}</div>
-                        <div class="card-unit">{pr:+.2f} per round</div>
-                    </div>
-                ''', unsafe_allow_html=True)
+    st.markdown('''
+        <div style="background:#f8f8f8;border-radius:8px;padding:1rem;margin-top:1rem;font-family:Inter,sans-serif;font-size:0.85rem;">
+            <p style="font-weight:600;margin-bottom:0.75rem;">Metric Definitions</p>
+            <p style="margin-bottom:0.5rem;"><strong>Bounce Back:</strong> Percentage of time you make par or better after a bogey or worse on the previous hole. Higher is better.</p>
+            <p style="margin-bottom:0.5rem;"><strong>Drop Off:</strong> Percentage of time you make another bogey or worse after a bogey or worse. Lower is better.</p>
+            <p style="margin-bottom:0.5rem;"><strong>Gas Pedal:</strong> Percentage of time you capitalize on birdie opportunities by making another birdie or better. Higher is better.</p>
+            <p style="margin-bottom:0.5rem;"><strong>Bogey Train:</strong> Percentage of bogey or worse holes that occur in streaks of 2 or more consecutive bogeys. Lower is better.</p>
+            <p style="margin-bottom:0.5rem;"><strong>Pressure Finish:</strong> Strokes gained/lost difference on holes 16-18 compared to your baseline performance. Positive values indicate better finish performance.</p>
+            <p style="margin-bottom:0.5rem;"><strong>Early Round:</strong> Strokes gained/lost difference on holes 1-3 compared to your baseline performance. Positive values indicate better start performance.</p>
+            <p><strong>Mistake Penalty:</strong> Average additional strokes per hole on Tiger 5 fail holes vs clean holes. Lower is better.</p>
+        </div>
+    ''', unsafe_allow_html=True)
     
     st.markdown("---")
     
     # ============================================================
-    # DEEP DIVE SECTIONS (Collapsible)
+    # DEEP DIVE ANALYSIS (Collapsible)
     # ============================================================
     st.markdown('<p class="subsection-title">Deep Dive Analysis</p>', unsafe_allow_html=True)
     
@@ -2587,22 +2540,6 @@ def playerpath_tab(pp):
                     st.markdown(f"**{cat}**: {val:+.2f} SG (Weakness)")
                 else:
                     st.markdown(f"**{cat}**: {val:+.2f} SG (Neutral)")
-    
-    with st.expander("Mental Strength Details"):
-        st.markdown("**Bounce Back:**")
-        st.json(bounce_back)
-        st.markdown("**Drop Off:**")
-        st.json(drop_off)
-        st.markdown("**Gas Pedal:**")
-        st.json(gas_pedal)
-        st.markdown("**Bogey Train:**")
-        st.json(bogey_train)
-        st.markdown("**Pressure Finish:**")
-        st.json(pressure_finish)
-        st.markdown("**Early Round Composure:**")
-        st.json(early_round)
-        st.markdown("**Mistake Penalty Index:**")
-        st.json(mistake_penalty)
     
     with st.expander("Tiger 5 Complete Analysis"):
         tiger5_results = pp.get("tiger5_results", {})
