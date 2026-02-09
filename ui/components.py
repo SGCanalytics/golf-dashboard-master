@@ -249,6 +249,10 @@ def comparison_grouped_bar(labels, group1_values, group2_values,
         title: chart title
         value_format: format string for values
     """
+    # Defensive: ensure value_format has a valid default
+    if value_format is None:
+        value_format = '{:.1f}'
+    
     fig = go.Figure()
     
     # Group 1 bars
