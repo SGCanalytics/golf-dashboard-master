@@ -147,3 +147,13 @@ def sidebar_label(text):
         f'margin-bottom:0.5rem;margin-top:1.25rem;">{text}</p>',
         unsafe_allow_html=True,
     )
+
+
+def subheader(title):
+    """Subheader without accent line."""
+    st.markdown(
+        f'<p style="font-family:{FONT_BODY};font-size:0.85rem;'
+        f'font-weight:600;color:{SLATE};text-transform:uppercase;'
+        f'letter-spacing:0.08em;margin-bottom:0.5rem;">{title}</p>',
+        unsafe_allow_html=True,
+    )

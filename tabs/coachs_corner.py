@@ -7,61 +7,16 @@ import pandas as pd
 
 from ui.theme import (
     CHARCOAL, SLATE, FONT_BODY, FONT_HEADING,
-    POSITIVE, NEGATIVE, NEUTRAL, ACCENT_PRIMARY, WARNING,
+    POSITIVE, NEGATIVE, NEUTRAL, ACCENT_PRIMARY,
     WHITE, BORDER_LIGHT, CARD_RADIUS, CARD_PADDING
 )
+from ui.components import section_header, premium_stat_card, subheader
 from ui.formatters import format_sg, format_pct
 
 
 # ============================================================
 # UI COMPONENT HELPERS
 # ============================================================
-
-
-def section_header(title):
-    """Premium section title with accent underline."""
-    st.markdown(
-        f'<p style="font-family:{FONT_HEADING};font-size:1.5rem;font-weight:600;'
-        f'color:{CHARCOAL};margin:2rem 0 1.25rem 0;padding-bottom:0.6rem;'
-        f'border-bottom:2px solid {ACCENT_PRIMARY};">{title}</p>',
-        unsafe_allow_html=True,
-    )
-
-
-def subheader(title):
-    """Subheader without accent line."""
-    st.markdown(
-        f'<p style="font-family:{FONT_BODY};font-size:0.85rem;'
-        f'font-weight:600;color:{SLATE};text-transform:uppercase;'
-        f'letter-spacing:0.08em;margin-bottom:0.5rem;">{title}</p>',
-        unsafe_allow_html=True,
-    )
-
-
-def premium_stat_card(label, value, subtitle="", sentiment="neutral"):
-    """
-    Light-background stat card with subtle shadow.
-    """
-    value_color = {
-        "positive": POSITIVE,
-        "negative": NEGATIVE,
-        "neutral": CHARCOAL,
-    }.get(sentiment, CHARCOAL)
-
-    st.markdown(f'''
-        <div style="background:{WHITE};border-radius:{CARD_RADIUS};
-             padding:{CARD_PADDING};text-align:center;
-             box-shadow:0 1px 4px rgba(0,0,0,0.04);
-             border:1px solid {BORDER_LIGHT};margin-bottom:1rem;">
-            <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
-                 color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
-                 margin-bottom:0.5rem;">{label}</div>
-            <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
-                 color:{value_color};line-height:1;">{value}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.65rem;color:{SLATE};
-                 margin-top:0.3rem;">{subtitle}</div>
-        </div>
-    ''', unsafe_allow_html=True)
 
 
 def tiger5_root_cause_card(item, show_detail=False):
