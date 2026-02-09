@@ -206,12 +206,22 @@ def comparison_radar_chart(categories, group1_values, group2_values,
         opacity=0.3,
     ))
     
+    # Calculate variable range based on max absolute value
+    all_values = group1_values + group2_values
+    max_abs = max(abs(v) for v in all_values) if all_values else 1
+    # Add some padding and ensure at least 1.0 range
+    max_range = max(max_abs * 1.2, 1.0)
+    
     fig.update_polars(
         radialaxis=dict(
             visible=True,
             showline=False,
             gridcolor=BORDER_LIGHT,
-            range=[0, 1],
+            range=[-max_range, max_range],
+            # Bold 0 line by using zeroline
+            zeroline=True,
+            zerolinecolor=CHARCOAL,
+            zerolinewidth=2,
         ),
         bgcolor=WHITE,
     )

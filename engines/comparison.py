@@ -47,9 +47,9 @@ def classify_round_quality(hole_summary):
         if score_vs_par < 0:
             return 'Under Par'
         elif score_vs_par <= 3:
-            return 'Par to +3'
+            return 'Even - +3'
         else:
-            return '+4+'
+            return '>+4'
     
     return round_scores.apply(classify)
 
@@ -112,17 +112,17 @@ def _process_group_data(df, hole_summary, group_name):
     
     num_rounds = df['Round ID'].nunique()
     
-    # --- SG by Category ---
-    sg_by_category = _compute_sg_by_category(df)
+    # --- SG by Category (per round) ---
+    sg_by_category = _compute_sg_by_category(df, num_rounds)
     
-    # --- Approach by Bucket ---
-    approach_by_bucket = _compute_approach_by_bucket(df)
+    # --- Approach by Bucket (per round) ---
+    approach_by_bucket = _compute_approach_by_bucket(df, num_rounds)
     
-    # --- Putting by Bucket ---
-    putting_by_bucket = _compute_putting_by_bucket(df)
+    # --- Putting by Bucket (per round) ---
+    putting_by_bucket = _compute_putting_by_bucket(df, num_rounds)
     
-    # --- Short Game by Bucket ---
-    short_game_by_bucket = _compute_short_game_by_bucket(df)
+    # --- Short Game by Bucket (per round) ---
+    short_game_by_bucket = _compute_short_game_by_bucket(df, num_rounds)
     
     # --- Hole Outcomes ---
     hole_outcomes = _compute_hole_outcomes(hole_summary)
@@ -136,13 +136,26 @@ def _process_group_data(df, hole_summary, group_name):
     # --- Basic Stats ---
     basic_stats = _compute_basic_stats(df, hole_summary)
     
-    # --- Scoring Average ---
+    # --- Scoring Summary ---
     scoring_avg = hole_summary['Hole Score'].mean() if not hole_summary.empty else 0
+    
+    # Calculate total SG and per-round SG
+    total_sg = df['Strokes Gained'].sum() if not df.empty else 0
+    sg_per_round = round(total_sg / num_rounds, 2) if num_rounds > 0 else 0
+    
+    # Calculate low and high scores
+    round_scores = hole_summary.groupby('Round ID')['Hole Score'].sum() if not hole_summary.empty else pd.Series()
+    low_score = round_scores.min() if not round_scores.empty else 0
+    high_score = round_scores.max() if not round_scores.empty else 0
     
     return {
         'name': group_name,
         'num_rounds': num_rounds,
-        'scoring_avg': scoring_avg,
+        'scoring_avg': round(scoring_avg, 2),
+        'total_sg': round(total_sg, 2),
+        'sg_per_round': sg_per_round,
+        'low_score': int(low_score),
+        'high_score': int(high_score),
         'sg_by_category': sg_by_category,
         'approach_by_bucket': approach_by_bucket,
         'putting_by_bucket': putting_by_bucket,
@@ -160,6 +173,10 @@ def _empty_group_result(group_name):
         'name': group_name,
         'num_rounds': 0,
         'scoring_avg': 0,
+        'total_sg': 0,
+        'sg_per_round': 0,
+        'low_score': 0,
+        'high_score': 0,
         'sg_by_category': {cat: 0.0 for cat in SG_CATEGORIES},
         'approach_by_bucket': {b: 0.0 for b in APPROACH_BUCKETS},
         'putting_by_bucket': {b: 0.0 for b in PUTTING_BUCKETS},
@@ -180,8 +197,8 @@ def _empty_group_result(group_name):
 # SG CATEGORY COMPUTATION
 # ============================================================
 
-def _compute_sg_by_category(df):
-    """Compute total SG by major category."""
+def _compute_sg_by_category(df, num_rounds=1):
+    """Compute average SG per round by major category."""
     if df.empty:
         return {cat: 0.0 for cat in SG_CATEGORIES}
     
@@ -189,7 +206,8 @@ def _compute_sg_by_category(df):
     
     result = {}
     for cat in SG_CATEGORIES:
-        result[cat] = float(sg_by_cat.get(cat, 0))
+        total = float(sg_by_cat.get(cat, 0))
+        result[cat] = round(total / num_rounds, 2) if num_rounds > 0 else 0.0
     
     return result
 
@@ -211,8 +229,8 @@ def _approach_bucket(dist):
     return None
 
 
-def _compute_approach_by_bucket(df):
-    """Compute total SG by approach distance bucket."""
+def _compute_approach_by_bucket(df, num_rounds=1):
+    """Compute average SG per round by approach distance bucket."""
     if df.empty:
         return {b: 0.0 for b in APPROACH_BUCKETS}
     
@@ -229,7 +247,8 @@ def _compute_approach_by_bucket(df):
     
     result = {}
     for bucket in APPROACH_BUCKETS:
-        result[bucket] = float(sg_by_bucket.get(bucket, 0))
+        total = float(sg_by_bucket.get(bucket, 0))
+        result[bucket] = round(total / num_rounds, 2) if num_rounds > 0 else 0.0
     
     return result
 
@@ -252,8 +271,8 @@ def _putting_bucket(dist):
         return "30+"
 
 
-def _compute_putting_by_bucket(df):
-    """Compute total SG by putting distance bucket."""
+def _compute_putting_by_bucket(df, num_rounds=1):
+    """Compute average SG per round by putting distance bucket."""
     if df.empty:
         return {b: 0.0 for b in PUTTING_BUCKETS}
     
@@ -270,7 +289,8 @@ def _compute_putting_by_bucket(df):
     
     result = {}
     for bucket in PUTTING_BUCKETS:
-        result[bucket] = float(sg_by_bucket.get(bucket, 0))
+        total = float(sg_by_bucket.get(bucket, 0))
+        result[bucket] = round(total / num_rounds, 2) if num_rounds > 0 else 0.0
     
     return result
 
@@ -293,8 +313,8 @@ def _short_game_bucket(dist):
         return "40-50"
 
 
-def _compute_short_game_by_bucket(df):
-    """Compute total SG by short game distance bucket."""
+def _compute_short_game_by_bucket(df, num_rounds=1):
+    """Compute average SG per round by short game distance bucket."""
     if df.empty:
         return {b: 0.0 for b in SHORT_GAME_BUCKETS}
     
@@ -311,7 +331,8 @@ def _compute_short_game_by_bucket(df):
     
     result = {}
     for bucket in SHORT_GAME_BUCKETS:
-        result[bucket] = float(sg_by_bucket.get(bucket, 0))
+        total = float(sg_by_bucket.get(bucket, 0))
+        result[bucket] = round(total / num_rounds, 2) if num_rounds > 0 else 0.0
     
     return result
 

@@ -3,7 +3,7 @@
 # ============================================================
 # Compare performance across:
 # 1. Player vs Player
-# 2. Round Quality (Under Par vs Par to +3 vs +4+)
+# 2. Round Quality (Under Par vs Even - +3 vs >+4)
 # 3. Time Period (Recent vs Previous rounds)
 # ============================================================
 
@@ -42,6 +42,39 @@ def render_mode_selector(players):
     """Render the comparison mode selector."""
     mode, mode_params = comparison_mode_selector(players)
     return mode, mode_params
+
+
+# ============================================================
+# SECTION 1B: GROUP SUMMARY (shown after mode selection)
+# ============================================================
+
+def render_group_summary(comparison_data):
+    """Render small summary text for each group."""
+    group1 = comparison_data['group1']
+    group2 = comparison_data['group2']
+    g1_label = comparison_data['group1_label']
+    g2_label = comparison_data['group2_label']
+    
+    # Format summary text for each group
+    g1_summary = f"""
+    <div style="font-family:{FONT_BODY};font-size:0.75rem;color:{CHARCOAL};line-height:1.6;">
+        <span style="color:{COMPARISON_GROUP_1};font-weight:600;">{g1_label}:</span>
+        {group1['num_rounds']} rounds | Avg: {group1['scoring_avg']:.1f} | 
+        SG: {group1['total_sg']:+.1f} ({group1['sg_per_round']:+.2f}/r) |
+        Low: {group1['low_score']} | High: {group1['high_score']}
+    </div>
+    """
+    
+    g2_summary = f"""
+    <div style="font-family:{FONT_BODY};font-size:0.75rem;color:{CHARCOAL};line-height:1.6;">
+        <span style="color:{COMPARISON_GROUP_2};font-weight:600;">{g2_label}:</span>
+        {group2['num_rounds']} rounds | Avg: {group2['scoring_avg']:.1f} | 
+        SG: {group2['total_sg']:+.1f} ({group2['sg_per_round']:+.2f}/r) |
+        Low: {group2['low_score']} | High: {group2['high_score']}
+    </div>
+    """
+    
+    st.markdown(g1_summary + "<br>" + g2_summary, unsafe_allow_html=True)
 
 
 # ============================================================
@@ -163,18 +196,18 @@ def render_hole_outcomes(comparison_data):
         ''', unsafe_allow_html=True)
     
     with col3:
-        # Par percentage
-        g1_par_pct = g1_pcts[OUTCOME_LABELS.index('Par')]
-        g2_par_pct = g2_pcts[OUTCOME_LABELS.index('Par')]
+        # Bogey+ percentage
+        g1_bogey_pct = g1_pcts[OUTCOME_LABELS.index('Bogey')] + g1_pcts[OUTCOME_LABELS.index('Double or Worse')]
+        g2_bogey_pct = g2_pcts[OUTCOME_LABELS.index('Bogey')] + g2_pcts[OUTCOME_LABELS.index('Double or Worse')]
         st.markdown(f'''
             <div style="background:#F8F7F4;padding:1rem;border-radius:10px;
                  text-align:center;">
                 <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};
-                     text-transform:uppercase;letter-spacing:0.08em;">Par Rate</div>
+                     text-transform:uppercase;letter-spacing:0.08em;">Bogey+ Rate</div>
                 <div style="font-family:{FONT_HEADING};font-size:1rem;font-weight:600;
-                     color:{COMPARISON_GROUP_1};margin:0.3rem 0;">{g1_label}: {g1_par_pct:.0f}%</div>
+                     color:{COMPARISON_GROUP_1};margin:0.3rem 0;">{g1_label}: {g1_bogey_pct:.0f}%</div>
                 <div style="font-family:{FONT_HEADING};font-size:1rem;font-weight:600;
-                     color:{COMPARISON_GROUP_2};margin:0.3rem 0;">{g2_label}: {g2_par_pct:.0f}%</div>
+                     color:{COMPARISON_GROUP_2};margin:0.3rem 0;">{g2_label}: {g2_bogey_pct:.0f}%</div>
             </div>
         ''', unsafe_allow_html=True)
 
@@ -224,7 +257,7 @@ def render_tiger5_comparison(comparison_data):
     with col2:
         st.markdown(f'''
             <div style="background:#F8F7F4;padding:1rem;border-radius:10px;
-                 text-align:center;border:1px solid {BORDER_LIGHT};">
+                 text-align:center;border:1px solid #E2E8F0;">
                 <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};
                      text-transform:uppercase;letter-spacing:0.08em;">{g2_label} Total Fails</div>
                 <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
@@ -241,7 +274,7 @@ def render_tiger5_comparison(comparison_data):
         diff_text = f"{diff:+.0f}" if diff >= 0 else f"{diff:.0f}"
         st.markdown(f'''
             <div style="background:#F8F7F4;padding:1rem;border-radius:10px;
-                 text-align:center;border:1px solid {BORDER_LIGHT};">
+                 text-align:center;border:1px solid #E2E8F0;">
                 <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};
                      text-transform:uppercase;letter-spacing:0.08em;">Difference</div>
                 <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
@@ -260,8 +293,13 @@ def render_tiger5_comparison(comparison_data):
                  text-align:center;border:1px solid #FED7D7;">
                 <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};
                      text-transform:uppercase;letter-spacing:0.08em;">3-Putts</div>
-                <div style=\"display:flex;justify-content:center;gap:1rem;margin-top:0.5rem;\">
-                    <span style=\"color:{COMPARISON_GROUP_1};font-weight:600;\">{g1_3putt}</span>\n                    <span style=\"color:{SLATE};\">vs</span>\n                    <span style=\"color:{COMPARISON_GROUP_2};font-weight:600;\">{g2_3putt}</span>\n                </div>\n            </div>\n        ''', unsafe_allow_html=True)
+                <div style="display:flex;justify-content:center;gap:1rem;margin-top:0.5rem;">
+                    <span style="color:{COMPARISON_GROUP_1};font-weight:600;">{g1_3putt}</span>
+                    <span style="color:{SLATE};">vs</span>
+                    <span style="color:{COMPARISON_GROUP_2};font-weight:600;">{g2_3putt}</span>
+                </div>
+            </div>
+        ''', unsafe_allow_html=True)
 
 
 # ============================================================
@@ -381,14 +419,48 @@ def render_basic_stats(comparison_data):
     with col4:
         st.markdown(f'''
             <div style="background:#F8F7F4;padding:1rem;border-radius:10px;
-                 border:1px solid {BORDER_LIGHT};">
-                <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:1rem;\">
-                    <div style=\"text-align:center;\">
-                        <div style=\"font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};\n                             text-transform:uppercase;letter-spacing:0.08em;\">{g1_label}</div>\n                        <div style=\"font-family:{FONT_HEADING};font-size:1.8rem;font-weight:700;\n                             color:{COMPARISON_GROUP_1};\">{group1['num_rounds']}</div>\n                        <div style=\"font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};\"\n                             >Rounds</div>\n                    </div>\n                    <div style=\"text-align:center;\">\n                        <div style=\"font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};\n                             text-transform:uppercase;letter-spacing:0.08em;\">{g2_label}</div>\n                        <div style=\"font-family:{FONT_HEADING};font-size:1.8rem;font-weight:700;\n                             color:{COMPARISON_GROUP_2};\">{group2['num_rounds']}</div>\n                        <div style=\"font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};\"\n                             >Rounds</div>\n                    </div>\n                </div>\n            </div>\n        ''', unsafe_allow_html=True)
+                 border:1px solid #E2E8F0;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div style="text-align:center;">
+                        <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};
+                             text-transform:uppercase;letter-spacing:0.08em;">{g1_label}</div>
+                        <div style="font-family:{FONT_HEADING};font-size:1.8rem;font-weight:700;
+                             color:{COMPARISON_GROUP_1};">{group1['num_rounds']}</div>
+                        <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};">Rounds</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};
+                             text-transform:uppercase;letter-spacing:0.08em;">{g2_label}</div>
+                        <div style="font-family:{FONT_HEADING};font-size:1.8rem;font-weight:700;
+                             color:{COMPARISON_GROUP_2};">{group2['num_rounds']}</div>
+                        <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};">Rounds</div>
+                    </div>
+                </div>
+            </div>
+        ''', unsafe_allow_html=True)
     
     with col5:
         st.markdown(f'''
-            <div style=\"background:#F8F7F4;padding:1rem;border-radius:10px;\n                 border:1px solid {BORDER_LIGHT};\">\n                <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:1rem;\">\n                    <div style=\"text-align:center;\">\n                        <div style=\"font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};\n                             text-transform:uppercase;letter-spacing:0.08em;\">{g1_label}</div>\n                        <div style=\"font-family:{FONT_HEADING};font-size:1.8rem;font-weight:700;\n                             color:{COMPARISON_GROUP_1};\">{group1['scoring_avg']:.2f}</div>\n                        <div style=\"font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};\"\n                             >Scoring Avg</div>\n                    </div>\n                    <div style=\"text-align:center;\">\n                        <div style=\"font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};\n                             text-transform:uppercase;letter-spacing:0.08em;\">{g2_label}</div>\n                        <div style=\"font-family:{FONT_HEADING};font-size:1.8rem;font-weight:700;\n                             color:{COMPARISON_GROUP_2};\">{group2['scoring_avg']:.2f}</div>\n                        <div style=\"font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};\"\n                             >Scoring Avg</div>\n                    </div>\n                </div>\n            </div>\n        ''', unsafe_allow_html=True)
+            <div style="background:#F8F7F4;padding:1rem;border-radius:10px;
+                 border:1px solid #E2E8F0;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div style="text-align:center;">
+                        <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};
+                             text-transform:uppercase;letter-spacing:0.08em;">{g1_label}</div>
+                        <div style="font-family:{FONT_HEADING};font-size:1.8rem;font-weight:700;
+                             color:{COMPARISON_GROUP_1};">{group1['scoring_avg']:.2f}</div>
+                        <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};">Scoring Avg</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};
+                             text-transform:uppercase;letter-spacing:0.08em;">{g2_label}</div>
+                        <div style="font-family:{FONT_HEADING};font-size:1.8rem;font-weight:700;
+                             color:{COMPARISON_GROUP_2};">{group2['scoring_avg']:.2f}</div>
+                        <div style="font-family:{FONT_BODY};font-size:0.6rem;color:{SLATE};">Scoring Avg</div>
+                    </div>
+                </div>
+            </div>
+        ''', unsafe_allow_html=True)
 
 
 # ============================================================
@@ -422,6 +494,11 @@ def comparison_tab(filtered_df, hole_summary):
     if comparison_data['group2']['num_rounds'] == 0:
         st.warning(f"No data available for {comparison_data['group2_label']}. Please adjust your filters or selection.")
         return
+    
+    st.markdown("---")
+    
+    # Group Summary - shown after mode selection, before radar charts
+    render_group_summary(comparison_data)
     
     st.markdown("---")
     
