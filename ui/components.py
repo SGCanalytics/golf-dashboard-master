@@ -414,6 +414,31 @@ def comparison_stat_row(g1_label, g1_value, g2_label, g2_value,
                 pass
 
 
+def comparison_single_stat_card(value, label, group_color=COMPARISON_GROUP_1, group_label=""):
+    """
+    Render a single stat card with label and value.
+    
+    Args:
+        value: the value to display
+        label: metric label
+        group_color: color for the card border
+        group_label: optional group label (displayed at top)
+    """
+    st.markdown(f'''
+        <div style="background:{WHITE};border-radius:{CARD_RADIUS};
+             padding:{CARD_PADDING};text-align:center;
+             border:1px solid {BORDER_LIGHT};margin-bottom:1rem;
+             border-left:4px solid {group_color};">
+            <div style="font-family:{FONT_BODY};font-size:0.6rem;font-weight:600;
+                 color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
+                 margin-bottom:0.3rem;">{label}</div>
+            <div style="font-family:{FONT_HEADING};font-size:1.5rem;font-weight:700;
+                 color:{group_color};line-height:1;">{value}</div>
+            {f'<div style="font-family:{FONT_BODY};font-size:0.55rem;color:{SLATE};margin-top:0.2rem;">{group_label}</div>' if group_label else ''}
+        </div>
+    ''', unsafe_allow_html=True)
+
+
 def comparison_mode_selector(players):
     """
     Render the comparison mode selector with mode-specific controls.

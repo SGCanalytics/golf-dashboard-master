@@ -17,7 +17,7 @@ from ui.theme import (
 from ui.components import (
     section_header, subheader,
     comparison_radar_chart, comparison_grouped_bar, comparison_stacked_bar,
-    comparison_stat_row, comparison_mode_selector, comparison_legend,
+    comparison_stat_row, comparison_single_stat_card, comparison_mode_selector, comparison_legend,
 )
 from ui.formatters import format_sg, format_pct
 
@@ -49,32 +49,39 @@ def render_mode_selector(players):
 # ============================================================
 
 def render_group_summary(comparison_data):
-    """Render small summary text for each group."""
+    """Render small summary text for each group in two columns."""
     group1 = comparison_data['group1']
     group2 = comparison_data['group2']
     g1_label = comparison_data['group1_label']
     g2_label = comparison_data['group2_label']
     
-    # Format summary text for each group
-    g1_summary = f"""
-    <div style="font-family:{FONT_BODY};font-size:0.75rem;color:{CHARCOAL};line-height:1.6;">
-        <span style="color:{COMPARISON_GROUP_1};font-weight:600;">{g1_label}:</span>
-        {group1['num_rounds']} rounds | Avg: {group1['scoring_avg']:.1f} | 
-        SG: {group1['total_sg']:+.1f} ({group1['sg_per_round']:+.2f}/r) |
-        Low: {group1['low_score']} | High: {group1['high_score']}
-    </div>
-    """
+    col1, col2 = st.columns(2)
     
-    g2_summary = f"""
-    <div style="font-family:{FONT_BODY};font-size:0.75rem;color:{CHARCOAL};line-height:1.6;">
-        <span style="color:{COMPARISON_GROUP_2};font-weight:600;">{g2_label}:</span>
-        {group2['num_rounds']} rounds | Avg: {group2['scoring_avg']:.1f} | 
-        SG: {group2['total_sg']:+.1f} ({group2['sg_per_round']:+.2f}/r) |
-        Low: {group2['low_score']} | High: {group2['high_score']}
-    </div>
-    """
+    with col1:
+        st.markdown(f"""
+        <div style="font-family:{FONT_BODY};font-size:0.85rem;color:{CHARCOAL};
+             line-height:1.6;background:#F8F7F4;padding:1rem;border-radius:10px;
+             border-left:4px solid {COMPARISON_GROUP_1};">
+            <div style="color:{COMPARISON_GROUP_1};font-weight:600;font-size:0.9rem;
+                 margin-bottom:0.5rem;">{g1_label}</div>
+            {group1['num_rounds']} rounds | Total score avg: {group1['scoring_avg']:.1f} |
+            SG: {group1['total_sg']:+.1f} ({group1['sg_per_round']:+.2f}/Rd) |
+            Low: {group1['low_score']} | High: {group1['high_score']}
+        </div>
+        """, unsafe_allow_html=True)
     
-    st.markdown(g1_summary + "<br>" + g2_summary, unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""
+        <div style="font-family:{FONT_BODY};font-size:0.85rem;color:{CHARCOAL};
+             line-height:1.6;background:#F8F7F4;padding:1rem;border-radius:10px;
+             border-left:4px solid {COMPARISON_GROUP_2};">
+            <div style="color:{COMPARISON_GROUP_2};font-weight:600;font-size:0.9rem;
+                 margin-bottom:0.5rem;">{g2_label}</div>
+            {group2['num_rounds']} rounds | Total score avg: {group2['scoring_avg']:.1f} |
+            SG: {group2['total_sg']:+.1f} ({group2['sg_per_round']:+.2f}/Rd) |
+            Low: {group2['low_score']} | High: {group2['high_score']}
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ============================================================
@@ -138,7 +145,7 @@ def render_radar_charts(comparison_data):
 # ============================================================
 
 def render_hole_outcomes(comparison_data):
-    """Render hole outcome distribution comparison."""
+    """Render hole outcome distribution comparison per round."""
     section_header("Hole Outcome Distribution")
     
     group1 = comparison_data['group1']
@@ -150,6 +157,13 @@ def render_hole_outcomes(comparison_data):
     g1_outcomes = [group1['hole_outcomes'].get(label, 0) for label in OUTCOME_LABELS]
     g2_outcomes = [group2['hole_outcomes'].get(label, 0) for label in OUTCOME_LABELS]
     
+    # Calculate per-round values
+    g1_rounds = group1['num_rounds'] if group1['num_rounds'] > 0 else 1
+    g2_rounds = group2['num_rounds'] if group2['num_rounds'] > 0 else 1
+    
+    g1_per_round = [c / g1_rounds for c in g1_outcomes]
+    g2_per_round = [c / g2_rounds for c in g2_outcomes]
+    
     # Calculate percentages
     g1_total = sum(g1_outcomes) if sum(g1_outcomes) > 0 else 1
     g2_total = sum(g2_outcomes) if sum(g2_outcomes) > 0 else 1
@@ -157,12 +171,19 @@ def render_hole_outcomes(comparison_data):
     g1_pcts = [c / g1_total * 100 for c in g1_outcomes]
     g2_pcts = [c / g2_total * 100 for c in g2_outcomes]
     
-    # Render grouped bar chart
+    # Render grouped bar chart with per-round values
     comparison_grouped_bar(
-        OUTCOME_LABELS, g1_outcomes, g2_outcomes,
+        OUTCOME_LABELS, g1_per_round, g2_per_round,
         g1_label, g2_label,
-        "Hole Outcomes (Count)",
+        "Hole Outcomes per Round",
+        value_format='{:.2f}',
     )
+    
+    # Calculate per-round birdies and bogeys
+    g1_birdies_per_round = group1['hole_outcomes'].get('Birdie', 0) / g1_rounds
+    g1_bogeys_per_round = group1['hole_outcomes'].get('Bogey', 0) / g1_rounds
+    g2_birdies_per_round = group2['hole_outcomes'].get('Birdie', 0) / g2_rounds
+    g2_bogeys_per_round = group2['hole_outcomes'].get('Bogey', 0) / g2_rounds
     
     # Show summary stats
     col1, col2, col3 = st.columns(3)
@@ -175,9 +196,9 @@ def render_hole_outcomes(comparison_data):
                      text-transform:uppercase;letter-spacing:0.08em;">{g1_label}</div>
                 <div style="font-family:{FONT_HEADING};font-size:1.2rem;font-weight:600;
                      color:{CHARCOAL};margin:0.5rem 0;">
-                     Birdies: {group1['hole_outcomes'].get('Birdie', 0)}</div>
+                     Birdies: {g1_birdies_per_round:.1f}/Rd</div>
                 <div style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};">
-                     Bogeys: {group1['hole_outcomes'].get('Bogey', 0)}</div>
+                     Bogeys: {g1_bogeys_per_round:.1f}/Rd</div>
             </div>
         ''', unsafe_allow_html=True)
     
@@ -189,14 +210,14 @@ def render_hole_outcomes(comparison_data):
                      text-transform:uppercase;letter-spacing:0.08em;">{g2_label}</div>
                 <div style="font-family:{FONT_HEADING};font-size:1.2rem;font-weight:600;
                      color:{CHARCOAL};margin:0.5rem 0;">
-                     Birdies: {group2['hole_outcomes'].get('Birdie', 0)}</div>
+                     Birdies: {g2_birdies_per_round:.1f}/Rd</div>
                 <div style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};">
-                     Bogeys: {group2['hole_outcomes'].get('Bogey', 0)}</div>
+                     Bogeys: {g2_bogeys_per_round:.1f}/Rd</div>
             </div>
         ''', unsafe_allow_html=True)
     
     with col3:
-        # Bogey+ percentage
+        # Bogey+ percentage (remains as percentage since it's a rate)
         g1_bogey_pct = g1_pcts[OUTCOME_LABELS.index('Bogey')] + g1_pcts[OUTCOME_LABELS.index('Double or Worse')]
         g2_bogey_pct = g2_pcts[OUTCOME_LABELS.index('Bogey')] + g2_pcts[OUTCOME_LABELS.index('Double or Worse')]
         st.markdown(f'''
@@ -307,7 +328,7 @@ def render_tiger5_comparison(comparison_data):
 # ============================================================
 
 def render_mental_comparison(comparison_data):
-    """Render mental characteristics comparison."""
+    """Render mental characteristics comparison with card layout."""
     section_header("Mental Characteristics & Round Flow")
     
     group1 = comparison_data['group1']
@@ -353,24 +374,56 @@ def render_mental_comparison(comparison_data):
     
     st.markdown("---")
     
-    # Detailed breakdown
+    # Detailed breakdown - card layout with two columns
     subheader("Detailed Mental Metrics")
     
     colA, colB = st.columns(2)
     
     with colA:
-        st.markdown(f"**{g1_label}**")
-        st.markdown(f"- Bounce Back: {m1['bounce_back']['successes']}/{m1['bounce_back']['opportunities']} ({format_pct(m1['bounce_back']['rate'])})")
-        st.markdown(f"- Gas Pedal: {m1['gas_pedal']['successes']}/{m1['gas_pedal']['opportunities']} ({format_pct(m1['gas_pedal']['rate'])})")
-        st.markdown(f"- Drop Off: {m1['drop_off']['events']}/{m1['drop_off']['opportunities']} ({format_pct(m1['drop_off']['rate'])})")
-        st.markdown(f"- Bogey Trains: Longest streak {m1['bogey_train_rate']['longest']} holes")
+        st.markdown(f"<div style='text-align:center;margin-bottom:0.5rem;color:{COMPARISON_GROUP_1};font-weight:600;'>{g1_label}</div>", unsafe_allow_html=True)
+        comparison_single_stat_card(
+            f"{m1['bounce_back']['successes']}/{m1['bounce_back']['opportunities']}",
+            "Bounce Back",
+            COMPARISON_GROUP_1
+        )
+        comparison_single_stat_card(
+            f"{m1['gas_pedal']['successes']}/{m1['gas_pedal']['opportunities']}",
+            "Gas Pedal",
+            COMPARISON_GROUP_1
+        )
+        comparison_single_stat_card(
+            f"{m1['drop_off']['events']}/{m1['drop_off']['opportunities']}",
+            "Drop Off",
+            COMPARISON_GROUP_1
+        )
+        comparison_single_stat_card(
+            f"{m1['bogey_train_rate']['longest']} holes",
+            "Longest Bogey Streak",
+            COMPARISON_GROUP_1
+        )
     
     with colB:
-        st.markdown(f"**{g2_label}**")
-        st.markdown(f"- Bounce Back: {m2['bounce_back']['successes']}/{m2['bounce_back']['opportunities']} ({format_pct(m2['bounce_back']['rate'])})")
-        st.markdown(f"- Gas Pedal: {m2['gas_pedal']['successes']}/{m2['gas_pedal']['opportunities']} ({format_pct(m2['gas_pedal']['rate'])})")
-        st.markdown(f"- Drop Off: {m2['drop_off']['events']}/{m2['drop_off']['opportunities']} ({format_pct(m2['drop_off']['rate'])})")
-        st.markdown(f"- Bogey Trains: Longest streak {m2['bogey_train_rate']['longest']} holes")
+        st.markdown(f"<div style='text-align:center;margin-bottom:0.5rem;color:{COMPARISON_GROUP_2};font-weight:600;'>{g2_label}</div>", unsafe_allow_html=True)
+        comparison_single_stat_card(
+            f"{m2['bounce_back']['successes']}/{m2['bounce_back']['opportunities']}",
+            "Bounce Back",
+            COMPARISON_GROUP_2
+        )
+        comparison_single_stat_card(
+            f"{m2['gas_pedal']['successes']}/{m2['gas_pedal']['opportunities']}",
+            "Gas Pedal",
+            COMPARISON_GROUP_2
+        )
+        comparison_single_stat_card(
+            f"{m2['drop_off']['events']}/{m2['drop_off']['opportunities']}",
+            "Drop Off",
+            COMPARISON_GROUP_2
+        )
+        comparison_single_stat_card(
+            f"{m2['bogey_train_rate']['longest']} holes",
+            "Longest Bogey Streak",
+            COMPARISON_GROUP_2
+        )
 
 
 # ============================================================
