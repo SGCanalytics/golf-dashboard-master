@@ -211,6 +211,7 @@ def comparison_radar_chart(categories, group1_values, group2_values,
             visible=True,
             showline=False,
             gridcolor=BORDER_LIGHT,
+            range=[0, 1],
         ),
         bgcolor=WHITE,
     )
