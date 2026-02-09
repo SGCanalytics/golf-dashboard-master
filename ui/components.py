@@ -236,7 +236,7 @@ def comparison_radar_chart(categories, group1_values, group2_values,
 
 def comparison_grouped_bar(labels, group1_values, group2_values,
                            group1_name, group2_name, title,
-                           value_format='{.1f}'):
+                           value_format='{:.1f}'):
     """
     Render a grouped bar chart comparing two groups.
     
