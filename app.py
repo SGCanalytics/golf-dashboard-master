@@ -29,6 +29,7 @@ from tabs.approach import approach_tab
 from tabs.short_game import short_game_tab
 from tabs.putting import putting_tab
 from tabs.coachs_corner import coachs_corner_tab
+from tabs.comparison import comparison_tab
 
 # ============================================================
 # PAGE CONFIG & GLOBAL CSS
@@ -154,9 +155,9 @@ coachs_corner_results = build_coachs_corner(
 # ============================================================
 
 tab_tiger5, tab_sg, tab_driving, tab_approach, tab_short_game, \
-    tab_putting, tab_coach = st.tabs(
+    tab_putting, tab_coach, tab_comparison = st.tabs(
         ["Tiger 5", "Strokes Gained", "Driving", "Approach",
-         "Short Game", "Putting", "Coach's Corner"]
+         "Short Game", "Putting", "Coach's Corner", "Comparison"]
     )
 
 with tab_tiger5:
@@ -183,3 +184,6 @@ with tab_putting:
 
 with tab_coach:
     coachs_corner_tab(coachs_corner_results)
+
+with tab_comparison:
+    comparison_tab(filtered_df, hole_summary)

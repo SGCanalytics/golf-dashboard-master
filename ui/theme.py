@@ -59,6 +59,12 @@ OUTCOME_COLORS = {
 
 DONUT_SEQUENCE = ["#2D6A4F", "#3D5A3E", "#B7791F", "#C53030"]
 
+# --- COMPARISON GROUP COLORS (premium purple/charcoal) ---
+COMPARISON_GROUP_1 = "#4A1D7C"      # Deep Dark Purple (Group 1)
+COMPARISON_GROUP_1_BG = "#4A1D7C40"  # 25% opacity for filled areas
+COMPARISON_GROUP_2 = "#8B8B8B"      # Medium Light Charcoal Gray (Group 2)
+COMPARISON_GROUP_2_BG = "#8B8B8B40"  # 25% opacity for filled areas
+
 # --- TYPOGRAPHY ---
 FONT_HEADING = "'Playfair Display', Georgia, serif"
 FONT_BODY    = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
