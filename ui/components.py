@@ -218,10 +218,6 @@ def comparison_radar_chart(categories, group1_values, group2_values,
             showline=False,
             gridcolor=BORDER_LIGHT,
             range=[-max_range, max_range],
-            # Bold 0 line by using zeroline
-            zeroline=True,
-            zerolinecolor=CHARCOAL,
-            zerolinewidth=2,
         ),
         bgcolor=WHITE,
     )
