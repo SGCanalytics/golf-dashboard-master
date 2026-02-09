@@ -182,26 +182,28 @@ def comparison_radar_chart(categories, group1_values, group2_values,
     """
     fig = go.Figure()
     
-    # Group 1 - filled area
+    # Group 1 - filled area (purple)
     fig.add_trace(go.Scatterpolar(
         r=group1_values,
         theta=categories,
         fill='toself',
         name=group1_name,
         line_color=COMPARISON_GROUP_1,
-        fillcolor=COMPARISON_GROUP_1_BG,
+        fillcolor=COMPARISON_GROUP_1,
         line_width=2,
+        opacity=0.3,
     ))
     
-    # Group 2 - outline only
+    # Group 2 - filled area (charcoal gray)
     fig.add_trace(go.Scatterpolar(
         r=group2_values,
         theta=categories,
         fill='toself',
         name=group2_name,
         line_color=COMPARISON_GROUP_2,
-        fillcolor=COMPARISON_GROUP_2_BG,
+        fillcolor=COMPARISON_GROUP_2,
         line_width=2,
+        opacity=0.3,
     ))
     
     fig.update_polars(
