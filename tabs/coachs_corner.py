@@ -224,7 +224,7 @@ def render_mental_metrics(mental_metrics):
         sg_diff = finish.get('sg_vs_baseline', 0)
         premium_stat_card(
             "Pressure Finish (16-18)",
-            f"{finish.get('finish_score_to_par', 0):+d}",
+            f"{finish.get('finish_score_to_par', 0):+f}",
             f"SG: {sg_diff:+.2f} vs baseline",
             sentiment
         )
@@ -235,7 +235,7 @@ def render_mental_metrics(mental_metrics):
         sg_diff = early.get('sg_vs_baseline', 0)
         premium_stat_card(
             "Early Round (1-3)",
-            f"{early.get('early_score_to_par', 0):+d}",
+            f"{early.get('early_score_to_par', 0):+f}",
             f"SG: {sg_diff:+.2f} vs baseline",
             sentiment
         )
