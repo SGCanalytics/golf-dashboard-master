@@ -19,6 +19,7 @@ from engines.tiger5 import (
     build_tiger5_scoring_impact
 )
 from engines.coachs_corner import build_coachs_corner
+from engines.scoring_performance import build_scoring_performance
 from engines.overview import (
     overview_engine,
     build_sg_separators,
@@ -480,6 +481,237 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
             ''', unsafe_allow_html=True)
     else:
         st.info("No round data available for scoring impact.")
+
+
+# ============================================================
+# TAB: SCORING PERFORMANCE
+# ============================================================
+
+def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
+    """
+    Scoring Performance tab showing root cause analysis for:
+    - Double Bogey+ holes
+    - Bogey holes
+    - Underperformance holes (par or better with 3-putt or short game miss)
+    """
+
+    root_cause_names = ['Short Putts', 'Lag Putts', 'Driving', 'Approach', 'Short Game', 'Recovery and Other']
+
+    # ------------------------------------------------------------
+    # HERO CARDS — ROOT CAUSE COUNTS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Scoring Issues by Root Cause</p>', unsafe_allow_html=True)
+
+    total_fails = scoring_perf_results['total_fails']
+    total_counts = scoring_perf_results['total_counts']
+
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+
+    # Colors for each root cause category
+    rc_colors = {
+        'Short Putts': ODU_PURPLE,
+        'Lag Putts': ODU_METALLIC_GOLD,
+        'Driving': ODU_GOLD,
+        'Approach': ODU_BLACK,
+        'Short Game': ODU_GREEN,
+        'Recovery and Other': ODU_RED
+    }
+
+    for col, rc_name in zip([col1, col2, col3, col4, col5, col6], root_cause_names):
+        count = total_counts[rc_name]
+        pct = (count / total_fails * 100) if total_fails > 0 else 0
+        color = rc_colors[rc_name]
+
+        with col:
+            st.markdown(f'''
+                <div style="background:linear-gradient(135deg,{color} 0%,{color}dd 100%);
+                     border-radius:12px;padding:1.25rem 1rem;text-align:center;
+                     border:none;margin-bottom:1rem;">
+                    <div style="font-family:Inter;font-size:0.7rem;font-weight:600;
+                         color:rgba(255,255,255,0.9);text-transform:uppercase;
+                         letter-spacing:0.08em;margin-bottom:0.5rem;">{rc_name}</div>
+                    <div style="font-family:Playfair Display,serif;font-size:2.25rem;
+                         font-weight:700;color:#ffffff;line-height:1;margin-bottom:0.25rem;">
+                        {count}</div>
+                    <div style="font-family:Inter;font-size:0.65rem;
+                         color:rgba(255,255,255,0.7);text-transform:uppercase;
+                         letter-spacing:0.05em;">{pct:.0f}% of fails</div>
+                </div>
+            ''', unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # TREND CHART (stacked bar by round + line overlay)
+    # ------------------------------------------------------------
+    with st.expander("View Scoring Issues Trend by Round"):
+        by_round = scoring_perf_results['by_round']
+
+        if not by_round.empty:
+            by_round = by_round.copy()
+
+            rc_colors_list = [
+                ODU_PURPLE,      # Short Putts
+                ODU_METALLIC_GOLD,  # Lag Putts
+                ODU_GOLD,        # Driving
+                ODU_BLACK,       # Approach
+                ODU_GREEN,       # Short Game
+                ODU_RED          # Recovery and Other
+            ]
+
+            fig_sp = go.Figure()
+
+            # Add stacked bars for each root cause
+            for rc_name, color in zip(root_cause_names, rc_colors_list):
+                fig_sp.add_trace(go.Bar(
+                    x=by_round['Label'],
+                    y=by_round[rc_name],
+                    name=rc_name,
+                    marker_color=color
+                ))
+
+            # Add line for total fails
+            fig_sp.add_trace(go.Scatter(
+                x=by_round['Label'],
+                y=by_round['Total Fails'],
+                name='Total Fails',
+                mode='lines+markers',
+                line=dict(color='#000000', width=3),
+                marker=dict(size=8, color='#000000'),
+                yaxis='y2'
+            ))
+
+            fig_sp.update_layout(
+                **CHART_LAYOUT,
+                barmode='stack',
+                xaxis_title='',
+                yaxis_title='Issues by Root Cause',
+                yaxis2=dict(
+                    title='Total Fails',
+                    overlaying='y',
+                    side='right',
+                    showgrid=False
+                ),
+                height=400,
+                legend=dict(
+                    orientation='h',
+                    yanchor='bottom',
+                    y=1.02,
+                    xanchor='right',
+                    x=1
+                ),
+                margin=dict(t=60, b=80, l=60, r=60),
+                xaxis=dict(tickangle=-45),
+                hovermode='x unified'
+            )
+
+            st.plotly_chart(fig_sp, use_container_width=True,
+                            config={'displayModeBar': False})
+        else:
+            st.info("No data available for scoring issues trend.")
+
+    # ------------------------------------------------------------
+    # PENALTY ANALYSIS
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Penalty Impact Analysis</p>', unsafe_allow_html=True)
+
+    penalty_stats = scoring_perf_results['penalty_stats']
+
+    p1, p2, p3 = st.columns(3)
+
+    with p1:
+        st.markdown(f'''
+            <div class="sg-card">
+                <div class="card-label">Bogey with Penalty</div>
+                <div class="card-value">{penalty_stats['bogey_penalty_pct']:.1f}%</div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+    with p2:
+        st.markdown(f'''
+            <div class="sg-card">
+                <div class="card-label">Double+ with Penalty</div>
+                <div class="card-value">{penalty_stats['db_penalty_pct']:.1f}%</div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+    with p3:
+        st.markdown(f'''
+            <div class="sg-card">
+                <div class="card-label">Double+ with 2+ Bad Shots</div>
+                <div class="card-value">{penalty_stats['db_multiple_bad_pct']:.1f}%</div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # ROOT CAUSE DETAILS (shot-level breakdown)
+    # ------------------------------------------------------------
+    with st.expander("View Root Cause Details"):
+        shot_details = scoring_perf_results['shot_details']
+        any_details = False
+
+        for rc_name in root_cause_names:
+            holes = shot_details.get(rc_name, [])
+            if holes:
+                any_details = True
+                st.markdown(f"#### {rc_name}")
+                for hole_data in holes:
+                    st.markdown(
+                        f"**{hole_data['date']} &mdash; "
+                        f"{hole_data['course']} &mdash; "
+                        f"Hole {hole_data['hole']}** "
+                        f"(Par {hole_data['par']}, Score {hole_data['score']})"
+                    )
+                    st.dataframe(
+                        hole_data['shots'],
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+        if not any_details:
+            st.info("No scoring issues to display.")
+
+    # ------------------------------------------------------------
+    # CATEGORY BREAKDOWN (optional sub-tabs)
+    # ------------------------------------------------------------
+    st.markdown('<p class="section-title">Breakdown by Issue Type</p>', unsafe_allow_html=True)
+
+    tab_db, tab_bog, tab_under = st.tabs(["Double Bogey+", "Bogey", "Underperformance"])
+
+    with tab_db:
+        db_analysis = scoring_perf_results['double_bogey_analysis']
+        st.markdown(f"**Total Holes:** {len(db_analysis['holes'])}")
+
+        if db_analysis['counts']:
+            # Show top 3 root causes
+            sorted_causes = sorted(db_analysis['counts'].items(), key=lambda x: x[1], reverse=True)
+            st.markdown("**Top Root Causes:**")
+            for rc, count in sorted_causes[:3]:
+                if count > 0:
+                    pct = (count / len(db_analysis['holes']) * 100) if len(db_analysis['holes']) > 0 else 0
+                    st.markdown(f"- {rc}: {count} ({pct:.0f}%)")
+
+    with tab_bog:
+        bogey_analysis = scoring_perf_results['bogey_analysis']
+        st.markdown(f"**Total Holes:** {len(bogey_analysis['holes'])}")
+
+        if bogey_analysis['counts']:
+            sorted_causes = sorted(bogey_analysis['counts'].items(), key=lambda x: x[1], reverse=True)
+            st.markdown("**Top Root Causes:**")
+            for rc, count in sorted_causes[:3]:
+                if count > 0:
+                    pct = (count / len(bogey_analysis['holes']) * 100) if len(bogey_analysis['holes']) > 0 else 0
+                    st.markdown(f"- {rc}: {count} ({pct:.0f}%)")
+
+    with tab_under:
+        underperf_analysis = scoring_perf_results['underperformance_analysis']
+        st.markdown(f"**Total Holes:** {len(underperf_analysis['holes'])}")
+
+        if underperf_analysis['counts']:
+            sorted_causes = sorted(underperf_analysis['counts'].items(), key=lambda x: x[1], reverse=True)
+            st.markdown("**Top Root Causes:**")
+            for rc, count in sorted_causes[:3]:
+                if count > 0:
+                    pct = (count / len(underperf_analysis['holes']) * 100) if len(underperf_analysis['holes']) > 0 else 0
+                    st.markdown(f"- {rc}: {count} ({pct:.0f}%)")
 
 
 # ============================================================
@@ -2523,6 +2755,8 @@ putting_results = build_putting_results(filtered_df, num_rounds)
 
 tiger5_results, total_tiger5_fails, grit_score = build_tiger5_results(filtered_df, hole_summary)
 
+scoring_perf_results = build_scoring_performance(filtered_df, hole_summary)
+
 coachs_corner_results = build_coachs_corner(
     filtered_df,
     hole_summary,
@@ -2538,12 +2772,15 @@ coachs_corner_results = build_coachs_corner(
 # TABS
 # ============================================================
 
-tab_tiger5, tab_sg, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
-    ["Tiger 5", "Strokes Gained", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
+tab_tiger5, tab_scoring_perf, tab_sg, tab_driving, tab_approach, tab_short_game, tab_putting, tab_coach = st.tabs(
+    ["Tiger 5", "Scoring Performance", "Strokes Gained", "Driving", "Approach", "Short Game", "Putting", "Coach's Corner"]
 )
 
 with tab_tiger5:
     tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails)
+
+with tab_scoring_perf:
+    scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results)
 
 with tab_sg:
     strokes_gained_tab(
