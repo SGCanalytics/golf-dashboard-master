@@ -76,7 +76,12 @@ def find_worst_shot(hole_shots_df):
 
 def categorize_shot(shot_row):
     """
-    Maps a shot to one of six root cause categories.
+    Maps a shot to one of EIGHT root cause categories.
+
+    Putting categories:
+    - Short Putts: 0-6 feet
+    - Mid-range Putts: 7-15 feet
+    - Lag Putts: 16+ feet
 
     Returns:
         String category name
@@ -85,10 +90,15 @@ def categorize_shot(shot_row):
     starting_dist = pd.to_numeric(shot_row['Starting Distance'], errors='coerce')
 
     if shot_type == 'Putt':
-        if pd.notna(starting_dist) and starting_dist <= 10:
-            return 'Short Putts'
+        if pd.notna(starting_dist):
+            if starting_dist <= 6:
+                return 'Short Putts'
+            elif starting_dist <= 15:
+                return 'Mid-range Putts'
+            else:
+                return 'Lag Putts'  # 16+ feet
         else:
-            return 'Lag Putts'  # >10 feet or unknown distance
+            return 'Mid-range Putts'  # Default for unknown putt distance
     elif shot_type == 'Driving':
         return 'Driving'
     elif shot_type == 'Approach':
@@ -107,15 +117,28 @@ def analyze_category(filtered_df, hole_summary, hole_list, category_name):
         dict with keys:
         - 'holes': list of hole metadata dicts
         - 'counts': dict mapping root_cause -> count
+        - 'sg_sums': dict mapping root_cause -> sum of worst_sg values
     """
     holes_data = []
     counts = {
         'Short Putts': 0,
+        'Mid-range Putts': 0,
         'Lag Putts': 0,
         'Driving': 0,
         'Approach': 0,
         'Short Game': 0,
         'Recovery and Other': 0
+    }
+
+    # Track SG sums per root cause
+    sg_sums = {
+        'Short Putts': 0.0,
+        'Mid-range Putts': 0.0,
+        'Lag Putts': 0.0,
+        'Driving': 0.0,
+        'Approach': 0.0,
+        'Short Game': 0.0,
+        'Recovery and Other': 0.0
     }
 
     for rid, hole_num in hole_list:
@@ -129,6 +152,13 @@ def analyze_category(filtered_df, hole_summary, hole_list, category_name):
             continue
 
         hole_row = hole_info.iloc[0]
+
+        # Get Tournament from filtered_df (not in hole_summary)
+        tournament_info = filtered_df[
+            (filtered_df['Round ID'] == rid) &
+            (filtered_df['Hole'] == hole_num)
+        ]
+        tournament = tournament_info.iloc[0]['Tournament'] if not tournament_info.empty else ''
 
         # Get all shots for this hole
         hole_shots = filtered_df[
@@ -156,6 +186,7 @@ def analyze_category(filtered_df, hole_summary, hole_list, category_name):
         holes_data.append({
             'round_id': rid,
             'hole': hole_num,
+            'tournament': tournament,
             'date': hole_row.get('Date', ''),
             'course': hole_row.get('Course', ''),
             'par': hole_row['Par'],
@@ -167,9 +198,13 @@ def analyze_category(filtered_df, hole_summary, hole_list, category_name):
         # Increment count
         counts[root_cause] += 1
 
+        # Accumulate SG sum
+        sg_sums[root_cause] += float(worst_sg)
+
     return {
         'holes': holes_data,
-        'counts': counts
+        'counts': counts,
+        'sg_sums': sg_sums
     }
 
 
@@ -196,6 +231,7 @@ def aggregate_by_round(filtered_df, all_analyzed_holes):
         # Count root causes for this round
         round_counts = {
             'Short Putts': 0,
+            'Mid-range Putts': 0,
             'Lag Putts': 0,
             'Driving': 0,
             'Approach': 0,
@@ -214,6 +250,7 @@ def aggregate_by_round(filtered_df, all_analyzed_holes):
             'Course': r['Course'],
             'Label': label,
             'Short Putts': round_counts['Short Putts'],
+            'Mid-range Putts': round_counts['Mid-range Putts'],
             'Lag Putts': round_counts['Lag Putts'],
             'Driving': round_counts['Driving'],
             'Approach': round_counts['Approach'],
@@ -227,6 +264,7 @@ def aggregate_by_round(filtered_df, all_analyzed_holes):
         by_round_df = by_round_df.sort_values('Date')
         by_round_df['Total Fails'] = (
             by_round_df['Short Putts'] +
+            by_round_df['Mid-range Putts'] +
             by_round_df['Lag Putts'] +
             by_round_df['Driving'] +
             by_round_df['Approach'] +
@@ -292,6 +330,33 @@ def calculate_penalty_stats(filtered_df, hole_summary, categorized_holes):
     return stats
 
 
+def build_scoring_impact(by_round_df):
+    """
+    Compare actual round scores vs potential scores if 50% of scoring fails
+    were eliminated (each eliminated fail = 1 stroke saved).
+
+    Pattern matches Tiger 5's build_tiger5_scoring_impact() function.
+
+    Args:
+        by_round_df: DataFrame with columns including 'Total Fails' and 'Total Score'
+
+    Returns:
+        DataFrame with columns: Label, Date, Total Score, Potential Score,
+                                Total Fails, Fails Removed
+    """
+    if by_round_df.empty:
+        return pd.DataFrame()
+
+    impact = by_round_df.copy()
+    impact['Fails Removed'] = (impact['Total Fails'] * 0.5).apply(
+        lambda x: int(round(x))
+    )
+    impact['Potential Score'] = impact['Total Score'] - impact['Fails Removed']
+
+    return impact[['Label', 'Date', 'Total Score', 'Potential Score',
+                   'Total Fails', 'Fails Removed']].copy()
+
+
 def build_shot_details(filtered_df, all_analyzed_holes):
     """
     Builds shot-level detail for the detail section.
@@ -301,6 +366,7 @@ def build_shot_details(filtered_df, all_analyzed_holes):
     """
     shot_details = {
         'Short Putts': [],
+        'Mid-range Putts': [],
         'Lag Putts': [],
         'Driving': [],
         'Approach': [],
@@ -344,6 +410,7 @@ def build_shot_details(filtered_df, all_analyzed_holes):
                 shots_data[col] = shots_data[col].round(1)
 
         shot_details[root_cause].append({
+            'tournament': str(hole_data['tournament']),
             'date': str(hole_data['date']),
             'course': hole_data['course'],
             'hole': hole_data['hole'],
@@ -384,9 +451,10 @@ def build_scoring_performance(filtered_df, hole_summary):
         'Underperformance'
     )
 
-    # Step 3: Aggregate total counts
+    # Step 3: Aggregate total counts and SG sums
     total_counts = {
         'Short Putts': 0,
+        'Mid-range Putts': 0,
         'Lag Putts': 0,
         'Driving': 0,
         'Approach': 0,
@@ -394,11 +462,38 @@ def build_scoring_performance(filtered_df, hole_summary):
         'Recovery and Other': 0
     }
 
+    # Track total SG sums across all root causes
+    total_sg_sums = {
+        'Short Putts': 0.0,
+        'Mid-range Putts': 0.0,
+        'Lag Putts': 0.0,
+        'Driving': 0.0,
+        'Approach': 0.0,
+        'Short Game': 0.0,
+        'Recovery and Other': 0.0
+    }
+
     for analysis in [db_analysis, bogey_analysis, underperf_analysis]:
         for rc, count in analysis['counts'].items():
             total_counts[rc] += count
+        for rc, sg_sum in analysis['sg_sums'].items():
+            total_sg_sums[rc] += sg_sum
 
     total_fails = sum(total_counts.values())
+
+    # Calculate category breakdown counts
+    category_counts = {
+        'double_bogey_plus': len(categorized_holes['double_bogey_plus']),
+        'bogey': len(categorized_holes['bogey']),
+        'underperformance': len(categorized_holes['underperformance'])
+    }
+
+    # Calculate category breakdown SG sums
+    category_sg_sums = {
+        'double_bogey_plus': sum(db_analysis['sg_sums'].values()),
+        'bogey': sum(bogey_analysis['sg_sums'].values()),
+        'underperformance': sum(underperf_analysis['sg_sums'].values())
+    }
 
     # Step 4: Combine all analyzed holes
     all_analyzed_holes = (
@@ -410,10 +505,25 @@ def build_scoring_performance(filtered_df, hole_summary):
     # Step 5: Aggregate by round
     by_round = aggregate_by_round(filtered_df, all_analyzed_holes)
 
+    # Add Total Score to by_round for scoring impact calculation
+    if not by_round.empty:
+        # Calculate total score per round from hole_summary
+        round_scores = hole_summary.groupby('Round ID').agg(
+            Total_Score=('Hole Score', 'sum')
+        ).reset_index()
+        by_round = by_round.merge(
+            round_scores.rename(columns={'Total_Score': 'Total Score'}),
+            on='Round ID',
+            how='left'
+        )
+
     # Step 6: Calculate penalty stats
     penalty_stats = calculate_penalty_stats(filtered_df, hole_summary, categorized_holes)
 
-    # Step 7: Build shot details
+    # Step 7: Build scoring impact data
+    scoring_impact = build_scoring_impact(by_round)
+
+    # Step 8: Build shot details
     shot_details = build_shot_details(filtered_df, all_analyzed_holes)
 
     return {
@@ -422,8 +532,12 @@ def build_scoring_performance(filtered_df, hole_summary):
         'bogey_analysis': bogey_analysis,
         'underperformance_analysis': underperf_analysis,
         'total_counts': total_counts,
+        'total_sg_sums': total_sg_sums,
         'total_fails': total_fails,
+        'category_counts': category_counts,
+        'category_sg_sums': category_sg_sums,
         'by_round': by_round,
         'penalty_stats': penalty_stats,
+        'scoring_impact': scoring_impact,
         'shot_details': shot_details
     }
