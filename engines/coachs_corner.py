@@ -18,100 +18,6 @@ def _strengths_weaknesses(sg_summary):
     return strengths, weaknesses
 
 
-def _gir_flags(filtered_df):
-    """Flag approach distance buckets with GIR < 50%."""
-    approach = filtered_df[filtered_df['Shot Type'] == 'Approach'].copy()
-    if approach.empty:
-        return []
-
-    approach['Starting Distance'] = pd.to_numeric(approach['Starting Distance'], errors='coerce')
-
-    def bucket(d):
-        if 50 <= d < 100:
-            return "50\u2013100"
-        elif 100 <= d < 150:
-            return "100\u2013150"
-        elif 150 <= d < 200:
-            return "150\u2013200"
-        elif d >= 200:
-            return ">200"
-        return None
-
-    approach['Bucket'] = approach['Starting Distance'].apply(bucket)
-    flags = []
-    for b in APPROACH_BUCKETS:
-        bdf = approach[approach['Bucket'] == b]
-        if bdf.empty:
-            continue
-        gir_pct = (bdf['Ending Location'] == 'Green').sum() / len(bdf) * 100
-        if gir_pct < 50:
-            flags.append({"bucket": b, "gir_pct": gir_pct})
-    return flags
-
-
-def _short_game_flags(filtered_df):
-    """Compute % of short game shots landing inside 8 ft by lie type."""
-    sg = filtered_df[filtered_df['Shot Type'] == 'Short Game'].copy()
-    if sg.empty:
-        return {"inside8_fr_pct": 0.0, "inside8_sand_pct": 0.0}
-
-    sg['Ending Distance'] = pd.to_numeric(sg['Ending Distance'], errors='coerce')
-
-    fr = sg[sg['Starting Location'].isin(['Fairway', 'Rough'])]
-    sand = sg[sg['Starting Location'] == 'Sand']
-
-    fr_pct = (fr['Ending Distance'] <= 8).sum() / len(fr) * 100 if not fr.empty else 0.0
-    sand_pct = (sand['Ending Distance'] <= 8).sum() / len(sand) * 100 if not sand.empty else 0.0
-
-    return {"inside8_fr_pct": fr_pct, "inside8_sand_pct": sand_pct}
-
-
-def _putting_flags(filtered_df):
-    """Extract putting red flag metrics."""
-    putts = filtered_df[filtered_df['Shot Type'] == 'Putt'].copy()
-    if putts.empty:
-        return {"make_45_pct": 0.0, "sg_510": 0.0, "lag_miss_pct": 0.0, "three_putts_inside_20": 0}
-
-    putts['Starting Distance'] = pd.to_numeric(putts['Starting Distance'], errors='coerce')
-    putts['Ending Distance'] = pd.to_numeric(putts['Ending Distance'], errors='coerce')
-    putts['Made'] = (putts['Ending Distance'] == 0).astype(int)
-
-    # Make % 4-5 ft
-    m45 = putts[(putts['Starting Distance'] >= 4) & (putts['Starting Distance'] <= 5)]
-    make_45_pct = m45['Made'].sum() / len(m45) * 100 if len(m45) > 0 else 0.0
-
-    # SG 5-10 ft
-    m510 = putts[(putts['Starting Distance'] >= 5) & (putts['Starting Distance'] <= 10)]
-    sg_510 = m510['Strokes Gained'].sum() if not m510.empty else 0.0
-
-    # Lag miss % (start >= 30 ft, leave > 5 ft)
-    lag = putts[putts['Starting Distance'] >= 30]
-    lag_miss_pct = (lag['Ending Distance'] > 5).sum() / len(lag) * 100 if not lag.empty else 0.0
-
-    # 3-putts where first putt started <= 20 ft
-    putts['Hole Key'] = (
-        putts['Player'].astype(str) + '|' +
-        putts['Round ID'].astype(str) + '|' +
-        putts['Hole'].astype(str)
-    )
-    hole_putt_counts = putts.groupby('Hole Key').size()
-    three_putt_holes = set(hole_putt_counts[hole_putt_counts >= 3].index)
-
-    first_putts = putts.sort_values('Shot').groupby('Hole Key').first()
-    three_putts_inside_20 = 0
-    for hk in three_putt_holes:
-        if hk in first_putts.index:
-            if first_putts.loc[hk, 'Starting Distance'] <= 20:
-                three_putts_inside_20 += 1
-
-    return {
-        "make_45_pct": make_45_pct,
-        "sg_510": sg_510,
-        "lag_miss_pct": lag_miss_pct,
-        "three_putts_inside_20": three_putts_inside_20
-    }
-
-
 def _green_yellow_red(filtered_df):
     """DECADE-style shot classification by SG outcome."""
     sg_vals = filtered_df['Strokes Gained']
@@ -284,7 +190,7 @@ def _flow_metrics(hole_summary):
     return result
 
 
-def _practice_priorities(weaknesses, tiger5_results, gir_flags, putting_flags):
+def _practice_priorities(weaknesses, tiger5_results):
     """Generate prioritized practice recommendations."""
     priorities = []
 
@@ -297,16 +203,6 @@ def _practice_priorities(weaknesses, tiger5_results, gir_flags, putting_flags):
     for name, data in t5_categories.items():
         if data['fails'] > 0:
             priorities.append(f"Reduce {name.lower()} ({data['fails']} failures).")
-
-    # GIR flags
-    for gf in gir_flags:
-        priorities.append(f"Improve GIR from {gf['bucket']} ({gf['gir_pct']:.0f}% current).")
-
-    # Putting flags
-    if putting_flags.get("three_putts_inside_20", 0) > 0:
-        priorities.append(
-            f"Eliminate 3-putts inside 20 ft ({putting_flags['three_putts_inside_20']} occurrences)."
-        )
 
     return priorities
 
@@ -1118,11 +1014,6 @@ def build_coachs_corner(filtered_df, hole_summary,
 
     strengths, weaknesses = _strengths_weaknesses(sg_summary)
 
-    # --- Red flags ---
-    gir_flags = _gir_flags(filtered_df)
-    sgf = _short_game_flags(filtered_df)
-    pf = _putting_flags(filtered_df)
-
     # --- Decision making ---
     gyr = _green_yellow_red(filtered_df)
     ba = _bogey_avoidance(hole_summary)
@@ -1132,7 +1023,7 @@ def build_coachs_corner(filtered_df, hole_summary,
     flow = _flow_metrics(hole_summary)
 
     # --- Practice priorities ---
-    priorities = _practice_priorities(weaknesses, tiger5_results, gir_flags, pf)
+    priorities = _practice_priorities(weaknesses, tiger5_results)
 
     # --- Narrative ---
     summary = _coach_summary(strengths, weaknesses, grit_score, flow)
@@ -1166,9 +1057,6 @@ def build_coachs_corner(filtered_df, hole_summary,
         "coach_summary": summary,
         "strengths": strengths,
         "weaknesses": weaknesses,
-        "gir_flags": gir_flags,
-        "short_game_flags": sgf,
-        "putting_flags": pf,
         "green_yellow_red": gyr,
         "bogey_avoidance": ba,
         "birdie_opportunities": bo,
