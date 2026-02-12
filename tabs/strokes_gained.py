@@ -10,7 +10,7 @@ from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, SLATE, WHITE, WARM_GRAY,
     ACCENT_PRIMARY, ACCENT_SECONDARY,
     POSITIVE, NEGATIVE, CHART_PUTTING,
-    FONT_HEADING, FONT_BODY, CARD_RADIUS, OUTCOME_COLORS,
+    FONT_HEADING, FONT_BODY, CARD_RADIUS, CARD_PADDING, OUTCOME_COLORS,
     BORDER_LIGHT,
 )
 from ui.chart_config import CHART_LAYOUT, sg_cell_style
@@ -40,6 +40,7 @@ def strokes_gained_tab(
 
     total_sg = overview["total_sg"]
     sg_cat = overview.get("sg_by_category", {})
+    sg_other_recovery = overview.get('sg_other_recovery', 0)
 
     # ----------------------------------------------------------------
     # 1. SG SUMMARY CARDS
@@ -51,16 +52,30 @@ def strokes_gained_tab(
     sg_putting = sg_cat.get('Putting', 0)
     sg_short = sg_cat.get('Short Game', 0)
 
-    summary_metrics = [
+    summary_metrics_row1 = [
         ('SG Total', total_sg),
         ('SG Drive', sg_drive),
         ('SG Approach', sg_approach),
-        ('SG Putting', sg_putting),
-        ('SG Short Game', sg_short),
     ]
 
-    cols = st.columns(5)
-    for col, (label, val) in zip(cols, summary_metrics):
+    summary_metrics_row2 = [
+        ('SG Putting', sg_putting),
+        ('SG Short Game', sg_short),
+        ('SG Other + Recovery', sg_other_recovery),
+    ]
+
+    cols1 = st.columns(3)
+    for col, (label, val) in zip(cols1, summary_metrics_row1):
+        pr = val / num_rounds if num_rounds > 0 else 0
+        with col:
+            premium_hero_card(
+                label, format_sg(val),
+                f"{format_sg(pr)} per round",
+                sentiment=sg_sentiment(val),
+            )
+
+    cols2 = st.columns(3)
+    for col, (label, val) in zip(cols2, summary_metrics_row2):
         pr = val / num_rounds if num_rounds > 0 else 0
         with col:
             premium_hero_card(
@@ -74,33 +89,76 @@ def strokes_gained_tab(
     # ----------------------------------------------------------------
     section_header("Strokes Gained Separators")
 
-    separators = build_sg_separators(filtered_df, num_rounds)
+    separators, best_key, worst_key = build_sg_separators(filtered_df, num_rounds)
 
     if separators:
         row1 = st.columns(4)
-        for col, (label, val, pr) in zip(row1, separators[:4]):
+        for col, (label, val, pr, key) in zip(row1, separators[:4]):
+            border_style = ""
+            if key == best_key:
+                border_style = f"border:2px solid {POSITIVE};"
+            elif key == worst_key:
+                border_style = f"border:2px solid {NEGATIVE};"
+
+            sent_color = POSITIVE if val >= 0 else NEGATIVE
+
             with col:
-                premium_stat_card(
-                    label, format_sg(val),
-                    f"{format_sg(pr)} per round",
-                    sentiment=sg_sentiment(val),
-                )
+                st.markdown(f'''
+                    <div style="background:{WHITE};border-radius:{CARD_RADIUS};
+                         padding:{CARD_PADDING};text-align:center;
+                         box-shadow:0 1px 4px rgba(0,0,0,0.04);
+                         border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
+                        <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
+                             color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
+                             margin-bottom:0.5rem;">{label}</div>
+                        <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
+                             color:{sent_color};line-height:1;">{format_sg(val)}</div>
+                        <div style="font-family:{FONT_BODY};font-size:0.65rem;color:{SLATE};
+                             margin-top:0.3rem;">{format_sg(pr)} per round</div>
+                    </div>
+                ''', unsafe_allow_html=True)
 
         row2 = st.columns(4)
-        for col, (label, val, pr) in zip(row2, separators[4:]):
+        for col, (label, val, pr, key) in zip(row2, separators[4:]):
+            border_style = ""
+            if key == best_key:
+                border_style = f"border:2px solid {POSITIVE};"
+            elif key == worst_key:
+                border_style = f"border:2px solid {NEGATIVE};"
+
+            sent_color = POSITIVE if val >= 0 else NEGATIVE
+
             with col:
-                premium_stat_card(
-                    label, format_sg(val),
-                    f"{format_sg(pr)} per round",
-                    sentiment=sg_sentiment(val),
-                )
+                st.markdown(f'''
+                    <div style="background:{WHITE};border-radius:{CARD_RADIUS};
+                         padding:{CARD_PADDING};text-align:center;
+                         box-shadow:0 1px 4px rgba(0,0,0,0.04);
+                         border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
+                        <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
+                             color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
+                             margin-bottom:0.5rem;">{label}</div>
+                        <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
+                             color:{sent_color};line-height:1;">{format_sg(val)}</div>
+                        <div style="font-family:{FONT_BODY};font-size:0.65rem;color:{SLATE};
+                             margin-top:0.3rem;">{format_sg(pr)} per round</div>
+                    </div>
+                ''', unsafe_allow_html=True)
+
+        # Add legend
+        st.markdown(
+            f'<p style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};'
+            f'margin-top:0.5rem;">'
+            f'<span style="color:{POSITIVE};">●</span> Best Total SG &nbsp;&nbsp;'
+            f'<span style="color:{NEGATIVE};">●</span> Worst Total SG</p>',
+            unsafe_allow_html=True,
+        )
 
     # ----------------------------------------------------------------
     # 3. HOLE-BY-HOLE SG PIVOT
     # ----------------------------------------------------------------
     section_header("Hole-by-Hole Strokes Gained")
 
-    sg_pivot = build_sg_by_hole_pivot(filtered_df)
+    sg_pivot = build_sg_by_hole_pivot(filtered_df, hole_summary)
 
     if not sg_pivot.empty:
         hole_cols = [c for c in sg_pivot.columns if c != 'Shot Type']
@@ -138,6 +196,9 @@ def strokes_gained_tab(
         for _, row in sg_pivot.iterrows():
             shot_type = row['Shot Type']
             is_total_row = (shot_type == 'Total SG')
+            is_par_row = (shot_type == 'Hole Par')
+            is_score_row = (shot_type == 'Hole Score')
+            is_info_row = is_par_row or is_score_row
 
             if is_total_row:
                 row_bg = (
@@ -152,6 +213,19 @@ def strokes_gained_tab(
                 cell_base = (
                     f'font-weight:700;color:{WHITE};font-size:0.72rem;'
                     'padding:0.5rem 0.15rem;text-align:center;'
+                )
+            elif is_info_row:
+                row_bg = f'background:{WARM_GRAY};'
+                label_style = (
+                    f'font-weight:600;color:{CHARCOAL};font-size:0.72rem;'
+                    f'padding:0.4rem 0.25rem;text-align:left;'
+                    f'border-bottom:1px solid {BORDER_LIGHT};position:sticky;left:0;'
+                    f'background:{WARM_GRAY};width:{label_w};'
+                )
+                cell_base = (
+                    f'font-size:0.72rem;padding:0.4rem 0.15rem;'
+                    f'text-align:center;border-bottom:1px solid {BORDER_LIGHT};'
+                    f'background:{WARM_GRAY};color:{CHARCOAL};font-weight:500;'
                 )
             else:
                 row_bg = ''
@@ -179,12 +253,24 @@ def strokes_gained_tab(
 
                 if is_total_row:
                     style = cell_base + border_left
+                elif is_info_row:
+                    style = cell_base + border_left
                 else:
                     style = cell_base + sg_cell_style(val) + border_left
                     if is_total_col:
                         style += 'font-weight:600;'
 
-                display = f'{val:+.2f}' if val != 0 else '0.00'
+                # Format display value
+                if is_info_row:
+                    # Plain numbers for Par/Score (no +/- formatting)
+                    if is_par_row:
+                        display = f'{int(val)}' if val == int(val) else f'{val:.1f}'
+                    else:  # is_score_row
+                        display = f'{val:.2f}' if val != 0 else '0.00'
+                else:
+                    # SG values with +/- formatting
+                    display = f'{val:+.2f}' if val != 0 else '0.00'
+
                 html += f'<td style="{style}">{display}</td>'
 
             html += '</tr>'

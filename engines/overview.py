@@ -50,6 +50,10 @@ def overview_engine(df, hole_summary, driving_results, approach_results,
     putts_5_10 = df[(df['Shot Type'] == 'Putt') & (start_dist >= 5) & (start_dist <= 10)]
     sg_putts_5_10 = putts_5_10['Strokes Gained'].sum() if not putts_5_10.empty else 0
 
+    # SG Other + Recovery (combined)
+    other_recovery_shots = df[(df['Shot Type'] == 'Other') | (df['Shot Type'] == 'Recovery')]
+    sg_other_recovery = other_recovery_shots['Strokes Gained'].sum() if not other_recovery_shots.empty else 0
+
     # -----------------------------
     # SCORING AVERAGE
     # -----------------------------
@@ -108,6 +112,7 @@ def overview_engine(df, hole_summary, driving_results, approach_results,
         "sg_putts_over_30": sg_putts_over_30,
         "sg_putts_5_10": sg_putts_5_10,
         "sg_by_category": sg_by_category,
+        "sg_other_recovery": sg_other_recovery,
         "scoring_average": scoring_average,
         "best_round": best_round,
         "worst_round": worst_round,
@@ -121,9 +126,9 @@ def overview_engine(df, hole_summary, driving_results, approach_results,
 # ============================================================
 
 def build_sg_separators(df, num_rounds):
-    """Calculate granular SG separator metrics with per-round values."""
+    """Calculate granular SG separator metrics with per-round values and best/worst identification."""
     if df.empty:
-        return []
+        return [], None, None
 
     start_dist = pd.to_numeric(df['Starting Distance'], errors='coerce')
 
@@ -133,43 +138,62 @@ def build_sg_separators(df, num_rounds):
         return total, per_round
 
     separators = []
+    separator_dict = {}  # Track all totals for best/worst calculation
 
-    # SG Putting 3-6 Feet
-    m = (df['Shot Type'] == 'Putt') & (start_dist >= 3) & (start_dist <= 6)
+    # SG Putting 4-6 Feet (CHANGED from 3-6)
+    m = (df['Shot Type'] == 'Putt') & (start_dist >= 4) & (start_dist <= 6)
     t, pr = _calc(m)
-    separators.append(('SG Putting 3–6ft', t, pr))
+    key = 'putt_4_6'
+    separators.append(('SG Putting 4–6ft', t, pr, key))
+    separator_dict[key] = t
 
-    # SG Putting 25+ Feet
-    m = (df['Shot Type'] == 'Putt') & (start_dist >= 25)
+    # SG Putting 20+ Feet (CHANGED from 25+)
+    m = (df['Shot Type'] == 'Putt') & (start_dist >= 20)
     t, pr = _calc(m)
-    separators.append(('SG Putting 25+ft', t, pr))
+    key = 'putt_20_plus'
+    separators.append(('SG Putting 20+ft', t, pr, key))
+    separator_dict[key] = t
 
     # SG Approach 100-150 yards
     m = (df['Shot Type'] == 'Approach') & (start_dist >= 100) & (start_dist <= 150)
     t, pr = _calc(m)
-    separators.append(('SG Approach 100–150yd', t, pr))
+    key = 'app_100_150'
+    separators.append(('SG Approach 100–150yd', t, pr, key))
+    separator_dict[key] = t
 
     # SG Approach 150-200 yards
     m = (df['Shot Type'] == 'Approach') & (start_dist >= 150) & (start_dist <= 200)
     t, pr = _calc(m)
-    separators.append(('SG Approach 150–200yd', t, pr))
+    key = 'app_150_200'
+    separators.append(('SG Approach 150–200yd', t, pr, key))
+    separator_dict[key] = t
 
     # SG Approach Rough <150 yards
     m = (df['Shot Type'] == 'Approach') & (df['Starting Location'] == 'Rough') & (start_dist < 150)
     t, pr = _calc(m)
-    separators.append(('SG Approach Rough <150yd', t, pr))
+    key = 'app_rough_150'
+    separators.append(('SG Approach Rough <150yd', t, pr, key))
+    separator_dict[key] = t
 
     # SG Playable Drives = drives ending in Fairway, Rough, or Sand
     m = (df['Shot Type'] == 'Driving') & (df['Ending Location'].isin(['Fairway', 'Rough', 'Sand']))
     t, pr = _calc(m)
-    separators.append(('SG Playable Drives', t, pr))
+    key = 'playable_drives'
+    separators.append(('SG Playable Drives', t, pr, key))
+    separator_dict[key] = t
 
     # SG Around the Green = Short Game with starting distance <= 25 yards
     m = (df['Shot Type'] == 'Short Game') & (start_dist <= 25)
     t, pr = _calc(m)
-    separators.append(('SG Around the Green', t, pr))
+    key = 'around_green'
+    separators.append(('SG Around the Green', t, pr, key))
+    separator_dict[key] = t
 
-    return separators
+    # Determine best and worst
+    best_key = max(separator_dict, key=separator_dict.get) if separator_dict else None
+    worst_key = min(separator_dict, key=separator_dict.get) if separator_dict else None
+
+    return separators, best_key, worst_key
 
 
 # ============================================================
@@ -274,8 +298,8 @@ def build_hole_outcomes(hole_summary):
 # HOLE-BY-HOLE SG PIVOT BY SHOT TYPE
 # ============================================================
 
-def build_sg_by_hole_pivot(df):
-    """Hole-by-hole SG pivot table by shot type."""
+def build_sg_by_hole_pivot(df, hole_summary):
+    """Hole-by-hole SG pivot table by shot type with Par and Score rows."""
     if df.empty:
         return pd.DataFrame()
 
@@ -314,6 +338,42 @@ def build_sg_by_hole_pivot(df):
 
     # Add Total column (sum across all holes for each row)
     pivot_table['Total'] = pivot_table.sum(axis=1)
+
+    # Add Hole Par and Hole Score rows from hole_summary
+    if not hole_summary.empty:
+        # Average par per hole (handles multiple rounds)
+        par_by_hole = hole_summary.groupby('Hole')['Par'].mean()
+        # Average score per hole (handles multiple rounds)
+        score_by_hole = hole_summary.groupby('Hole')['Hole Score'].mean()
+
+        # Create Hole Par row
+        par_row = pd.Series(index=pivot_table.columns, dtype=float)
+        for hole in pivot_table.columns:
+            if hole == 'Total':
+                par_row[hole] = par_by_hole.sum()
+            elif hole in par_by_hole.index:
+                par_row[hole] = par_by_hole[hole]
+            else:
+                par_row[hole] = 0
+        par_row.name = 'Hole Par'
+
+        # Create Hole Score row
+        score_row = pd.Series(index=pivot_table.columns, dtype=float)
+        for hole in pivot_table.columns:
+            if hole == 'Total':
+                score_row[hole] = score_by_hole.sum()
+            elif hole in score_by_hole.index:
+                score_row[hole] = score_by_hole[hole]
+            else:
+                score_row[hole] = 0
+        score_row.name = 'Hole Score'
+
+        # Insert at the top
+        pivot_table = pd.concat([
+            par_row.to_frame().T,
+            score_row.to_frame().T,
+            pivot_table
+        ])
 
     pivot_table = pivot_table.round(2)
 
