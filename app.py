@@ -16,6 +16,7 @@ from engines.approach import build_approach_results
 from engines.short_game import build_short_game_results
 from engines.putting import build_putting_results
 from engines.tiger5 import build_tiger5_results
+from engines.scoring_performance import build_scoring_performance
 from engines.coachs_corner import build_coachs_corner
 from engines.strokes_gained import BENCHMARK_FILES, apply_benchmark_sg
 
@@ -23,6 +24,7 @@ from ui.css import inject_css
 from ui.components import sidebar_title, sidebar_label
 
 from tabs.tiger5 import tiger5_tab
+from tabs.scoring_performance import scoring_perf_tab
 from tabs.strokes_gained import strokes_gained_tab
 from tabs.driving import driving_tab
 from tabs.approach import approach_tab
@@ -134,6 +136,8 @@ tiger5_results, total_tiger5_fails, grit_score = build_tiger5_results(
     filtered_df, hole_summary
 )
 
+scoring_perf_results = build_scoring_performance(filtered_df, hole_summary)
+
 coachs_corner_results = build_coachs_corner(
     filtered_df,
     hole_summary,
@@ -150,14 +154,17 @@ coachs_corner_results = build_coachs_corner(
 # TABS
 # ============================================================
 
-tab_tiger5, tab_sg, tab_driving, tab_approach, tab_short_game, \
+tab_tiger5, tab_scoring_perf, tab_sg, tab_driving, tab_approach, tab_short_game, \
     tab_putting, tab_coach = st.tabs(
-        ["Tiger 5", "Strokes Gained", "Driving", "Approach",
+        ["Tiger 5", "Scoring Performance", "Strokes Gained", "Driving", "Approach",
          "Short Game", "Putting", "Coach's Corner"]
     )
 
 with tab_tiger5:
     tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails)
+
+with tab_scoring_perf:
+    scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results)
 
 with tab_sg:
     strokes_gained_tab(
