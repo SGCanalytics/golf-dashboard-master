@@ -316,78 +316,78 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
     scoring_impact = scoring_perf_results['scoring_impact']
 
     if not scoring_impact.empty:
-        # Summary stats
-        total_actual = scoring_impact['Total Score'].sum()
-        total_potential = scoring_impact['Potential Score'].sum()
-        strokes_saved = total_actual - total_potential
+        # Summary stats - calculate averages per round
+        avg_actual = scoring_impact['Total Score'].mean()
+        avg_potential = scoring_impact['Potential Score'].mean()
+        avg_strokes_saved = avg_actual - avg_potential
 
+        # Grouped bar chart
+        fig_impact = go.Figure()
+
+        # Actual scores
+        fig_impact.add_trace(go.Bar(
+            x=scoring_impact['Label'],
+            y=scoring_impact['Total Score'],
+            name='Actual Score',
+            marker_color=CHARCOAL,
+            text=scoring_impact['Total Score'],
+            textposition='outside'
+        ))
+
+        # Potential scores
+        fig_impact.add_trace(go.Bar(
+            x=scoring_impact['Label'],
+            y=scoring_impact['Potential Score'],
+            name='Potential Score',
+            marker_color=POSITIVE,
+            text=scoring_impact['Potential Score'],
+            textposition='outside'
+        ))
+
+        fig_impact.update_layout(
+            **CHART_LAYOUT,
+            barmode='group',
+            xaxis_title='',
+            yaxis_title='Score',
+            height=400,
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='right',
+                x=1
+            ),
+            margin=dict(t=60, b=80, l=60, r=60),
+            xaxis=dict(tickangle=-45),
+            hovermode='x unified'
+        )
+
+        st.plotly_chart(fig_impact, use_container_width=True,
+                        config={'displayModeBar': False})
+
+        # Summary stat cards below chart
         s1, s2, s3 = st.columns(3)
 
         with s1:
             premium_stat_card(
-                "Total Actual Strokes",
-                f"{int(total_actual)}",
+                "Average Actual Score",
+                f"{avg_actual:.1f}",
                 sentiment="neutral"
             )
 
         with s2:
             premium_stat_card(
-                "Potential Strokes",
-                f"{int(total_potential)}",
+                "Average Potential Score",
+                f"{avg_potential:.1f}",
                 sentiment="positive"
             )
 
         with s3:
             premium_stat_card(
-                "Strokes Saved (50% Fix)",
-                f"{int(strokes_saved)}",
+                "Avg Strokes Saved (50% Fix)",
+                f"{avg_strokes_saved:.1f}",
                 sentiment="positive"
             )
-
-        # Grouped bar chart
-        with st.expander("View Actual vs Potential Scores by Round"):
-            fig_impact = go.Figure()
-
-            # Actual scores
-            fig_impact.add_trace(go.Bar(
-                x=scoring_impact['Label'],
-                y=scoring_impact['Total Score'],
-                name='Actual Score',
-                marker_color=CHARCOAL,
-                text=scoring_impact['Total Score'],
-                textposition='outside'
-            ))
-
-            # Potential scores
-            fig_impact.add_trace(go.Bar(
-                x=scoring_impact['Label'],
-                y=scoring_impact['Potential Score'],
-                name='Potential Score',
-                marker_color=POSITIVE,
-                text=scoring_impact['Potential Score'],
-                textposition='outside'
-            ))
-
-            fig_impact.update_layout(
-                **CHART_LAYOUT,
-                barmode='group',
-                xaxis_title='',
-                yaxis_title='Score',
-                height=400,
-                legend=dict(
-                    orientation='h',
-                    yanchor='bottom',
-                    y=1.02,
-                    xanchor='right',
-                    x=1
-                ),
-                margin=dict(t=60, b=80, l=60, r=60),
-                xaxis=dict(tickangle=-45),
-                hovermode='x unified'
-            )
-
-            st.plotly_chart(fig_impact, use_container_width=True,
-                            config={'displayModeBar': False})
     else:
         st.info("No scoring impact data available.")
 
