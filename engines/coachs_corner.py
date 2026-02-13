@@ -89,15 +89,16 @@ def _birdie_opportunities(filtered_df, hole_summary):
     # This preserves all columns including 'Shot'
     first_putts = putts[putts['Putt Sequence'] == 0].copy()
 
-    # Merge with hole summary to get Par and Hole Score
+    # Merge with hole summary to get Hole Score ONLY (first_putts already has Par from original data)
+    # This avoids duplicate 'Par' column conflict that was causing Shot column to be lost
     first_putts = first_putts.merge(
-        hole_summary[['Player', 'Round ID', 'Hole', 'Par', 'Hole Score']],
+        hole_summary[['Player', 'Round ID', 'Hole', 'Hole Score']],
         on=['Player', 'Round ID', 'Hole'],
         how='left'
     )
 
     # Opportunities: first putt shot number <= par - 1 (Green in Regulation)
-    # Shot column is now guaranteed to be present
+    # Shot and Par columns are guaranteed to be present (both from original putts data)
     opps = first_putts[first_putts['Shot'] <= first_putts['Par'] - 1]
     opportunities = len(opps)
 
