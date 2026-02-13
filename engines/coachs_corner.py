@@ -167,10 +167,10 @@ def _flow_metrics(hole_summary):
             prev_bogey = scores[i - 1] > pars[i - 1]
             prev_birdie = scores[i - 1] < pars[i - 1]
 
-            # Bounce back: bogey+ followed by birdie+
-            if prev_bogey:
+            # Bounce back: any worse-than-par followed by par or better
+            if prev_bogey:  # prev_bogey already checks scores[i-1] > pars[i-1]
                 bounce_back_attempts += 1
-                if is_birdie_plus:
+                if scores[i] <= pars[i]:  # par or better (includes eagle, birdie, par)
                     bounce_back_successes += 1
 
             # Drop off: birdie+ followed by bogey+

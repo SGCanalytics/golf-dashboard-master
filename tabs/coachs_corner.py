@@ -354,7 +354,7 @@ def coachs_corner_tab(cc):
         s = pct_sentiment_above(fm["bounce_back_pct"], "pct_bounce_back")
         premium_stat_card("Bounce Back %",
                           format_pct(fm['bounce_back_pct']),
-                          "birdie after bogey", sentiment=s)
+                          "par or better after bogey+", sentiment=s)
     with colB:
         s = "positive" if fm["drop_off_pct"] <= 25 else "negative"
         premium_stat_card("Drop Off %",
