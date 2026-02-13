@@ -20,9 +20,61 @@ from ui.formatters import format_sg, format_pct
 
 # ---- Local card helpers -----------------------------------------------
 
-# Removed: _SEVERITY_COLORS - used by removed Performance Drivers section
+_SEVERITY_COLORS = {
+    "critical": NEGATIVE,      # #C53030 (muted red)
+    "significant": WARNING,    # #B7791F (muted amber)
+    "moderate": ACCENT_MUTED,  # #8FA890 (light sage)
+}
+
 # Removed: _LIGHT_COLORS - used by removed Green/Yellow/Red SG section
-# Removed: _driver_card() function - Performance Drivers (Red Flags) section has been removed
+
+
+def _driver_card(rank, driver):
+    """Render a single Performance Driver as a premium numbered card."""
+    sev = driver.get("severity", "moderate")
+    border_color = _SEVERITY_COLORS.get(sev, ACCENT_MUTED)
+    sev_label = sev.capitalize()
+    sg_pr = driver["sg_per_round"]
+    sg_color = NEGATIVE if sg_pr < 0 else POSITIVE
+
+    st.markdown(f'''
+        <div style="background:{WHITE};border-radius:{CARD_RADIUS};
+             padding:1rem 1.25rem;margin-bottom:0.75rem;
+             border:1px solid {BORDER_LIGHT};border-left:5px solid {border_color};
+             box-shadow:0 2px 8px rgba(0,0,0,0.05);
+             display:flex;align-items:center;gap:1rem;">
+            <div style="min-width:40px;text-align:center;">
+                <div style="font-family:{FONT_HEADING};font-size:1.8rem;
+                     font-weight:700;color:{border_color};line-height:1;">
+                    {rank}</div>
+            </div>
+            <div style="flex:1;">
+                <div style="display:flex;justify-content:space-between;
+                     align-items:baseline;margin-bottom:0.3rem;">
+                    <div>
+                        <span style="font-family:{FONT_BODY};font-size:0.7rem;
+                              font-weight:600;color:{SLATE};text-transform:uppercase;
+                              letter-spacing:0.06em;">{driver["category"]}</span>
+                        <span style="font-family:{FONT_BODY};font-size:0.6rem;
+                              color:{border_color};margin-left:0.5rem;
+                              text-transform:uppercase;letter-spacing:0.05em;">
+                            {sev_label}</span>
+                    </div>
+                    <div style="font-family:{FONT_HEADING};font-size:1.4rem;
+                         font-weight:700;color:{sg_color};">
+                        {sg_pr:+.2f}
+                        <span style="font-size:0.65rem;color:{SLATE};
+                              font-weight:400;">SG/rd</span>
+                    </div>
+                </div>
+                <div style="font-family:{FONT_HEADING};font-size:0.95rem;
+                     font-weight:600;color:{CHARCOAL};margin-bottom:0.2rem;">
+                    {driver["label"]}</div>
+                <div style="font-family:{FONT_BODY};font-size:0.75rem;
+                     color:{CHARCOAL_LIGHT};">{driver["detail"]}</div>
+            </div>
+        </div>
+    ''', unsafe_allow_html=True)
 
 
 def _path_category_card(entry, is_strength):
@@ -139,9 +191,23 @@ def coachs_corner_tab(cc):
                           sentiment=grit_sent)
 
     # ================================================================
-    # SECTION 2: PERFORMANCE DRIVERS — REMOVED
+    # SECTION 2: PERFORMANCE DRIVERS
     # ================================================================
-    # This section (Red Flags) has been removed per user requirements
+    section_header("Performance Drivers")
+
+    drivers = cc.get("performance_drivers", [])
+
+    if drivers:
+        st.markdown(
+            f'<p style="font-family:{FONT_BODY};font-size:0.8rem;color:{SLATE};'
+            f'margin-bottom:1rem;">Top factors costing strokes per round, '
+            f'ranked by impact.</p>',
+            unsafe_allow_html=True,
+        )
+        for i, drv in enumerate(drivers, 1):
+            _driver_card(i, drv)
+    else:
+        st.info("No negative performance drivers found — all areas performing at or above benchmark.")
 
     # ================================================================
     # SECTION 3: PLAYERPATH — STRENGTHS & WEAKNESSES
