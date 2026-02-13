@@ -174,71 +174,54 @@ def approach_tab(approach, num_rounds):
         )
         label_order = profile_df['Label'].tolist()
 
-        # Green Hit %
-        fig_gir = go.Figure(go.Bar(
-            y=profile_df['Label'],
-            x=profile_df['Green Hit %'],
-            orientation='h',
-            marker_color=[ACCENT_PRIMARY if g == 'Fairway / Tee' else NEGATIVE
-                          for g in profile_df['Group']],
-            text=profile_df['Green Hit %'].apply(lambda v: f"{v:.0f}%"),
-            textposition='outside',
-            textfont=dict(family='Inter', size=12, color=CHARCOAL),
-        ))
-        fig_gir.update_layout(
-            **CHART_LAYOUT,
-            title=dict(text='Green Hit %', font=dict(size=14)),
-            yaxis=dict(categoryorder='array',
-                       categoryarray=label_order[::-1]),
-            xaxis=dict(title='', showticklabels=False),
-            margin=dict(t=40, b=20, l=160, r=60),
-            height=280,
-        )
-        st.plotly_chart(fig_gir, use_container_width=True)
+        # Two-column layout for side-by-side comparison
+        col_chart1, col_chart2 = st.columns(2)
 
-        # Total SG
-        bar_colors = [sg_bar_color(v) for v in profile_df['Total SG']]
-        fig_sg = go.Figure(go.Bar(
-            y=profile_df['Label'],
-            x=profile_df['Total SG'],
-            orientation='h',
-            marker_color=bar_colors,
-            text=profile_df['Total SG'].apply(lambda v: f"{v:+.2f}"),
-            textposition='outside',
-            textfont=dict(family='Inter', size=12, color=CHARCOAL),
-        ))
-        fig_sg.update_layout(
-            **CHART_LAYOUT,
-            title=dict(text='Total SG', font=dict(size=14)),
-            yaxis=dict(categoryorder='array',
-                       categoryarray=label_order[::-1]),
-            xaxis=dict(title='', showticklabels=False),
-            margin=dict(t=40, b=20, l=160, r=60),
-            height=280,
-        )
-        st.plotly_chart(fig_sg, use_container_width=True)
+        with col_chart1:
+            # Chart 1: Green Hit %
+            fig_gir = go.Figure(go.Bar(
+                y=profile_df['Label'],
+                x=profile_df['Green Hit %'],
+                orientation='h',
+                marker_color=[ACCENT_PRIMARY if g == 'Fairway / Tee' else NEGATIVE
+                              for g in profile_df['Group']],
+                text=profile_df['Green Hit %'].apply(lambda v: f"{v:.0f}%"),
+                textposition='outside',
+                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+            ))
+            fig_gir.update_layout(
+                **CHART_LAYOUT,
+                title=dict(text='Green Hit %', font=dict(size=14)),
+                yaxis=dict(categoryorder='array',
+                           categoryarray=label_order[::-1]),
+                xaxis=dict(title='', showticklabels=False),
+                margin=dict(t=40, b=20, l=160, r=60),
+                height=280,
+            )
+            st.plotly_chart(fig_gir, use_container_width=True)
 
-        # Proximity
-        fig_prox = go.Figure(go.Bar(
-            y=profile_df['Label'],
-            x=profile_df['Proximity'],
-            orientation='h',
-            marker_color=[ACCENT_PRIMARY if g == 'Fairway / Tee' else NEGATIVE
-                          for g in profile_df['Group']],
-            text=profile_df['Proximity'].apply(lambda v: f"{v:.1f} ft"),
-            textposition='outside',
-            textfont=dict(family='Inter', size=12, color=CHARCOAL),
-        ))
-        fig_prox.update_layout(
-            **CHART_LAYOUT,
-            title=dict(text='Proximity (ft)', font=dict(size=14)),
-            yaxis=dict(categoryorder='array',
-                       categoryarray=label_order[::-1]),
-            xaxis=dict(title='', showticklabels=False),
-            margin=dict(t=40, b=20, l=160, r=60),
-            height=280,
-        )
-        st.plotly_chart(fig_prox, use_container_width=True)
+        with col_chart2:
+            # Chart 2: Proximity
+            fig_prox = go.Figure(go.Bar(
+                y=profile_df['Label'],
+                x=profile_df['Proximity'],
+                orientation='h',
+                marker_color=[ACCENT_PRIMARY if g == 'Fairway / Tee' else NEGATIVE
+                              for g in profile_df['Group']],
+                text=profile_df['Proximity'].apply(lambda v: f"{v:.1f} ft"),
+                textposition='outside',
+                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+            ))
+            fig_prox.update_layout(
+                **CHART_LAYOUT,
+                title=dict(text='Proximity (ft)', font=dict(size=14)),
+                yaxis=dict(categoryorder='array',
+                           categoryarray=label_order[::-1]),
+                xaxis=dict(title='', showticklabels=False),
+                margin=dict(t=40, b=20, l=160, r=60),
+                height=280,
+            )
+            st.plotly_chart(fig_prox, use_container_width=True)
 
     # ----------------------------------------------------------------
     # SECTION 4: HEATMAP
@@ -372,3 +355,71 @@ def approach_tab(approach, num_rounds):
         with st.expander("Approach Shot Detail"):
             st.dataframe(detail_df, use_container_width=True,
                          hide_index=True)
+
+    # ----------------------------------------------------------------
+    # SECTION 8: ZONE PERFORMANCE
+    # ----------------------------------------------------------------
+    section_header("Zone Performance")
+
+    zone_metrics = approach["zone_metrics"]
+    zone_ranges = approach["zone_ranges"]
+
+    # Find best and worst zones by Total SG (only zones with shots)
+    zones_with_shots = {z: m for z, m in zone_metrics.items() if m["shots"] > 0}
+    best_zone = max(zones_with_shots, key=lambda z: zones_with_shots[z]["total_sg"]) if zones_with_shots else None
+    worst_zone = min(zones_with_shots, key=lambda z: zones_with_shots[z]["total_sg"]) if zones_with_shots else None
+
+    # Zone display configuration (emoji and color for zone names)
+    ZONE_CONFIG = {
+        "Green Zone": {"emoji": "🟢", "color": "#2D6A4F"},
+        "Yellow Zone": {"emoji": "🟡", "color": "#B7791F"},
+        "Red Zone": {"emoji": "🔴", "color": "#C53030"},
+    }
+
+    zone_cols = st.columns(3)
+
+    for col, zone in zip(zone_cols, ["Green Zone", "Yellow Zone", "Red Zone"]):
+        m = zone_metrics[zone]
+        zone_range = zone_ranges[zone]
+        config = ZONE_CONFIG[zone]
+
+        # Determine border style for best/worst highlighting
+        if zone == best_zone:
+            border_style = f"border:2px solid {POSITIVE};"
+        elif zone == worst_zone:
+            border_style = f"border:2px solid {NEGATIVE};"
+        else:
+            border_style = ""
+
+        with col:
+            st.markdown(f'''
+                <div style="background:{WHITE};border-radius:12px;
+                     padding:1.25rem 1rem;text-align:center;
+                     box-shadow:0 2px 8px rgba(0,0,0,0.06);
+                     border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
+                    <div style="font-family:Inter,sans-serif;font-size:0.85rem;
+                         font-weight:700;color:{config['color']};
+                         margin-bottom:0.25rem;">
+                         {config['emoji']} {zone}</div>
+                    <div style="font-family:Inter,sans-serif;font-size:0.65rem;
+                         font-weight:600;color:{SLATE};text-transform:uppercase;
+                         letter-spacing:0.08em;margin-bottom:0.5rem;">
+                         {zone_range} Yards</div>
+                    <div style="font-family:Playfair Display,serif;font-size:2rem;
+                         font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
+                         line-height:1;">{m['total_sg']:+.2f}</div>
+                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                         color:{SLATE};margin-top:0.3rem;">
+                         {m['shots']} shots &middot; Prox: {m['prox']:.1f if m['shots'] > 0 else 0:.1f} ft
+                         &middot; GIR: {m['green_hit_pct']:.0f if m['shots'] > 0 else 0:.0f}%</div>
+                </div>
+            ''', unsafe_allow_html=True)
+
+    # Best / worst legend
+    st.markdown(
+        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:{SLATE};'
+        f'margin-top:0.5rem;">'
+        f'<span style="color:{POSITIVE};">\u25aa</span> Best Zone &nbsp;&nbsp;'
+        f'<span style="color:{NEGATIVE};">\u25aa</span> Worst Zone</p>',
+        unsafe_allow_html=True,
+    )
