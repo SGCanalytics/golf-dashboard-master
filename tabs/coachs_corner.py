@@ -77,6 +77,43 @@ def _driver_card(rank, driver):
     ''', unsafe_allow_html=True)
 
 
+def _compact_stat_card(label, value, subtitle="", sentiment="neutral"):
+    """
+    Render a compact stat card with smaller fonts for supporting metrics.
+    Used in PlayerPath detail items to differentiate from primary metrics.
+    """
+    from ui.theme import (
+        CHARCOAL, SLATE, WHITE, POSITIVE, NEGATIVE, WARNING,
+        ACCENT_PRIMARY, BORDER_LIGHT, CARD_RADIUS, CARD_PADDING,
+        FONT_BODY, FONT_HEADING
+    )
+
+    # Sentiment colors
+    sentiment_colors = {
+        "positive": POSITIVE,
+        "negative": NEGATIVE,
+        "warning": WARNING,
+        "neutral": CHARCOAL,
+        "accent": ACCENT_PRIMARY,
+    }
+    color = sentiment_colors.get(sentiment, CHARCOAL)
+
+    st.markdown(f'''
+        <div style="background:{WHITE};border-radius:{CARD_RADIUS};
+             padding:{CARD_PADDING};text-align:center;
+             border:1px solid {BORDER_LIGHT};
+             box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:0.75rem;">
+            <div style="font-family:{FONT_BODY};font-size:0.55rem;
+                 font-weight:600;color:{SLATE};text-transform:uppercase;
+                 letter-spacing:0.08em;margin-bottom:0.4rem;">{label}</div>
+            <div style="font-family:{FONT_HEADING};font-size:1.4rem;
+                 font-weight:700;color:{color};line-height:1;">
+                {value}</div>
+            {f'<div style="font-family:{FONT_BODY};font-size:0.55rem;color:{SLATE};margin-top:0.25rem;">{subtitle}</div>' if subtitle else ''}
+        </div>
+    ''', unsafe_allow_html=True)
+
+
 def _path_category_card(entry, is_strength):
     """Render a PlayerPath category (strength or weakness) as a card block."""
     sg_val = entry["sg_total"]
@@ -112,7 +149,7 @@ def _path_category_card(entry, is_strength):
         cols = st.columns(min(len(entry["detail_items"]), 4))
         for i, item in enumerate(entry["detail_items"][:4]):
             with cols[i % len(cols)]:
-                premium_stat_card(
+                _compact_stat_card(
                     item["label"],
                     item["value"],
                     sentiment=item.get("sentiment", "neutral"),
