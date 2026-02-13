@@ -201,37 +201,38 @@ def coachs_corner_tab(cc):
     # ================================================================
     # SECTION 0: SG SUMMARY HERO CARDS
     # ================================================================
-    sg = cc["sg_summary"]
+    with st.expander("Strokes Gained Summary", expanded=True):
+        sg = cc["sg_summary"]
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4, col5 = st.columns(5)
 
-    with col1:
-        total_sg = sum(sg.values())
-        premium_hero_card(
-            "SG Total", format_sg(total_sg),
-            "all categories combined",
-            sentiment=sg_sentiment(total_sg),
-        )
-    with col2:
-        premium_hero_card(
-            "SG Driving", format_sg(sg.get("Driving", 0)),
-            sentiment=sg_sentiment(sg.get("Driving", 0)),
-        )
-    with col3:
-        premium_hero_card(
-            "SG Approach", format_sg(sg.get("Approach", 0)),
-            sentiment=sg_sentiment(sg.get("Approach", 0)),
-        )
-    with col4:
-        premium_hero_card(
-            "SG Short Game", format_sg(sg.get("Short Game", 0)),
-            sentiment=sg_sentiment(sg.get("Short Game", 0)),
-        )
-    with col5:
-        premium_hero_card(
-            "SG Putting", format_sg(sg.get("Putting", 0)),
-            sentiment=sg_sentiment(sg.get("Putting", 0)),
-        )
+        with col1:
+            total_sg = sum(sg.values())
+            premium_hero_card(
+                "SG Total", format_sg(total_sg),
+                "all categories combined",
+                sentiment=sg_sentiment(total_sg),
+            )
+        with col2:
+            premium_hero_card(
+                "SG Driving", format_sg(sg.get("Driving", 0)),
+                sentiment=sg_sentiment(sg.get("Driving", 0)),
+            )
+        with col3:
+            premium_hero_card(
+                "SG Approach", format_sg(sg.get("Approach", 0)),
+                sentiment=sg_sentiment(sg.get("Approach", 0)),
+            )
+        with col4:
+            premium_hero_card(
+                "SG Short Game", format_sg(sg.get("Short Game", 0)),
+                sentiment=sg_sentiment(sg.get("Short Game", 0)),
+            )
+        with col5:
+            premium_hero_card(
+                "SG Putting", format_sg(sg.get("Putting", 0)),
+                sentiment=sg_sentiment(sg.get("Putting", 0)),
+            )
 
     # ================================================================
     # SECTION 1: COACH SUMMARY
@@ -280,7 +281,63 @@ def coachs_corner_tab(cc):
         st.info("No negative performance drivers found — all areas performing at or above benchmark.")
 
     # ================================================================
-    # SECTION 3: PLAYERPATH — STRENGTHS & WEAKNESSES
+    # SECTION 3: ROUND FLOW
+    # ================================================================
+    section_header("Round Flow")
+
+    fm = cc["flow_metrics"]
+
+    colA, colB, colC, colD = st.columns(4)
+
+    with colA:
+        s = pct_sentiment_above(fm["bounce_back_pct"], "pct_bounce_back")
+        premium_stat_card("Bounce Back %",
+                          format_pct(fm['bounce_back_pct']),
+                          "par or better after bogey+", sentiment=s)
+    with colB:
+        s = "positive" if fm["drop_off_pct"] <= 25 else "negative"
+        premium_stat_card("Drop Off %",
+                          format_pct(fm['drop_off_pct']),
+                          "bogey after birdie", sentiment=s)
+    with colC:
+        s = "positive" if fm["gas_pedal_pct"] >= 20 else "neutral"
+        premium_stat_card("Gas Pedal %",
+                          format_pct(fm['gas_pedal_pct']),
+                          "birdie after birdie", sentiment=s)
+    with colD:
+        s = "negative" if fm["bogey_train_count"] > 0 else "positive"
+        premium_stat_card("Bogey Trains",
+                          str(fm['bogey_train_count']),
+                          sentiment=s)
+
+    with st.expander("ℹ️ What Do These Metrics Mean?"):
+        st.markdown('''
+        **Bounce Back %**: How often you recover with par or better after making bogey or worse.
+        Higher is better — shows mental resilience.
+
+        **Drop Off %**: How often you follow a birdie with a bogey. Lower is better —
+        measures ability to maintain momentum after scoring well.
+
+        **Gas Pedal %**: How often you follow one birdie with another birdie. Higher is better —
+        shows you can "keep your foot on the gas" when playing well.
+
+        **Bogey Trains**: Consecutive holes with bogey or worse. Lower count is better —
+        indicates you avoid extended rough patches.
+        ''')
+
+    if fm["bogey_train_count"] > 0:
+        bt_c1, bt_c2 = st.columns(2)
+        with bt_c1:
+            premium_stat_card("Longest Train",
+                              f"{fm['longest_bogey_train']} holes",
+                              sentiment="negative")
+        with bt_c2:
+            premium_stat_card("Train Lengths",
+                              str(fm['bogey_trains']),
+                              sentiment="negative")
+
+    # ================================================================
+    # SECTION 4: PLAYERPATH — STRENGTHS & WEAKNESSES
     # ================================================================
     section_header("PlayerPath")
 
@@ -330,9 +387,9 @@ def coachs_corner_tab(cc):
     # This section has been removed per user requirements
 
     # ================================================================
-    # SECTION 5: DECISION MAKING
+    # SECTION 5: BIRDIE BOGEY BREAKDOWN
     # ================================================================
-    section_header("Decision Making")
+    section_header("Birdie Bogey Breakdown")
 
     # Green / Yellow / Red SG — REMOVED
     # This subsection has been removed per user requirements
@@ -375,48 +432,7 @@ def coachs_corner_tab(cc):
                           sentiment=s)
 
     # ================================================================
-    # SECTION 7: ROUND FLOW
-    # ================================================================
-    section_header("Round Flow")
-
-    fm = cc["flow_metrics"]
-
-    colA, colB, colC, colD = st.columns(4)
-
-    with colA:
-        s = pct_sentiment_above(fm["bounce_back_pct"], "pct_bounce_back")
-        premium_stat_card("Bounce Back %",
-                          format_pct(fm['bounce_back_pct']),
-                          "par or better after bogey+", sentiment=s)
-    with colB:
-        s = "positive" if fm["drop_off_pct"] <= 25 else "negative"
-        premium_stat_card("Drop Off %",
-                          format_pct(fm['drop_off_pct']),
-                          "bogey after birdie", sentiment=s)
-    with colC:
-        s = "positive" if fm["gas_pedal_pct"] >= 20 else "neutral"
-        premium_stat_card("Gas Pedal %",
-                          format_pct(fm['gas_pedal_pct']),
-                          "birdie after birdie", sentiment=s)
-    with colD:
-        s = "negative" if fm["bogey_train_count"] > 0 else "positive"
-        premium_stat_card("Bogey Trains",
-                          str(fm['bogey_train_count']),
-                          sentiment=s)
-
-    if fm["bogey_train_count"] > 0:
-        bt_c1, bt_c2 = st.columns(2)
-        with bt_c1:
-            premium_stat_card("Longest Train",
-                              f"{fm['longest_bogey_train']} holes",
-                              sentiment="negative")
-        with bt_c2:
-            premium_stat_card("Train Lengths",
-                              str(fm['bogey_trains']),
-                              sentiment="negative")
-
-    # ================================================================
-    # SECTION 8: PRACTICE PRIORITIES
+    # SECTION 6: PRACTICE PRIORITIES
     # ================================================================
     section_header("Practice Priorities")
 
