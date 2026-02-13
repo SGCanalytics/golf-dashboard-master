@@ -18,18 +18,19 @@ def _strengths_weaknesses(sg_summary):
     return strengths, weaknesses
 
 
-def _green_yellow_red(filtered_df):
-    """DECADE-style shot classification by SG outcome."""
-    sg_vals = filtered_df['Strokes Gained']
-    green_sg = sg_vals[sg_vals > 0].sum()
-    yellow_sg = sg_vals[(sg_vals >= -0.5) & (sg_vals <= 0)].sum()
-    red_sg = sg_vals[sg_vals < -0.5].sum()
-
-    return [
-        {"light": "Green", "total_sg": green_sg},
-        {"light": "Yellow", "total_sg": yellow_sg},
-        {"light": "Red", "total_sg": red_sg}
-    ]
+# Removed: _green_yellow_red() function - Green/Yellow/Red SG section has been removed
+# def _green_yellow_red(filtered_df):
+#     """DECADE-style shot classification by SG outcome."""
+#     sg_vals = filtered_df['Strokes Gained']
+#     green_sg = sg_vals[sg_vals > 0].sum()
+#     yellow_sg = sg_vals[(sg_vals >= -0.5) & (sg_vals <= 0)].sum()
+#     red_sg = sg_vals[sg_vals < -0.5].sum()
+#
+#     return [
+#         {"light": "Green", "total_sg": green_sg},
+#         {"light": "Yellow", "total_sg": yellow_sg},
+#         {"light": "Red", "total_sg": red_sg}
+#     ]
 
 
 def _bogey_avoidance(hole_summary):
@@ -60,35 +61,43 @@ def _bogey_avoidance(hole_summary):
 
 def _birdie_opportunities(filtered_df, hole_summary):
     """
-    Birdie opportunities: holes where the first putt started <= 20 ft.
-    Conversions: of those, how many resulted in birdie or better.
+    Birdie opportunities: holes where player reached green in regulation (GIR).
+    GIR = first putt shot number <= par - 1
+
+    Examples:
+    - Par 3: First putt on shot 2 or less (reached green in 1 shot)
+    - Par 4: First putt on shot 3 or less (reached green in 2 shots)
+    - Par 5: First putt on shot 4 or less (reached green in 3 shots)
+
+    Conversions: of those GIR holes, how many resulted in birdie or better.
     """
     putts = filtered_df[filtered_df['Shot Type'] == 'Putt'].copy()
+
     if putts.empty or hole_summary.empty:
         return {"opportunities": 0, "conversions": 0, "conversion_pct": 0.0}
 
-    putts['Starting Distance'] = pd.to_numeric(putts['Starting Distance'], errors='coerce')
-
-    # First putt on each hole
+    # Get first putt on each hole (earliest by shot number)
     first_putts = putts.sort_values('Shot').groupby(
         ['Player', 'Round ID', 'Hole']
     ).first().reset_index()
 
-    # Opportunities: first putt within 20 ft
-    opps = first_putts[first_putts['Starting Distance'] <= 20]
+    # Merge with hole summary to get Par and Hole Score
+    first_putts = first_putts.merge(
+        hole_summary[['Player', 'Round ID', 'Hole', 'Par', 'Hole Score']],
+        on=['Player', 'Round ID', 'Hole'],
+        how='left'
+    )
+
+    # Opportunities: first putt shot number <= par - 1 (Green in Regulation)
+    # Shot column contains the shot number for that putt
+    opps = first_putts[first_putts['Shot'] <= first_putts['Par'] - 1]
     opportunities = len(opps)
 
     if opportunities == 0:
         return {"opportunities": 0, "conversions": 0, "conversion_pct": 0.0}
 
-    # Check which of those resulted in birdie or better
-    opps_with_score = opps[['Player', 'Round ID', 'Hole']].merge(
-        hole_summary[['Player', 'Round ID', 'Hole', 'Hole Score', 'Par']],
-        on=['Player', 'Round ID', 'Hole'],
-        how='left'
-    )
-
-    conversions = int((opps_with_score['Hole Score'] < opps_with_score['Par']).sum())
+    # Conversions: birdie or better (Hole Score < Par)
+    conversions = int((opps['Hole Score'] < opps['Par']).sum())
     conversion_pct = conversions / opportunities * 100
 
     return {
@@ -439,9 +448,10 @@ def _build_performance_drivers(num_rounds, filtered_df,
 
     for c in negative:
         pr = c["sg_per_round"]
-        if pr <= -0.30:
+        # Updated thresholds: ≤-2.0 critical, ≤-1.0 significant, >-1.0 moderate
+        if pr <= -2.0:
             c["severity"] = "critical"
-        elif pr <= -0.15:
+        elif pr <= -1.0:
             c["severity"] = "significant"
         else:
             c["severity"] = "moderate"
@@ -1015,7 +1025,7 @@ def build_coachs_corner(filtered_df, hole_summary,
     strengths, weaknesses = _strengths_weaknesses(sg_summary)
 
     # --- Decision making ---
-    gyr = _green_yellow_red(filtered_df)
+    # gyr = _green_yellow_red(filtered_df)  # REMOVED
     ba = _bogey_avoidance(hole_summary)
     bo = _birdie_opportunities(filtered_df, hole_summary)
 
@@ -1035,16 +1045,16 @@ def build_coachs_corner(filtered_df, hole_summary,
         short_game_results, putting_results,
     )
 
-    # --- Tiger 5 Root Cause Deep Dive (NEW) ---
-    shot_type_counts, detail_by_type = build_tiger5_root_cause(
-        filtered_df, tiger5_results, hole_summary,
-    )
-    total_fails = sum(v for v in shot_type_counts.values())
-    tiger5_deep_dive = _build_tiger5_deep_dive(
-        shot_type_counts, total_fails,
-        driving_results, approach_results,
-        short_game_results, putting_results,
-    )
+    # --- Tiger 5 Root Cause Deep Dive — REMOVED ---
+    # shot_type_counts, detail_by_type = build_tiger5_root_cause(
+    #     filtered_df, tiger5_results, hole_summary,
+    # )
+    # total_fails = sum(v for v in shot_type_counts.values())
+    # tiger5_deep_dive = _build_tiger5_deep_dive(
+    #     shot_type_counts, total_fails,
+    #     driving_results, approach_results,
+    #     short_game_results, putting_results,
+    # )
 
     # --- PlayerPath (NEW) ---
     player_path = _build_player_path(
@@ -1057,7 +1067,7 @@ def build_coachs_corner(filtered_df, hole_summary,
         "coach_summary": summary,
         "strengths": strengths,
         "weaknesses": weaknesses,
-        "green_yellow_red": gyr,
+        # "green_yellow_red": gyr,  # REMOVED
         "bogey_avoidance": ba,
         "birdie_opportunities": bo,
         "flow_metrics": flow,
@@ -1066,7 +1076,7 @@ def build_coachs_corner(filtered_df, hole_summary,
         "grit_score": grit_score,
         # NEW sections
         "performance_drivers": perf_drivers,
-        "tiger5_deep_dive": tiger5_deep_dive,
-        "tiger5_root_cause_counts": shot_type_counts,
+        # "tiger5_deep_dive": tiger5_deep_dive,  # REMOVED
+        # "tiger5_root_cause_counts": shot_type_counts,  # REMOVED
         "player_path": player_path,
     }
