@@ -66,15 +66,18 @@ def _bogey_avoidance(hole_summary):
 
 def _birdie_opportunities(filtered_df, hole_summary):
     """
-    Birdie opportunities: holes where player reached green in regulation (GIR).
+    Quality birdie opportunities: holes where player reached green in regulation (GIR)
+    AND finished ≤20 feet from the hole.
+
     GIR = first putt shot number <= par - 1
+    Proximity = Ending Distance <= 20 feet
 
     Examples:
-    - Par 3: First putt on shot 2 or less (reached green in 1 shot)
-    - Par 4: First putt on shot 3 or less (reached green in 2 shots)
-    - Par 5: First putt on shot 4 or less (reached green in 3 shots)
+    - Par 3: First putt on shot 2 or less (GIR) + ≤20 ft from hole
+    - Par 4: First putt on shot 3 or less (GIR) + ≤20 ft from hole
+    - Par 5: First putt on shot 4 or less (GIR) + ≤20 ft from hole
 
-    Conversions: of those GIR holes, how many resulted in birdie or better.
+    Conversions: of those qualified opportunities, how many resulted in birdie or better.
     """
     putts = filtered_df[filtered_df['Shot Type'] == 'Putt'].copy()
 
@@ -94,6 +97,11 @@ def _birdie_opportunities(filtered_df, hole_summary):
     # This preserves all columns including 'Shot'
     first_putts = putts[putts['Putt Sequence'] == 0].copy()
 
+    # Ensure Ending Distance is numeric for proximity filtering
+    first_putts['Ending Distance'] = pd.to_numeric(
+        first_putts['Ending Distance'], errors='coerce'
+    )
+
     # Merge with hole summary to get Hole Score ONLY (first_putts already has Par from original data)
     # This avoids duplicate 'Par' column conflict that was causing Shot column to be lost
     first_putts = first_putts.merge(
@@ -102,9 +110,11 @@ def _birdie_opportunities(filtered_df, hole_summary):
         how='left'
     )
 
-    # Opportunities: first putt shot number <= par - 1 (Green in Regulation)
+    # Quality Opportunities: GIR (first putt shot number <= par - 1) AND proximity ≤20 feet
     # Shot and Par columns are guaranteed to be present (both from original putts data)
-    opps = first_putts[first_putts['Shot'] <= first_putts['Par'] - 1]
+    gir_mask = first_putts['Shot'] <= first_putts['Par'] - 1
+    proximity_mask = first_putts['Ending Distance'] <= 20  # ≤20 feet from hole
+    opps = first_putts[gir_mask & proximity_mask]
     opportunities = len(opps)
 
     if opportunities == 0:
