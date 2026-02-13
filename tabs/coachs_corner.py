@@ -177,16 +177,17 @@ def _path_category_card(entry, is_strength):
         </div>
     ''', unsafe_allow_html=True)
 
-    # Detail items as compact stat row
+    # Detail items inside collapsible expander
     if entry.get("detail_items"):
-        cols = st.columns(min(len(entry["detail_items"]), 4))
-        for i, item in enumerate(entry["detail_items"][:4]):
-            with cols[i % len(cols)]:
-                _compact_stat_card(
-                    item["label"],
-                    item["value"],
-                    sentiment=item.get("sentiment", "neutral"),
-                )
+        with st.expander(f"View {entry['headline']} Details"):
+            cols = st.columns(min(len(entry["detail_items"]), 4))
+            for i, item in enumerate(entry["detail_items"][:4]):
+                with cols[i % len(cols)]:
+                    _compact_stat_card(
+                        item["label"],
+                        item["value"],
+                        sentiment=item.get("sentiment", "neutral"),
+                    )
 
 
 # Removed: _deep_dive_card() function - Tiger 5 Root Cause Deep Dive section has been removed
@@ -421,8 +422,8 @@ def coachs_corner_tab(cc):
     bo = cc["birdie_opportunities"]
     bo_cols = st.columns(3)
     with bo_cols[0]:
-        premium_stat_card("Opportunities", str(bo["opportunities"]),
-                          "Green in Regulation", sentiment="accent")
+        premium_stat_card("Quality Opportunities", str(bo["opportunities"]),
+                          "GIR ≤20 ft from hole", sentiment="accent")
     with bo_cols[1]:
         premium_stat_card("Conversions", str(bo["conversions"]),
                           "birdie or better", sentiment="positive")
