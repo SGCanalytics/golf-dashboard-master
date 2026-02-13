@@ -9,6 +9,11 @@ from engines.tiger5 import build_tiger5_root_cause
 APPROACH_BUCKETS = ["50\u2013100", "100\u2013150", "150\u2013200", ">200"]
 
 
+def safe_divide(num, denom):
+    """Safe division that returns 0 if denominator is 0."""
+    return num / denom if denom > 0 else 0
+
+
 def _strengths_weaknesses(sg_summary):
     """Return sorted (category, sg_value) tuples for strengths and weaknesses."""
     strengths = [(cat, val) for cat, val in sg_summary.items() if val > 0]
@@ -208,21 +213,113 @@ def _flow_metrics(hole_summary):
     return result
 
 
-def _practice_priorities(weaknesses, tiger5_results):
-    """Generate prioritized practice recommendations."""
-    priorities = []
+def _practice_priorities(weaknesses, tiger5_results, performance_drivers,
+                        driving_results, approach_results,
+                        short_game_results, putting_results):
+    """Generate tiered practice priorities with HIGH/MEDIUM structure."""
+    # Build enhanced candidates from Performance Drivers
+    candidates = []
+    for driver in performance_drivers:
+        enhanced = _enhance_driver_with_context(
+            driver, driving_results, approach_results,
+            short_game_results, putting_results
+        )
+        candidates.append(enhanced)
 
-    # SG weaknesses
-    for cat, val in weaknesses:
-        priorities.append(f"Focus on {cat.lower()} \u2014 losing {abs(val):.2f} strokes.")
+    # Separate by severity
+    high_priority = [c for c in candidates if c['severity'] in ['critical', 'significant']]
+    medium_priority = [c for c in candidates if c['severity'] == 'moderate']
 
-    # Tiger 5 issues
-    t5_categories = {k: v for k, v in tiger5_results.items() if isinstance(v, dict) and 'fails' in v}
-    for name, data in t5_categories.items():
-        if data['fails'] > 0:
-            priorities.append(f"Reduce {name.lower()} ({data['fails']} failures).")
+    # Sort each tier by impact (already sorted by performance_drivers, but ensure)
+    high_priority.sort(key=lambda x: x['impact'], reverse=True)
+    medium_priority.sort(key=lambda x: x['impact'], reverse=True)
 
-    return priorities
+    # Cap and return tiered structure
+    return {
+        'high': high_priority[:3],  # Top 3 critical/significant items
+        'medium': medium_priority[:2]  # Top 2 moderate items
+    }
+
+
+def _enhance_driver_with_context(driver, driving_results, approach_results,
+                                 short_game_results, putting_results):
+    """Add current performance metrics and targets to each Performance Driver."""
+    import re
+
+    category = driver['category']
+    label = driver['label']
+    enhanced = dict(driver)  # Copy original
+    enhanced['impact'] = abs(driver.get('sg_per_round', 0))
+
+    # Default metric and target
+    enhanced['metric'] = driver.get('detail', '')
+    enhanced['target'] = 'Improve'
+
+    # PUTTING enhancements
+    if category == 'Putting':
+        hero = putting_results.get('hero_metrics', {})
+
+        if '3\u20136 ft' in label or '3-6 ft' in label:
+            made = hero.get('sg_3_6_made', 0)
+            att = hero.get('sg_3_6_attempts', 1)
+            pct = safe_divide(made, att) * 100
+            enhanced['metric'] = f"{pct:.0f}% make rate"
+            enhanced['target'] = "85%+ (Tour avg)"
+
+        elif '7\u201310 ft' in label or '7-10 ft' in label:
+            made = hero.get('sg_7_10_made', 0)
+            att = hero.get('sg_7_10_attempts', 1)
+            pct = safe_divide(made, att) * 100
+            enhanced['metric'] = f"{pct:.0f}% make rate"
+            enhanced['target'] = "50%+ (Tour avg)"
+
+        elif 'Lag' in label or '20+ ft' in label:
+            lag = putting_results.get('lag_metrics', {})
+            avg_leave = lag.get('avg_leave', 0)
+            enhanced['metric'] = f"{avg_leave:.1f} ft avg leave"
+            enhanced['target'] = "<3 ft (birdie range)"
+
+    # SHORT GAME enhancements
+    elif category == 'Short Game':
+        hero = short_game_results.get('hero_metrics', {})
+
+        if '25\u201350' in label or '25-50' in label:
+            sg_val = driver.get('sg_total', 0)
+            enhanced['metric'] = f"{sg_val:+.2f} SG"
+            enhanced['target'] = "Neutral or better"
+
+        elif 'Around the Green' in label or 'Around Green' in label:
+            pct_fr = hero.get('pct_inside_8_fr', 0)
+            enhanced['metric'] = f"{pct_fr:.0f}% inside 8 ft"
+            enhanced['target'] = "60%+ (scrambling)"
+
+        elif 'Sand' in label or 'Bunker' in label:
+            pct_sand = hero.get('pct_inside_8_sand', 0)
+            enhanced['metric'] = f"{pct_sand:.0f}% inside 8 ft"
+            enhanced['target'] = "50%+"
+
+    # APPROACH enhancements
+    elif category == 'Approach':
+        # Extract GIR from detail if available
+        gir_match = re.search(r'GIR (\d+)%', driver.get('detail', ''))
+        if gir_match:
+            current_gir = int(gir_match.group(1))
+            target_gir = current_gir + 15
+            enhanced['metric'] = f"{current_gir}% GIR"
+            enhanced['target'] = f"{target_gir}%+"
+
+    # DRIVING enhancements
+    elif category == 'Driving':
+        if 'Penalty' in label or 'OB' in label:
+            # Keep detail as metric
+            enhanced['target'] = "Zero penalties"
+
+        elif 'Poor' in label:
+            poor_pct = driving_results.get('poor_drive_pct', 0)
+            enhanced['metric'] = f"{poor_pct:.0f}% poor drives"
+            enhanced['target'] = "<15% (consistent)"
+
+    return enhanced
 
 
 def _coach_summary(strengths, weaknesses, grit_score, flow):
@@ -1041,9 +1138,6 @@ def build_coachs_corner(filtered_df, hole_summary,
     # --- Round flow ---
     flow = _flow_metrics(hole_summary)
 
-    # --- Practice priorities ---
-    priorities = _practice_priorities(weaknesses, tiger5_results)
-
     # --- Narrative ---
     summary = _coach_summary(strengths, weaknesses, grit_score, flow)
 
@@ -1052,6 +1146,12 @@ def build_coachs_corner(filtered_df, hole_summary,
         num_rounds, filtered_df,
         driving_results, approach_results,
         short_game_results, putting_results,
+    )
+
+    # --- Practice priorities (moved after perf_drivers for tiered structure) ---
+    priorities = _practice_priorities(
+        weaknesses, tiger5_results, perf_drivers,
+        driving_results, approach_results, short_game_results, putting_results
     )
 
     # --- Tiger 5 Root Cause Deep Dive — REMOVED ---
