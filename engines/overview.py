@@ -147,6 +147,13 @@ def build_sg_separators(df, num_rounds):
     separators.append(('SG Putting 4–6ft', t, pr, key))
     separator_dict[key] = t
 
+    # SG Putting 7-19 Feet
+    m = (df['Shot Type'] == 'Putt') & (start_dist >= 7) & (start_dist <= 19)
+    t, pr = _calc(m)
+    key = 'putt_7_19'
+    separators.append(('SG Putting 7–19ft', t, pr, key))
+    separator_dict[key] = t
+
     # SG Putting 20+ Feet (CHANGED from 25+)
     m = (df['Shot Type'] == 'Putt') & (start_dist >= 20)
     t, pr = _calc(m)
