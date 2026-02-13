@@ -30,6 +30,35 @@ def _rough_bucket(d):
     return ">150"
 
 
+# Zone labels for performance analysis
+ZONE_LABELS = ["Green Zone", "Yellow Zone", "Red Zone"]
+ZONE_RANGES = {
+    "Green Zone": "75-125",
+    "Yellow Zone": "125-175",
+    "Red Zone": "175-225"
+}
+
+
+def _zone_bucket(d):
+    """
+    Assign approach distance to performance zone.
+
+    Zones:
+    - Green Zone: 75-125 yards (short approach shots)
+    - Yellow Zone: 125-175 yards (mid-range approach shots)
+    - Red Zone: 175-225 yards (long approach shots)
+
+    Shots outside these ranges (<75 or >=225) return None and are excluded.
+    """
+    if 75 <= d < 125:
+        return "Green Zone"
+    elif 125 <= d < 175:
+        return "Yellow Zone"
+    elif 175 <= d < 225:
+        return "Red Zone"
+    return None
+
+
 def _compute_bucket_metrics(bdf):
     """Compute standard metrics for a bucket slice."""
     if bdf.empty:
@@ -77,6 +106,15 @@ def build_approach_results(filtered_df, num_rounds):
         "outcome_df": pd.DataFrame(),
         "trend_df": pd.DataFrame(),
         "detail_df": pd.DataFrame(),
+        "zone_metrics": {
+            "Green Zone": {"total_sg": 0.0, "sg_per_shot": 0.0, "prox": 0.0,
+                          "green_hit_pct": 0.0, "shots": 0},
+            "Yellow Zone": {"total_sg": 0.0, "sg_per_shot": 0.0, "prox": 0.0,
+                           "green_hit_pct": 0.0, "shots": 0},
+            "Red Zone": {"total_sg": 0.0, "sg_per_shot": 0.0, "prox": 0.0,
+                        "green_hit_pct": 0.0, "shots": 0}
+        },
+        "zone_ranges": ZONE_RANGES,
     }
 
     if num_approach == 0:
@@ -118,6 +156,14 @@ def build_approach_results(filtered_df, num_rounds):
         else:
             bdf = rough_df[rough_df['Starting Distance'] >= 150]
         rough_metrics[rb] = _compute_bucket_metrics(bdf)
+
+    # --- Zone Performance (all approach shots combined) ---
+    df['Zone'] = df['Starting Distance'].apply(_zone_bucket)
+    zone_metrics = {}
+
+    for zone in ZONE_LABELS:
+        zdf = df[df['Zone'] == zone]
+        zone_metrics[zone] = _compute_bucket_metrics(zdf)
 
     # --- Section 2: Best / worst bucket by Total SG ---
     all_buckets = {}
@@ -243,6 +289,9 @@ def build_approach_results(filtered_df, num_rounds):
         "trend_df": round_trend,
         # Section 7
         "detail_df": detail_df,
+        # Section 8: Zone Performance
+        "zone_metrics": zone_metrics,
+        "zone_ranges": ZONE_RANGES,
     }
 
 
