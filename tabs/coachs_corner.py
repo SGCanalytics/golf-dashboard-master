@@ -77,6 +77,39 @@ def _driver_card(rank, driver):
     ''', unsafe_allow_html=True)
 
 
+def _render_priority_card(item, number, border_color):
+    """Render a single practice priority item in tiered format."""
+    label = item.get('label', '')
+    metric = item.get('metric', '')
+    target = item.get('target', '')
+    impact = item.get('impact', 0)
+
+    st.markdown(f'''
+        <div style="background:{WHITE};border-radius:8px;
+             padding:0.75rem 1rem;margin-bottom:0.5rem;
+             border:1px solid {BORDER_LIGHT};
+             border-left:4px solid {border_color};
+             box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display:flex;align-items:flex-start;gap:0.75rem;">
+                <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                     font-weight:700;color:{border_color};min-width:24px;
+                     text-align:center;flex-shrink:0;">{number}</div>
+                <div style="flex:1;">
+                    <div style="font-family:{FONT_HEADING};font-size:0.9rem;
+                         font-weight:600;color:{CHARCOAL};margin-bottom:0.3rem;">
+                        {label}</div>
+                    <div style="font-family:{FONT_BODY};font-size:0.75rem;
+                         color:{CHARCOAL_LIGHT};">
+                        <strong>Current:</strong> {metric} | <strong>Target:</strong> {target}</div>
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
+                         color:{SLATE};margin-top:0.2rem;">
+                        Impact: {impact:.1f} strokes/round</div>
+                </div>
+            </div>
+        </div>
+    ''', unsafe_allow_html=True)
+
+
 def _compact_stat_card(label, value, subtitle="", sentiment="neutral"):
     """
     Render a compact stat card with smaller fonts for supporting metrics.
@@ -388,7 +421,33 @@ def coachs_corner_tab(cc):
     section_header("Practice Priorities")
 
     priorities = cc["practice_priorities"]
-    if priorities:
+
+    # Check if priorities is tiered structure (dict) or old format (list)
+    if isinstance(priorities, dict):
+        # NEW: Tiered structure with HIGH/MEDIUM priorities
+        high_priorities = priorities.get('high', [])
+        medium_priorities = priorities.get('medium', [])
+
+        if high_priorities or medium_priorities:
+            # HIGH PRIORITY section
+            if high_priorities:
+                st.markdown("🔴 **HIGH PRIORITY**")
+                for i, item in enumerate(high_priorities, 1):
+                    _render_priority_card(item, i, NEGATIVE)
+
+                st.markdown("<div style='margin-bottom:1rem;'></div>", unsafe_allow_html=True)
+
+            # MEDIUM PRIORITY section
+            if medium_priorities:
+                st.markdown("🟡 **MEDIUM PRIORITY**")
+                start_num = len(high_priorities) + 1
+                for i, item in enumerate(medium_priorities, start_num):
+                    _render_priority_card(item, i, WARNING)
+        else:
+            st.info("No practice priorities identified.")
+
+    elif priorities:
+        # OLD: Backward compatibility with simple list format
         for i, p in enumerate(priorities, 1):
             st.markdown(f'''
                 <div style="background:{WHITE};border-radius:8px;
