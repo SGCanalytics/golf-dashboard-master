@@ -76,10 +76,18 @@ def _birdie_opportunities(filtered_df, hole_summary):
     if putts.empty or hole_summary.empty:
         return {"opportunities": 0, "conversions": 0, "conversion_pct": 0.0}
 
-    # Get first putt on each hole (earliest by shot number)
-    first_putts = putts.sort_values('Shot').groupby(
+    # Sort putts by hole and shot number
+    putts = putts.sort_values(['Player', 'Round ID', 'Hole', 'Shot'])
+
+    # Add putt sequence number for each hole (similar to putting engine pattern)
+    # cumcount() starts at 0, so 0 = first putt, 1 = second putt, etc.
+    putts['Putt Sequence'] = putts.groupby(
         ['Player', 'Round ID', 'Hole']
-    ).first().reset_index()
+    ).cumcount()
+
+    # Get only first putts (Putt Sequence == 0)
+    # This preserves all columns including 'Shot'
+    first_putts = putts[putts['Putt Sequence'] == 0].copy()
 
     # Merge with hole summary to get Par and Hole Score
     first_putts = first_putts.merge(
@@ -89,7 +97,7 @@ def _birdie_opportunities(filtered_df, hole_summary):
     )
 
     # Opportunities: first putt shot number <= par - 1 (Green in Regulation)
-    # Shot column contains the shot number for that putt
+    # Shot column is now guaranteed to be present
     opps = first_putts[first_putts['Shot'] <= first_putts['Par'] - 1]
     opportunities = len(opps)
 
