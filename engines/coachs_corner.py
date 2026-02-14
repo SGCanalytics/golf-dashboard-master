@@ -802,79 +802,102 @@ def _build_tiger5_deep_dive(shot_type_counts, total_fails,
 # PLAYER PATH — STRENGTHS & WEAKNESSES WITH DRILL-DOWN
 # ============================================================
 
-def _build_root_cause_player_path(shot_type_counts, total_t5_fails, num_rounds,
-                                   sg_summary, driving_results, approach_results,
-                                   short_game_results, putting_results):
+def _build_combined_root_cause_player_path(
+    t5_shot_counts, total_t5_fails,
+    sp_counts, sp_sg_sums, total_sp_issues,
+    num_rounds, sg_summary,
+    driving_results, approach_results,
+    short_game_results, putting_results
+):
     """
-    Build PlayerPath focused on Tiger 5 root causes and their scoring impact.
+    Build PlayerPath combining BOTH Tiger 5 and Scoring Performance root causes.
 
-    Shows:
-    - Root causes of bad shots (from Tiger 5 analysis)
-    - Scoring impact (strokes lost per category)
-    - Specific actionable improvements
+    Tiger 5 shows: What's causing bad shots (3-putts, double bogeys, etc.)
+    Scoring Perf shows: What's causing ALL scoring issues (bogeys, double bogeys, underperformance)
 
     Returns:
         {"root_causes": [...]}
-    Each root cause has: category, fail_count, fail_pct, sg_impact,
-                         sg_per_round, severity, headline, details
+    Each root cause has: category, t5_fails, sp_issues, total_issues,
+                         sg_impact, sg_per_round, severity, headline, details
     """
     root_causes = []
 
-    # Root cause categories in priority order
-    rc_categories = {
+    # Map scoring perf categories to our standard categories
+    sp_category_map = {
         'Driving': 'Driving',
         'Approach': 'Approach',
         'Short Game': 'Short Game',
         'Short Putts': 'Short Putts',
+        'Mid-range Putts': 'Mid-range Putts',
         'Lag Putts': 'Lag Putts',
+        'Recovery and Other': 'Recovery and Other',
     }
 
-    for rc_name, display_name in rc_categories.items():
-        fail_count = shot_type_counts.get(rc_name, 0)
+    # Combine all unique categories from both sources
+    all_categories = set(t5_shot_counts.keys()) | set(sp_counts.keys())
 
-        if fail_count == 0:
+    for rc_name in all_categories:
+        # Get counts from both sources
+        t5_count = t5_shot_counts.get(rc_name, 0)
+        sp_count = sp_counts.get(rc_name, 0)
+        sp_sg_sum = sp_sg_sums.get(rc_name, 0)
+
+        # Skip if no issues from either source
+        if t5_count == 0 and sp_count == 0:
             continue
 
-        fail_pct = (fail_count / total_t5_fails * 100) if total_t5_fails > 0 else 0
+        total_issues = t5_count + sp_count
 
-        # Get SG impact from corresponding category
+        # Get SG impact and details based on category
         if rc_name == 'Driving':
             sg_impact = driving_results.get("driving_sg", 0)
-            details = _root_cause_driving_details(driving_results, fail_count)
+            details = _combined_root_cause_driving_details(
+                driving_results, t5_count, sp_count, sp_sg_sum
+            )
         elif rc_name == 'Approach':
             sg_impact = approach_results.get("total_sg", 0)
-            details = _root_cause_approach_details(approach_results, fail_count)
+            details = _combined_root_cause_approach_details(
+                approach_results, t5_count, sp_count, sp_sg_sum
+            )
         elif rc_name == 'Short Game':
             sg_impact = short_game_results.get("total_sg", 0)
-            details = _root_cause_short_game_details(short_game_results, fail_count)
-        elif rc_name in ['Short Putts', 'Lag Putts']:
+            details = _combined_root_cause_short_game_details(
+                short_game_results, t5_count, sp_count, sp_sg_sum
+            )
+        elif rc_name in ['Short Putts', 'Mid-range Putts', 'Lag Putts']:
             sg_impact = putting_results.get("total_sg_putting", 0)
-            details = _root_cause_putting_details(putting_results, rc_name, fail_count)
-        else:
-            sg_impact = 0
-            details = []
+            details = _combined_root_cause_putting_details(
+                putting_results, rc_name, t5_count, sp_count, sp_sg_sum
+            )
+        else:  # Recovery and Other
+            sg_impact = sp_sg_sum  # Use SP SG sum for these
+            details = [f"{sp_count} scoring issues from recovery/other shots"]
 
         sg_per_round = _safe_pr(sg_impact, num_rounds)
 
-        # Determine severity based on fail_count and SG impact
-        if fail_count >= 5 or sg_per_round <= -0.5:
+        # Determine severity based on total issues and SG impact
+        if total_issues >= 10 or sg_per_round <= -0.5:
             severity = 'critical'
-        elif fail_count >= 3 or sg_per_round <= -0.25:
+        elif total_issues >= 5 or sg_per_round <= -0.25:
             severity = 'significant'
         else:
             severity = 'moderate'
 
         # Create headline
-        if sg_per_round < 0:
-            headline = f"{display_name} Issues Costing Strokes"
+        display_name = rc_name
+        if sg_per_round < -0.3:
+            headline = f"{display_name} Major Scoring Drain"
+        elif sg_per_round < 0:
+            headline = f"{display_name} Costing Strokes"
         else:
             headline = f"{display_name} Needs Consistency"
 
         root_causes.append({
             'category': rc_name,
             'display_name': display_name,
-            'fail_count': fail_count,
-            'fail_pct': fail_pct,
+            't5_fails': t5_count,
+            'sp_issues': sp_count,
+            'total_issues': total_issues,
             'sg_impact': sg_impact,
             'sg_per_round': sg_per_round,
             'severity': severity,
@@ -882,19 +905,22 @@ def _build_root_cause_player_path(shot_type_counts, total_t5_fails, num_rounds,
             'details': details,
         })
 
-    # Sort by fail_count descending (most fails first)
-    root_causes.sort(key=lambda x: x['fail_count'], reverse=True)
+    # Sort by total_issues descending (most problems first)
+    root_causes.sort(key=lambda x: x['total_issues'], reverse=True)
 
     return {"root_causes": root_causes}
 
 
-def _root_cause_driving_details(dr, fail_count):
-    """Build specific details for driving root cause."""
+def _combined_root_cause_driving_details(dr, t5_count, sp_count, sp_sg_sum):
+    """Build specific details for driving root cause (combined T5 + SP data)."""
     details = []
+
+    # Issue counts
+    details.append(f"Tiger 5 fails: {t5_count} | Scoring issues: {sp_count}")
 
     pen_count = dr.get("penalty_count", 0) + dr.get("ob_count", 0)
     if pen_count > 0:
-        details.append(f"{pen_count} penalties/OB in Tiger 5 situations")
+        details.append(f"{pen_count} total penalties/OB")
 
     fw_pct = dr.get("fairway_pct", 0)
     details.append(f"{fw_pct:.0f}% fairways hit")
@@ -906,9 +932,12 @@ def _root_cause_driving_details(dr, fail_count):
     return details
 
 
-def _root_cause_approach_details(ar, fail_count):
-    """Build specific details for approach root cause."""
+def _combined_root_cause_approach_details(ar, t5_count, sp_count, sp_sg_sum):
+    """Build specific details for approach root cause (combined T5 + SP data)."""
     details = []
+
+    # Issue counts
+    details.append(f"Tiger 5 fails: {t5_count} | Scoring issues: {sp_count}")
 
     worst = ar.get("worst_bucket")
     if worst and "|" in str(worst):
@@ -930,9 +959,12 @@ def _root_cause_approach_details(ar, fail_count):
     return details
 
 
-def _root_cause_short_game_details(sgr, fail_count):
-    """Build specific details for short game root cause."""
+def _combined_root_cause_short_game_details(sgr, t5_count, sp_count, sp_sg_sum):
+    """Build specific details for short game root cause (combined T5 + SP data)."""
     details = []
+
+    # Issue counts
+    details.append(f"Tiger 5 fails: {t5_count} | Scoring issues: {sp_count}")
 
     hero = sgr.get("hero_metrics", {})
     pct_fr = hero.get("pct_inside_8_fr", 0)
@@ -951,20 +983,22 @@ def _root_cause_short_game_details(sgr, fail_count):
     return details
 
 
-def _root_cause_putting_details(pr, putt_type, fail_count):
-    """Build specific details for putting root cause."""
+def _combined_root_cause_putting_details(pr, putt_type, t5_count, sp_count, sp_sg_sum):
+    """Build specific details for putting root cause (combined T5 + SP data)."""
     details = []
+
+    # Issue counts
+    details.append(f"Tiger 5 fails: {t5_count} | Scoring issues: {sp_count}")
 
     if putt_type == 'Short Putts':
         make_3_6 = pr.get("make_rate_3_6", 0)
-        details.append(f"{make_3_6:.0f}% make rate 3-6 ft")
-        if make_3_6 < 70:
-            details.append("Target: >70% from 3-6 feet")
+        details.append(f"{make_3_6:.0f}% make rate 3-6 ft (target: >70%)")
+    elif putt_type == 'Mid-range Putts':
+        make_7_15 = pr.get("make_rate_7_15", 0)
+        details.append(f"{make_7_15:.0f}% make rate 7-15 ft (target: >30%)")
     elif putt_type == 'Lag Putts':
         three_putt = pr.get("three_putt_pct", 0)
-        details.append(f"{three_putt:.1f}% three-putt rate")
-        if three_putt > 5:
-            details.append("Target: <5% three-putt rate")
+        details.append(f"{three_putt:.1f}% three-putt rate (target: <5%)")
 
     return details
 
@@ -1292,9 +1326,11 @@ def _putting_detail(pr, is_strength):
 def build_coachs_corner(filtered_df, hole_summary,
                          driving_results, approach_results,
                          short_game_results, putting_results,
-                         tiger5_results, grit_score, num_rounds):
+                         tiger5_results, scoring_perf_results,
+                         grit_score, num_rounds):
     """
     Combine all engines into a single coaching insight package.
+    Now includes both Tiger 5 AND Scoring Performance root causes.
     """
 
     # --- SG summary ---
@@ -1331,16 +1367,23 @@ def build_coachs_corner(filtered_df, hole_summary,
         driving_results, approach_results, short_game_results, putting_results
     )
 
-    # --- Tiger 5 Root Cause Analysis (for PlayerPath) ---
-    shot_type_counts, detail_by_type = build_tiger5_root_cause(
+    # --- Tiger 5 Root Cause Analysis ---
+    t5_shot_type_counts, t5_detail_by_type = build_tiger5_root_cause(
         filtered_df, tiger5_results, hole_summary,
     )
-    total_t5_fails = sum(v for v in shot_type_counts.values())
+    total_t5_fails = sum(v for v in t5_shot_type_counts.values())
 
-    # --- PlayerPath (Root Cause Driven) ---
-    player_path = _build_root_cause_player_path(
-        shot_type_counts, total_t5_fails, num_rounds,
-        sg_summary, driving_results, approach_results,
+    # --- Scoring Performance Root Cause Analysis ---
+    sp_total_counts = scoring_perf_results.get('total_counts', {})
+    sp_total_sg_sums = scoring_perf_results.get('total_sg_sums', {})
+    total_sp_issues = scoring_perf_results.get('total_fails', 0)
+
+    # --- PlayerPath (Root Cause Driven - merges Tiger 5 + Scoring Performance) ---
+    player_path = _build_combined_root_cause_player_path(
+        t5_shot_type_counts, total_t5_fails,
+        sp_total_counts, sp_total_sg_sums, total_sp_issues,
+        num_rounds, sg_summary,
+        driving_results, approach_results,
         short_game_results, putting_results,
     )
 

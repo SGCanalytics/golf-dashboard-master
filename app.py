@@ -237,6 +237,7 @@ coachs_corner_results = build_coachs_corner(
     short_game_results,
     putting_results,
     tiger5_results,
+    scoring_perf_results,
     grit_score,
     num_rounds,
 )

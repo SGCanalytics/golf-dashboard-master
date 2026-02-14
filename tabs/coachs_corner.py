@@ -464,8 +464,8 @@ def coachs_corner_tab(cc):
 
     st.markdown(
         f'<p style="font-family:{FONT_BODY};font-size:0.8rem;color:{SLATE};'
-        f'margin-bottom:1rem;">Understand what\'s causing high scores and how to fix it. '
-        f'These root causes are the specific shot types leading to Tiger 5 fails.</p>',
+        f'margin-bottom:1rem;">Combining Tiger 5 fails AND scoring issues to show exactly '
+        f'what\'s causing higher scores and how to fix it.</p>',
         unsafe_allow_html=True,
     )
 
@@ -521,15 +521,23 @@ def coachs_corner_tab(cc):
                                 Tiger 5 Fails</span>
                             <div style="font-family:{FONT_HEADING};font-size:1.1rem;
                                  font-weight:700;color:{NEGATIVE};">
-                                {rc['fail_count']}</div>
+                                {rc.get('t5_fails', 0)}</div>
                         </div>
                         <div>
                             <span style="font-family:{FONT_BODY};font-size:0.7rem;
                                   color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
-                                % of All Fails</span>
+                                Scoring Issues</span>
+                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                                 font-weight:700;color:{WARNING};">
+                                {rc.get('sp_issues', 0)}</div>
+                        </div>
+                        <div>
+                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
+                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
+                                Total Issues</span>
                             <div style="font-family:{FONT_HEADING};font-size:1.1rem;
                                  font-weight:700;color:{CHARCOAL};">
-                                {rc['fail_pct']:.0f}%</div>
+                                {rc.get('total_issues', 0)}</div>
                         </div>
                     </div>
                     {details_html}
