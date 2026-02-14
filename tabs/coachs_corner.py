@@ -110,6 +110,38 @@ def _render_priority_card(item, number, border_color):
     ''', unsafe_allow_html=True)
 
 
+def _render_strength_card(item, number):
+    """Render a single strength to maintain card."""
+    label = item.get('label', '')
+    metric = item.get('metric', '')
+    sg_value = item.get('sg_value', 0)
+
+    st.markdown(f'''
+        <div style="background:{WHITE};border-radius:8px;
+             padding:0.75rem 1rem;margin-bottom:0.5rem;
+             border:1px solid {BORDER_LIGHT};
+             border-left:4px solid {POSITIVE};
+             box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display:flex;align-items:flex-start;gap:0.75rem;">
+                <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                     font-weight:700;color:{POSITIVE};min-width:24px;
+                     text-align:center;flex-shrink:0;">{number}</div>
+                <div style="flex:1;">
+                    <div style="font-family:{FONT_HEADING};font-size:0.9rem;
+                         font-weight:600;color:{CHARCOAL};margin-bottom:0.3rem;">
+                        {label}</div>
+                    <div style="font-family:{FONT_BODY};font-size:0.75rem;
+                         color:{CHARCOAL_LIGHT};">
+                        <strong>Performance:</strong> {metric}</div>
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
+                         color:{POSITIVE};margin-top:0.2rem;">
+                        Gaining: {sg_value:+.2f} strokes/round</div>
+                </div>
+            </div>
+        </div>
+    ''', unsafe_allow_html=True)
+
+
 def _compact_stat_card(label, value, subtitle="", sentiment="neutral"):
     """
     Render a compact stat card with smaller fonts for supporting metrics.
@@ -311,6 +343,17 @@ def coachs_corner_tab(cc):
                           str(fm['bogey_train_count']),
                           sentiment=s)
 
+    if fm["bogey_train_count"] > 0:
+        bt_c1, bt_c2 = st.columns(2)
+        with bt_c1:
+            premium_stat_card("Longest Train",
+                              f"{fm['longest_bogey_train']} holes",
+                              sentiment="negative")
+        with bt_c2:
+            premium_stat_card("Train Lengths",
+                              str(fm['bogey_trains']),
+                              sentiment="negative")
+
     with st.expander("ℹ️ What Do These Metrics Mean?"):
         st.markdown('''
         **Bounce Back %**: How often you recover with par or better after making bogey or worse.
@@ -326,69 +369,190 @@ def coachs_corner_tab(cc):
         indicates you avoid extended rough patches.
         ''')
 
-    if fm["bogey_train_count"] > 0:
-        bt_c1, bt_c2 = st.columns(2)
-        with bt_c1:
-            premium_stat_card("Longest Train",
-                              f"{fm['longest_bogey_train']} holes",
-                              sentiment="negative")
-        with bt_c2:
-            premium_stat_card("Train Lengths",
-                              str(fm['bogey_trains']),
-                              sentiment="negative")
-
     # ================================================================
-    # SECTION 4: PLAYERPATH — STRENGTHS & WEAKNESSES
+    # SECTION 4: PRACTICE PRIORITIES
     # ================================================================
-    section_header("PlayerPath")
+    section_header("Practice Priorities")
 
+    priorities = cc["practice_priorities"]
     path = cc.get("player_path", {"strengths": [], "weaknesses": []})
 
-    col_str, col_wk = st.columns(2)
+    # ================================================================
+    # SUBSECTION: AREAS TO IMPROVE
+    # ================================================================
+    st.markdown(
+        f'<p style="font-family:{FONT_BODY};font-size:0.8rem;color:{SLATE};'
+        f'margin-bottom:1rem;">Focus your practice on these areas to lower your scores.</p>',
+        unsafe_allow_html=True,
+    )
 
-    with col_str:
-        st.markdown(f'''
-            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
-                 font-weight:700;color:{POSITIVE};margin-bottom:0.75rem;
-                 padding-bottom:0.4rem;
-                 border-bottom:2px solid {POSITIVE};">Strengths</div>
-        ''', unsafe_allow_html=True)
+    # Check if priorities is tiered structure (dict) or old format (list)
+    if isinstance(priorities, dict):
+        # NEW: Tiered structure with HIGH/MEDIUM priorities
+        high_priorities = priorities.get('high', [])
+        medium_priorities = priorities.get('medium', [])
 
-        if path["strengths"]:
-            for entry in path["strengths"]:
-                _path_category_card(entry, is_strength=True)
+        if high_priorities or medium_priorities:
+            # HIGH PRIORITY section
+            if high_priorities:
+                st.markdown("🔴 **HIGH PRIORITY**")
+                for i, item in enumerate(high_priorities, 1):
+                    _render_priority_card(item, i, NEGATIVE)
+
+                st.markdown("<div style='margin-bottom:1rem;'></div>", unsafe_allow_html=True)
+
+            # MEDIUM PRIORITY section
+            if medium_priorities:
+                st.markdown("🟡 **MEDIUM PRIORITY**")
+                start_num = len(high_priorities) + 1
+                for i, item in enumerate(medium_priorities, start_num):
+                    _render_priority_card(item, i, WARNING)
         else:
-            st.markdown(
-                f'<p style="font-family:{FONT_BODY};font-size:0.8rem;'
-                f'color:{SLATE};font-style:italic;">No categories with positive SG.</p>',
-                unsafe_allow_html=True,
-            )
+            st.info("No improvement priorities identified.")
 
-    with col_wk:
-        st.markdown(f'''
-            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
-                 font-weight:700;color:{NEGATIVE};margin-bottom:0.75rem;
-                 padding-bottom:0.4rem;
-                 border-bottom:2px solid {NEGATIVE};">Weaknesses</div>
-        ''', unsafe_allow_html=True)
-
-        if path["weaknesses"]:
-            for entry in path["weaknesses"]:
-                _path_category_card(entry, is_strength=False)
-        else:
-            st.markdown(
-                f'<p style="font-family:{FONT_BODY};font-size:0.8rem;'
-                f'color:{SLATE};font-style:italic;">No categories with negative SG.</p>',
-                unsafe_allow_html=True,
-            )
+    elif priorities:
+        # OLD: Backward compatibility with simple list format
+        for i, p in enumerate(priorities, 1):
+            st.markdown(f'''
+                <div style="background:{WHITE};border-radius:8px;
+                     padding:0.75rem 1rem;margin-bottom:0.5rem;
+                     border:1px solid {BORDER_LIGHT};
+                     border-left:4px solid {ACCENT_PRIMARY};
+                     box-shadow:0 1px 3px rgba(0,0,0,0.04);
+                     display:flex;align-items:center;gap:0.75rem;">
+                    <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                         font-weight:700;color:{ACCENT_PRIMARY};min-width:24px;
+                         text-align:center;">{i}</div>
+                    <div style="font-family:{FONT_BODY};font-size:0.82rem;
+                         color:{CHARCOAL};">{p}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.info("No improvement priorities identified.")
 
     # ================================================================
-    # SECTION 4: TIGER 5 ROOT CAUSE DEEP DIVE — REMOVED
+    # SUBSECTION: STRENGTHS TO MAINTAIN
+    # ================================================================
+    st.markdown("<div style='margin-top:2rem;'></div>", unsafe_allow_html=True)
+    st.markdown("🟢 **STRENGTHS TO MAINTAIN**")
+    st.markdown(
+        f'<p style="font-family:{FONT_BODY};font-size:0.8rem;color:{SLATE};'
+        f'margin-bottom:1rem;">Keep practicing these areas to maintain your competitive advantage.</p>',
+        unsafe_allow_html=True,
+    )
+
+    # Build strength items from PlayerPath strengths
+    strength_items = []
+    if path["strengths"]:
+        for idx, entry in enumerate(path["strengths"][:3], 1):  # Top 3 strengths
+            strength_items.append({
+                'label': entry['headline'],
+                'metric': f"{entry['sg_per_round']:+.2f} SG/round",
+                'sg_value': entry['sg_per_round'],
+            })
+
+    if strength_items:
+        for i, item in enumerate(strength_items, 1):
+            _render_strength_card(item, i)
+    else:
+        st.info("Build positive SG areas to create strengths to maintain.")
+
+    # ================================================================
+    # SECTION 5: PLAYERPATH — ROOT CAUSE SCORING ROADMAP
+    # ================================================================
+    section_header("PlayerPath: Your Scoring Roadmap")
+
+    st.markdown(
+        f'<p style="font-family:{FONT_BODY};font-size:0.8rem;color:{SLATE};'
+        f'margin-bottom:1rem;">Combining Tiger 5 fails AND scoring issues to show exactly '
+        f'what\'s causing higher scores and how to fix it.</p>',
+        unsafe_allow_html=True,
+    )
+
+    path = cc.get("player_path", {"root_causes": []})
+    root_causes = path.get("root_causes", [])
+
+    if root_causes:
+        for rc in root_causes:
+            # Severity color mapping
+            severity_colors = {
+                "critical": NEGATIVE,
+                "significant": WARNING,
+                "moderate": ACCENT_MUTED,
+            }
+            border_color = severity_colors.get(rc['severity'], ACCENT_MUTED)
+            sg_color = NEGATIVE if rc['sg_per_round'] < 0 else POSITIVE
+
+            # Build details list HTML
+            details_html = ""
+            if rc['details']:
+                details_html = "<ul style='margin:0.5rem 0 0 1.2rem;padding:0;'>"
+                for detail in rc['details']:
+                    details_html += f"<li style='font-family:{FONT_BODY};font-size:0.7rem;color:{CHARCOAL_LIGHT};margin-bottom:0.2rem;'>{detail}</li>"
+                details_html += "</ul>"
+
+            st.markdown(f'''
+                <div style="background:{WHITE};border-radius:{CARD_RADIUS};
+                     padding:1rem 1.25rem;margin-bottom:0.75rem;
+                     border:1px solid {BORDER_LIGHT};border-left:5px solid {border_color};
+                     box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.5rem;">
+                        <div>
+                            <span style="font-family:{FONT_HEADING};font-size:1rem;
+                                  font-weight:700;color:{CHARCOAL};">
+                                {rc['headline']}</span>
+                            <span style="font-family:{FONT_BODY};font-size:0.65rem;
+                                  color:{border_color};margin-left:0.75rem;
+                                  text-transform:uppercase;letter-spacing:0.05em;">
+                                {rc['severity']}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-family:{FONT_HEADING};font-size:1.3rem;
+                                  font-weight:700;color:{sg_color};">
+                                {rc['sg_per_round']:+.2f}</span>
+                            <span style="font-family:{FONT_BODY};font-size:0.6rem;
+                                  color:{SLATE};margin-left:0.2rem;">SG/rd</span>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:1.5rem;margin-bottom:0.3rem;">
+                        <div>
+                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
+                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
+                                Tiger 5 Fails</span>
+                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                                 font-weight:700;color:{NEGATIVE};">
+                                {rc.get('t5_fails', 0)}</div>
+                        </div>
+                        <div>
+                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
+                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
+                                Scoring Issues</span>
+                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                                 font-weight:700;color:{WARNING};">
+                                {rc.get('sp_issues', 0)}</div>
+                        </div>
+                        <div>
+                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
+                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
+                                Total Issues</span>
+                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                                 font-weight:700;color:{CHARCOAL};">
+                                {rc.get('total_issues', 0)}</div>
+                        </div>
+                    </div>
+                    {details_html}
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.info("Great job! No significant root causes detected. Keep up the consistent play!")
+
+    # ================================================================
+    # SECTION 5: TIGER 5 ROOT CAUSE DEEP DIVE — REMOVED
     # ================================================================
     # This section has been removed per user requirements
 
     # ================================================================
-    # SECTION 5: BIRDIE BOGEY BREAKDOWN
+    # SECTION 6: BIRDIE BOGEY BREAKDOWN
     # ================================================================
     section_header("Birdie Bogey Breakdown")
 
@@ -432,53 +596,3 @@ def coachs_corner_tab(cc):
         premium_stat_card("Conversion %", format_pct(bo["conversion_pct"]),
                           sentiment=s)
 
-    # ================================================================
-    # SECTION 6: PRACTICE PRIORITIES
-    # ================================================================
-    section_header("Practice Priorities")
-
-    priorities = cc["practice_priorities"]
-
-    # Check if priorities is tiered structure (dict) or old format (list)
-    if isinstance(priorities, dict):
-        # NEW: Tiered structure with HIGH/MEDIUM priorities
-        high_priorities = priorities.get('high', [])
-        medium_priorities = priorities.get('medium', [])
-
-        if high_priorities or medium_priorities:
-            # HIGH PRIORITY section
-            if high_priorities:
-                st.markdown("🔴 **HIGH PRIORITY**")
-                for i, item in enumerate(high_priorities, 1):
-                    _render_priority_card(item, i, NEGATIVE)
-
-                st.markdown("<div style='margin-bottom:1rem;'></div>", unsafe_allow_html=True)
-
-            # MEDIUM PRIORITY section
-            if medium_priorities:
-                st.markdown("🟡 **MEDIUM PRIORITY**")
-                start_num = len(high_priorities) + 1
-                for i, item in enumerate(medium_priorities, start_num):
-                    _render_priority_card(item, i, WARNING)
-        else:
-            st.info("No practice priorities identified.")
-
-    elif priorities:
-        # OLD: Backward compatibility with simple list format
-        for i, p in enumerate(priorities, 1):
-            st.markdown(f'''
-                <div style="background:{WHITE};border-radius:8px;
-                     padding:0.75rem 1rem;margin-bottom:0.5rem;
-                     border:1px solid {BORDER_LIGHT};
-                     border-left:4px solid {ACCENT_PRIMARY};
-                     box-shadow:0 1px 3px rgba(0,0,0,0.04);
-                     display:flex;align-items:center;gap:0.75rem;">
-                    <div style="font-family:{FONT_HEADING};font-size:1.1rem;
-                         font-weight:700;color:{ACCENT_PRIMARY};min-width:24px;
-                         text-align:center;">{i}</div>
-                    <div style="font-family:{FONT_BODY};font-size:0.82rem;
-                         color:{CHARCOAL};">{p}</div>
-                </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.info("No practice priorities identified.")
