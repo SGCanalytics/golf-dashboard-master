@@ -410,8 +410,8 @@ def approach_tab(approach, num_rounds):
                          line-height:1;">{m['total_sg']:+.2f}</div>
                     <div style="font-family:Inter,sans-serif;font-size:0.7rem;
                          color:{SLATE};margin-top:0.3rem;">
-                         {m['shots']} shots &middot; Prox: {m['prox']:.1f if m['shots'] > 0 else 0:.1f} ft
-                         &middot; GIR: {m['green_hit_pct']:.0f if m['shots'] > 0 else 0:.0f}%</div>
+                         {m['shots']} shots &middot; Prox: {(m['prox'] if m['shots'] > 0 else 0):.1f} ft
+                         &middot; GIR: {(m['green_hit_pct'] if m['shots'] > 0 else 0):.0f}%</div>
                 </div>
             ''', unsafe_allow_html=True)
 
