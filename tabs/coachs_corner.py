@@ -458,49 +458,85 @@ def coachs_corner_tab(cc):
         st.info("Build positive SG areas to create strengths to maintain.")
 
     # ================================================================
-    # SECTION 5: PLAYERPATH — STRENGTHS & WEAKNESSES
+    # SECTION 5: PLAYERPATH — ROOT CAUSE SCORING ROADMAP
     # ================================================================
-    section_header("PlayerPath")
+    section_header("PlayerPath: Your Scoring Roadmap")
 
-    path = cc.get("player_path", {"strengths": [], "weaknesses": []})
+    st.markdown(
+        f'<p style="font-family:{FONT_BODY};font-size:0.8rem;color:{SLATE};'
+        f'margin-bottom:1rem;">Understand what\'s causing high scores and how to fix it. '
+        f'These root causes are the specific shot types leading to Tiger 5 fails.</p>',
+        unsafe_allow_html=True,
+    )
 
-    col_str, col_wk = st.columns(2)
+    path = cc.get("player_path", {"root_causes": []})
+    root_causes = path.get("root_causes", [])
 
-    with col_str:
-        st.markdown(f'''
-            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
-                 font-weight:700;color:{POSITIVE};margin-bottom:0.75rem;
-                 padding-bottom:0.4rem;
-                 border-bottom:2px solid {POSITIVE};">Strengths</div>
-        ''', unsafe_allow_html=True)
+    if root_causes:
+        for rc in root_causes:
+            # Severity color mapping
+            severity_colors = {
+                "critical": NEGATIVE,
+                "significant": WARNING,
+                "moderate": ACCENT_MUTED,
+            }
+            border_color = severity_colors.get(rc['severity'], ACCENT_MUTED)
+            sg_color = NEGATIVE if rc['sg_per_round'] < 0 else POSITIVE
 
-        if path["strengths"]:
-            for entry in path["strengths"]:
-                _path_category_card(entry, is_strength=True)
-        else:
-            st.markdown(
-                f'<p style="font-family:{FONT_BODY};font-size:0.8rem;'
-                f'color:{SLATE};font-style:italic;">No categories with positive SG.</p>',
-                unsafe_allow_html=True,
-            )
+            # Build details list HTML
+            details_html = ""
+            if rc['details']:
+                details_html = "<ul style='margin:0.5rem 0 0 1.2rem;padding:0;'>"
+                for detail in rc['details']:
+                    details_html += f"<li style='font-family:{FONT_BODY};font-size:0.7rem;color:{CHARCOAL_LIGHT};margin-bottom:0.2rem;'>{detail}</li>"
+                details_html += "</ul>"
 
-    with col_wk:
-        st.markdown(f'''
-            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
-                 font-weight:700;color:{NEGATIVE};margin-bottom:0.75rem;
-                 padding-bottom:0.4rem;
-                 border-bottom:2px solid {NEGATIVE};">Weaknesses</div>
-        ''', unsafe_allow_html=True)
-
-        if path["weaknesses"]:
-            for entry in path["weaknesses"]:
-                _path_category_card(entry, is_strength=False)
-        else:
-            st.markdown(
-                f'<p style="font-family:{FONT_BODY};font-size:0.8rem;'
-                f'color:{SLATE};font-style:italic;">No categories with negative SG.</p>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'''
+                <div style="background:{WHITE};border-radius:{CARD_RADIUS};
+                     padding:1rem 1.25rem;margin-bottom:0.75rem;
+                     border:1px solid {BORDER_LIGHT};border-left:5px solid {border_color};
+                     box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.5rem;">
+                        <div>
+                            <span style="font-family:{FONT_HEADING};font-size:1rem;
+                                  font-weight:700;color:{CHARCOAL};">
+                                {rc['headline']}</span>
+                            <span style="font-family:{FONT_BODY};font-size:0.65rem;
+                                  color:{border_color};margin-left:0.75rem;
+                                  text-transform:uppercase;letter-spacing:0.05em;">
+                                {rc['severity']}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-family:{FONT_HEADING};font-size:1.3rem;
+                                  font-weight:700;color:{sg_color};">
+                                {rc['sg_per_round']:+.2f}</span>
+                            <span style="font-family:{FONT_BODY};font-size:0.6rem;
+                                  color:{SLATE};margin-left:0.2rem;">SG/rd</span>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:1.5rem;margin-bottom:0.3rem;">
+                        <div>
+                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
+                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
+                                Tiger 5 Fails</span>
+                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                                 font-weight:700;color:{NEGATIVE};">
+                                {rc['fail_count']}</div>
+                        </div>
+                        <div>
+                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
+                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
+                                % of All Fails</span>
+                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
+                                 font-weight:700;color:{CHARCOAL};">
+                                {rc['fail_pct']:.0f}%</div>
+                        </div>
+                    </div>
+                    {details_html}
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.info("Great job! No significant root causes detected. Keep up the consistent play!")
 
     # ================================================================
     # SECTION 5: TIGER 5 ROOT CAUSE DEEP DIVE — REMOVED
