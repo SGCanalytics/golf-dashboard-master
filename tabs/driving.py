@@ -40,19 +40,22 @@ def driving_tab(drive, num_rounds, hole_summary):
         )
 
     with col2:
-        s = "negative" if drive['non_playable_pct'] > THRESHOLDS["pct_nonplayable"] else "positive"
+        s = "negative" if drive['obstruction_pct'] > 10 else "positive"
         premium_hero_card(
-            "Non-Playable Rate",
-            format_pct(drive['non_playable_pct']),
-            f"{drive['non_playable_count']} of {drive['num_drives']} drives",
+            "Obstruction Rate",
+            format_pct(drive['obstruction_pct']),
+            f"{drive['obstruction_count']} of {drive['num_drives']} drives",
             sentiment=s,
         )
 
     with col3:
+        total_penalty_count = drive['penalty_count'] + drive['ob_count']
+        s = "negative" if total_penalty_count > 0 else "positive"
         premium_hero_card(
-            "SG Playable Drives", format_sg(drive['sg_playable']),
-            f"{format_sg(drive['sg_playable_per_round'])} per round",
-            sentiment=sg_sentiment(drive['sg_playable']),
+            "Driver Penalties",
+            str(total_penalty_count),
+            f"OB: {drive['ob_count']} \u00b7 Penalty: {drive['penalty_count']}",
+            sentiment=s,
         )
 
     with col4:
@@ -147,6 +150,10 @@ def driving_tab(drive, num_rounds, hole_summary):
     total_penalty_count = drive['penalty_count'] + drive['ob_count']
     total_penalty_sg = drive['penalty_sg'] + drive['ob_sg']
 
+    # Calculate SG for obstruction types from the driving dataframe
+    sand_sg = drive['df'][drive['df']['Ending Location'] == 'Sand']['Strokes Gained'].sum() if 'df' in drive else 0.0
+    recovery_sg = drive['df'][drive['df']['Ending Location'] == 'Recovery']['Strokes Gained'].sum() if 'df' in drive else 0.0
+
     col_pen, col_obs, col_avoid = st.columns(3)
 
     with col_pen:
@@ -172,10 +179,22 @@ def driving_tab(drive, num_rounds, hole_summary):
     with col_obs:
         s = "negative" if drive['obstruction_pct'] > 10 else "positive"
         premium_stat_card(
-            "Obstruction Rate",
-            format_pct(drive['obstruction_pct']),
-            f"{drive['obstruction_count']} of {drive['num_drives']} \u00b7 SG: {format_sg(drive['obstruction_sg'])}",
+            "Obstruction Type",
+            str(drive['obstruction_count']),
+            f"Total Obstructions \u00b7 SG: {format_sg(drive['obstruction_sg'])}",
             sentiment=s,
+        )
+        st.markdown(
+            f'''
+            <table class="premium-table">
+                <tr><th style="text-align:left;">Type</th><th>#</th><th>SG</th></tr>
+                <tr><td>Recovery</td><td>{drive['recovery']}</td>
+                    <td>{recovery_sg:+.2f}</td></tr>
+                <tr><td>Sand</td><td>{drive['sand']}</td>
+                    <td>{sand_sg:+.2f}</td></tr>
+            </table>
+            ''',
+            unsafe_allow_html=True,
         )
 
     with col_avoid:
