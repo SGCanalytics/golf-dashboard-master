@@ -158,9 +158,15 @@ with st.sidebar:
     )
 
     sidebar_label("Date Range")
+
+    # Clamp current date range to available bounds
+    current_start, current_end = st.session_state.selected_date_range
+    clamped_start = max(min(current_start, max_date_available), min_date_available)
+    clamped_end = max(min(current_end, max_date_available), min_date_available)
+
     date_range = st.date_input(
         "Date Range",
-        value=st.session_state.selected_date_range,
+        value=(clamped_start, clamped_end),
         min_value=min_date_available,
         max_value=max_date_available,
         label_visibility="collapsed",
