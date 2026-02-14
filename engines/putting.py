@@ -45,14 +45,14 @@ def _build_hero_metrics(putting_df, num_rounds):
     sg_total = putting_df['Strokes Gained'].sum()
     sg_per_round = safe_divide(sg_total, num_rounds)
 
-    # SG Putting 3-6 ft
-    m36 = putting_df[
-        (putting_df['Starting Distance'] >= 3) &
+    # SG Putting 4-6 ft
+    m46 = putting_df[
+        (putting_df['Starting Distance'] >= 4) &
         (putting_df['Starting Distance'] <= 6)
     ]
-    sg_3_6 = m36['Strokes Gained'].sum() if not m36.empty else 0.0
-    sg_3_6_made = int(m36['Made'].sum()) if not m36.empty else 0
-    sg_3_6_attempts = len(m36)
+    sg_4_6 = m46['Strokes Gained'].sum() if not m46.empty else 0.0
+    sg_4_6_made = int(m46['Made'].sum()) if not m46.empty else 0
+    sg_4_6_attempts = len(m46)
 
     # SG Putting 7-10 ft
     m710 = putting_df[
@@ -82,9 +82,9 @@ def _build_hero_metrics(putting_df, num_rounds):
     return {
         "sg_total": sg_total,
         "sg_per_round": sg_per_round,
-        "sg_3_6": sg_3_6,
-        "sg_3_6_made": sg_3_6_made,
-        "sg_3_6_attempts": sg_3_6_attempts,
+        "sg_4_6": sg_4_6,
+        "sg_4_6_made": sg_4_6_made,
+        "sg_4_6_attempts": sg_4_6_attempts,
         "sg_7_10": sg_7_10,
         "sg_7_10_made": sg_7_10_made,
         "sg_7_10_attempts": sg_7_10_attempts,
@@ -379,7 +379,7 @@ def build_putting_results(filtered_df, num_rounds):
 
     empty_hero = {
         "sg_total": 0.0, "sg_per_round": 0.0,
-        "sg_3_6": 0.0, "sg_3_6_made": 0, "sg_3_6_attempts": 0,
+        "sg_4_6": 0.0, "sg_4_6_made": 0, "sg_4_6_attempts": 0,
         "sg_7_10": 0.0, "sg_7_10_made": 0, "sg_7_10_attempts": 0,
         "lag_miss_pct": 0.0,
         "make_0_3_pct": 0.0, "make_0_3_made": 0, "make_0_3_attempts": 0,
