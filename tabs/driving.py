@@ -50,11 +50,12 @@ def driving_tab(drive, num_rounds, hole_summary):
 
     with col3:
         total_penalty_count = drive['penalty_count'] + drive['ob_count']
+        penalty_pct = (total_penalty_count / drive['num_drives'] * 100) if drive['num_drives'] > 0 else 0.0
         s = "negative" if total_penalty_count > 0 else "positive"
         premium_hero_card(
             "Driver Penalties",
-            str(total_penalty_count),
-            f"OB: {drive['ob_count']} \u00b7 Penalty: {drive['penalty_count']}",
+            format_pct(penalty_pct),
+            f"{total_penalty_count} of {drive['num_drives']} drives \u00b7 OB: {drive['ob_count']} \u00b7 Penalty: {drive['penalty_count']}",
             sentiment=s,
         )
 
