@@ -874,11 +874,13 @@ def _build_combined_root_cause_player_path(
             details = [f"{sp_count} scoring issues from recovery/other shots"]
 
         sg_per_round = _safe_pr(sg_impact, num_rounds)
+        issues_per_round = _safe_pr(total_issues, num_rounds)
 
-        # Determine severity based on total issues and SG impact
-        if total_issues >= 10 or sg_per_round <= -0.5:
+        # Determine severity based on issues per round
+        # Critical: ≥4 issues/round, Significant: >1 issue/round, Moderate: ≤1 issue/round
+        if issues_per_round >= 4:
             severity = 'critical'
-        elif total_issues >= 5 or sg_per_round <= -0.25:
+        elif issues_per_round > 1:
             severity = 'significant'
         else:
             severity = 'moderate'
@@ -898,6 +900,7 @@ def _build_combined_root_cause_player_path(
             't5_fails': t5_count,
             'sp_issues': sp_count,
             'total_issues': total_issues,
+            'issues_per_round': issues_per_round,
             'sg_impact': sg_impact,
             'sg_per_round': sg_per_round,
             'severity': severity,
