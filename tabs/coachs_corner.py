@@ -311,6 +311,17 @@ def coachs_corner_tab(cc):
                           str(fm['bogey_train_count']),
                           sentiment=s)
 
+    if fm["bogey_train_count"] > 0:
+        bt_c1, bt_c2 = st.columns(2)
+        with bt_c1:
+            premium_stat_card("Longest Train",
+                              f"{fm['longest_bogey_train']} holes",
+                              sentiment="negative")
+        with bt_c2:
+            premium_stat_card("Train Lengths",
+                              str(fm['bogey_trains']),
+                              sentiment="negative")
+
     with st.expander("ℹ️ What Do These Metrics Mean?"):
         st.markdown('''
         **Bounce Back %**: How often you recover with par or better after making bogey or worse.
@@ -325,17 +336,6 @@ def coachs_corner_tab(cc):
         **Bogey Trains**: Consecutive holes with bogey or worse. Lower count is better —
         indicates you avoid extended rough patches.
         ''')
-
-    if fm["bogey_train_count"] > 0:
-        bt_c1, bt_c2 = st.columns(2)
-        with bt_c1:
-            premium_stat_card("Longest Train",
-                              f"{fm['longest_bogey_train']} holes",
-                              sentiment="negative")
-        with bt_c2:
-            premium_stat_card("Train Lengths",
-                              str(fm['bogey_trains']),
-                              sentiment="negative")
 
     # ================================================================
     # SECTION 4: PLAYERPATH — STRENGTHS & WEAKNESSES
