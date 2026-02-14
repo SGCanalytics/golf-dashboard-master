@@ -11,6 +11,7 @@ from ui.theme import (
     CHARCOAL, ACCENT_PRIMARY, ACCENT_SECONDARY,
     POSITIVE, NEGATIVE, WARNING,
     BORDER_LIGHT, DONUT_SEQUENCE, THRESHOLDS,
+    WHITE, SLATE,
 )
 from ui.chart_config import CHART_LAYOUT
 from ui.components import (
@@ -43,9 +44,9 @@ def putting_tab(putting, num_rounds):
 
     with col2:
         premium_hero_card(
-            "SG Putting 3\u20136 ft", format_sg(hero["sg_3_6"]),
-            f"Made {hero['sg_3_6_made']} / {hero['sg_3_6_attempts']}",
-            sentiment=sg_sentiment(hero["sg_3_6"]),
+            "SG Putting 4\u20136 ft", format_sg(hero["sg_4_6"]),
+            f"Made {hero['sg_4_6_made']} / {hero['sg_4_6_attempts']}",
+            sentiment=sg_sentiment(hero["sg_4_6"]),
         )
 
     with col3:
@@ -59,7 +60,7 @@ def putting_tab(putting, num_rounds):
         # Lag miss % — lower is better; card is positive when inverted val >= 80
         s = sg_sentiment(100 - hero["lag_miss_pct"], threshold=80)
         premium_hero_card(
-            "Lag Miss %", format_pct(hero["lag_miss_pct"]),
+            "Poor Lag %", format_pct(hero["lag_miss_pct"]),
             "First putts \u226520 ft leaving >5 ft",
             sentiment=s,
         )
@@ -85,10 +86,75 @@ def putting_tab(putting, num_rounds):
     # ----------------------------------------------------------------
     section_header("SG Putting by Distance")
 
-    st.dataframe(
-        putting["bucket_table"],
-        use_container_width=True,
-        hide_index=True,
+    bucket_table = putting["bucket_table"]
+
+    # Find best and worst buckets by SG (only buckets with attempts)
+    buckets_with_shots = bucket_table[bucket_table['Attempts'] > 0].copy()
+
+    if not buckets_with_shots.empty:
+        # Convert SG column back to numeric for comparison (it's formatted as string)
+        buckets_with_shots['SG_numeric'] = buckets_with_shots['SG'].apply(
+            lambda x: float(x.replace('+', '').replace(',', '')) if isinstance(x, str) else x
+        )
+
+        best_bucket_idx = buckets_with_shots['SG_numeric'].idxmax()
+        worst_bucket_idx = buckets_with_shots['SG_numeric'].idxmin()
+        best_bucket = buckets_with_shots.loc[best_bucket_idx, 'Distance Bucket']
+        worst_bucket = buckets_with_shots.loc[worst_bucket_idx, 'Distance Bucket']
+    else:
+        best_bucket = None
+        worst_bucket = None
+
+    # Create 2 rows of 3 columns each (6 buckets total)
+    row1_cols = st.columns(3)
+    row2_cols = st.columns(3)
+
+    all_cols = row1_cols + row2_cols
+
+    for idx, row in bucket_table.iterrows():
+        bucket_name = row['Distance Bucket']
+        attempts = row['Attempts']
+        sg_str = row['SG']
+        make_pct_str = row['Make %']
+
+        # Determine border for best/worst
+        if bucket_name == best_bucket:
+            border_style = f"border:2px solid {POSITIVE};"
+        elif bucket_name == worst_bucket:
+            border_style = f"border:2px solid {NEGATIVE};"
+        else:
+            border_style = ""
+
+        # Parse SG for color
+        sg_numeric = float(sg_str.replace('+', '').replace(',', '')) if isinstance(sg_str, str) and sg_str != '-' else 0.0
+        sg_color = POSITIVE if sg_numeric >= 0 else NEGATIVE
+
+        with all_cols[idx]:
+            st.markdown(f'''
+                <div style="background:{WHITE};border-radius:12px;
+                     padding:1.25rem 1rem;text-align:center;
+                     box-shadow:0 2px 8px rgba(0,0,0,0.06);
+                     border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
+                    <div style="font-family:Inter,sans-serif;font-size:0.75rem;
+                         font-weight:600;color:{SLATE};text-transform:uppercase;
+                         letter-spacing:0.08em;margin-bottom:0.5rem;">
+                         {bucket_name} Feet</div>
+                    <div style="font-family:Playfair Display,serif;font-size:2rem;
+                         font-weight:700;color:{sg_color};
+                         line-height:1;">{sg_str}</div>
+                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                         color:{SLATE};margin-top:0.3rem;">
+                         {attempts} putts &middot; Make: {make_pct_str}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+
+    # Best / worst legend
+    st.markdown(
+        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:{SLATE};'
+        f'margin-top:0.5rem;">'
+        f'<span style="color:{POSITIVE};">\u25aa</span> Best SG &nbsp;&nbsp;'
+        f'<span style="color:{NEGATIVE};">\u25aa</span> Worst SG</p>',
+        unsafe_allow_html=True,
     )
 
     # Dual-axis chart: stacked bar (putt outcomes) + SG line
