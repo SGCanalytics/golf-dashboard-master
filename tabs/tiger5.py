@@ -82,46 +82,47 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
     # ----------------------------------------------------------------
     # TIGER 5 TREND CHART (stacked bar by round)
     # ----------------------------------------------------------------
-    with st.expander("View Tiger 5 Trend by Round"):
-        t5_df = tiger5_results["by_round"]
+    section_header("Tiger 5 Trend by Round")
 
-        if not t5_df.empty:
-            t5_df = t5_df.copy()
-            t5_df['Chart Label'] = (
-                t5_df['Date'].dt.strftime('%m/%d/%y') + ' ' + t5_df['Course']
-            )
+    t5_df = tiger5_results["by_round"]
 
-            fail_types = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
-                          'Missed Green', '125yd Bogey']
-            t5_colors = [CHART_PUTTING, NEGATIVE, ACCENT_PRIMARY,
-                         CHART_SHORT_GAME, CHARCOAL]
+    if not t5_df.empty:
+        t5_df = t5_df.copy()
+        t5_df['Chart Label'] = (
+            t5_df['Date'].dt.strftime('%m/%d/%y') + ' ' + t5_df['Course']
+        )
 
-            fig_t5 = go.Figure()
-            for fail_type, color in zip(fail_types, t5_colors):
-                fig_t5.add_trace(go.Bar(
-                    x=t5_df['Chart Label'],
-                    y=t5_df[fail_type],
-                    name=fail_type,
-                    marker_color=color,
-                ))
+        fail_types = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
+                      'Missed Green', '125yd Bogey']
+        t5_colors = [CHART_PUTTING, NEGATIVE, ACCENT_PRIMARY,
+                     CHART_SHORT_GAME, CHARCOAL]
 
-            fig_t5.update_layout(
-                **CHART_LAYOUT,
-                barmode='stack',
-                xaxis_title='',
-                yaxis_title='Tiger 5 Fails',
-                height=400,
-                legend=dict(orientation='h', yanchor='bottom', y=1.02,
-                            xanchor='right', x=1),
-                margin=dict(t=60, b=80, l=60, r=40),
-                xaxis=dict(tickangle=-45),
-                hovermode='x unified',
-            )
+        fig_t5 = go.Figure()
+        for fail_type, color in zip(fail_types, t5_colors):
+            fig_t5.add_trace(go.Bar(
+                x=t5_df['Chart Label'],
+                y=t5_df[fail_type],
+                name=fail_type,
+                marker_color=color,
+            ))
 
-            st.plotly_chart(fig_t5, use_container_width=True,
-                            config={'displayModeBar': False})
-        else:
-            st.info("No data available for Tiger 5 trend.")
+        fig_t5.update_layout(
+            **CHART_LAYOUT,
+            barmode='stack',
+            xaxis_title='',
+            yaxis_title='Tiger 5 Fails',
+            height=400,
+            legend=dict(orientation='h', yanchor='bottom', y=1.02,
+                        xanchor='right', x=1),
+            margin=dict(t=60, b=80, l=60, r=40),
+            xaxis=dict(tickangle=-45),
+            hovermode='x unified',
+        )
+
+        st.plotly_chart(fig_t5, use_container_width=True,
+                        config={'displayModeBar': False})
+    else:
+        st.info("No data available for Tiger 5 trend.")
 
     # ----------------------------------------------------------------
     # ROOT CAUSE ANALYSIS
