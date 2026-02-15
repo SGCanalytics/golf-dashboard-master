@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 
 from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, POSITIVE, NEGATIVE, ACCENT_PRIMARY, ACCENT_SECONDARY,
-    WARNING, CHART_PUTTING, CHART_PALETTE, DONUT_SEQUENCE,
+    WARNING, CHART_PUTTING, CHART_PALETTE, DONUT_SEQUENCE, CHART_SHORT_GAME,
 )
 from ui.chart_config import CHART_LAYOUT, sg_bar_color
 from ui.components import (
