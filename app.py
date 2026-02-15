@@ -253,7 +253,7 @@ tab_tiger5, tab_scoring_perf, tab_sg, tab_driving, tab_approach, tab_short_game,
     )
 
 with tab_tiger5:
-    tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails)
+    tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, num_rounds)
 
 with tab_scoring_perf:
     scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results)
