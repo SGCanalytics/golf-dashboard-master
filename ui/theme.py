@@ -1,8 +1,8 @@
 # ============================================================
-# DESIGN TOKENS — PREMIUM GREEN PALETTE
+# DESIGN TOKENS — PREMIUM PURPLE PALETTE
 # ============================================================
-# Inspired by private golf club aesthetics: clean whites,
-# deep olive/forest greens, warm grays, elegant serif headings.
+# Sophisticated deep purple palette with warm neutrals.
+# Green and red reserved exclusively for success/failure indicators.
 # ============================================================
 
 # --- PRIMARY PALETTE ---
@@ -15,11 +15,11 @@ WARM_GRAY      = "#F2F0EC"     # card/table header backgrounds
 BORDER_LIGHT   = "#E0DDD7"     # warm light border
 BORDER_MEDIUM  = "#C9C5BC"     # medium border
 
-# --- ACCENT COLORS (deep olive/forest green) ---
-ACCENT_PRIMARY   = "#3D5A3E"   # deep forest green — primary accent
-ACCENT_SECONDARY = "#5A7A5C"   # medium sage — secondary accent
-ACCENT_MUTED     = "#8FA890"   # light sage for subtle highlights
-ACCENT_PALE      = "#E8EDE8"   # very pale green for card backgrounds
+# --- ACCENT COLORS (deep purple) ---
+ACCENT_PRIMARY   = "#32174D"   # deep purple — primary accent
+ACCENT_SECONDARY = "#4A2766"   # medium purple — secondary accent
+ACCENT_MUTED     = "#7B5A92"   # light purple for subtle highlights
+ACCENT_PALE      = "#F0EBF4"   # pale lavender for card backgrounds
 
 # --- SEMANTIC / CONDITIONAL FORMATTING COLORS ---
 POSITIVE       = "#2D6A4F"     # deep green (positive SG / good)
@@ -29,16 +29,16 @@ NEGATIVE       = "#C53030"     # muted red (negative SG / bad)
 NEGATIVE_BG    = "#FED7D7"     # light red cell background
 NEGATIVE_TEXT  = "#9B2C2C"     # dark red cell text
 NEUTRAL        = "#6B7280"     # gray for zero/neutral values
-WARNING        = "#B7791F"     # muted amber for caution states
+WARNING        = "#D97706"     # brighter amber for caution states
 
 # --- CHART CATEGORY COLORS ---
 CHART_PALETTE = [
-    "#3D5A3E",  # deep green (driving)
+    "#32174D",  # deep purple (driving)
     "#8B6F47",  # warm brown (approach)
-    "#2D6A4F",  # forest green (short game)
+    "#4A5568",  # slate gray (short game)
     "#7C6F9B",  # muted violet (putting)
     "#C53030",  # muted red (fail/recovery)
-    "#B7791F",  # muted amber (secondary)
+    "#D97706",  # brighter amber (secondary)
 ]
 
 CHART_DRIVING    = CHART_PALETTE[0]
@@ -50,14 +50,14 @@ CHART_SECONDARY  = CHART_PALETTE[5]
 
 # --- DONUT / OUTCOME CHART COLORS ---
 OUTCOME_COLORS = {
-    "Eagle":            "#B7791F",
-    "Birdie":           "#2D6A4F",
-    "Par":              "#3D5A3E",
+    "Eagle":            "#D97706",
+    "Birdie":           "#7B5A92",
+    "Par":              "#4A5568",
     "Bogey":            "#C53030",
     "Double or Worse":  "#7C6F9B",
 }
 
-DONUT_SEQUENCE = ["#2D6A4F", "#3D5A3E", "#B7791F", "#C53030"]
+DONUT_SEQUENCE = ["#7B5A92", "#4A5568", "#D97706", "#C53030"]
 
 # --- TYPOGRAPHY ---
 FONT_HEADING = "'Playfair Display', Georgia, serif"

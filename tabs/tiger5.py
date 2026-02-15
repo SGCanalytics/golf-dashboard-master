@@ -71,7 +71,7 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
             fail_types = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
                           'Missed Green', '125yd Bogey']
             t5_colors = [CHART_PUTTING, NEGATIVE, ACCENT_PRIMARY,
-                         POSITIVE, CHARCOAL]
+                         CHART_SHORT_GAME, CHARCOAL]
 
             fig_t5 = go.Figure()
             for fail_type, color in zip(fail_types, t5_colors):

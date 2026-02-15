@@ -372,7 +372,7 @@ def approach_tab(approach, num_rounds):
     # Zone display configuration (emoji and color for zone names)
     ZONE_CONFIG = {
         "Green Zone": {"emoji": "🟢", "color": "#2D6A4F"},
-        "Yellow Zone": {"emoji": "🟡", "color": "#B7791F"},
+        "Yellow Zone": {"emoji": "🟡", "color": "#D97706"},
         "Red Zone": {"emoji": "🔴", "color": "#C53030"},
     }
 

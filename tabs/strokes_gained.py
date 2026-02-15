@@ -291,7 +291,7 @@ def strokes_gained_tab(
         use_ma_sg = st.checkbox("Apply Moving Average", value=False,
                                 key="overview_sg_trend_ma")
         categories = ['Driving', 'Approach', 'Short Game', 'Putting']
-        cat_colors = [ACCENT_PRIMARY, CHARCOAL, POSITIVE, CHART_PUTTING]
+        cat_colors = [ACCENT_PRIMARY, CHARCOAL, CHART_SHORT_GAME, CHART_PUTTING]
 
         if use_ma_sg:
             ma_window = st.selectbox("Moving Average Window", [3, 5, 10],
