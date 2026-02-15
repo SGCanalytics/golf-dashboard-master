@@ -20,7 +20,7 @@ from engines.overview import build_tiger5_fail_shots
 from engines.tiger5 import build_tiger5_root_cause, build_tiger5_scoring_impact
 
 
-def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
+def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, num_rounds):
 
     tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
                     'Missed Green', '125yd Bogey']
@@ -28,11 +28,20 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
     # ----------------------------------------------------------------
     # HERO CARD — TOTAL TIGER 5 FAILS
     # ----------------------------------------------------------------
-    sentiment = "negative" if total_tiger5_fails > 0 else "positive"
+    # Calculate fails per round and determine sentiment
+    fails_per_round = total_tiger5_fails / num_rounds if num_rounds > 0 else 0
+
+    if fails_per_round == 0:
+        sentiment = "positive"  # Green
+    elif fails_per_round < 3:
+        sentiment = "warning"   # Yellow
+    else:
+        sentiment = "negative"  # Red
+
     premium_hero_card(
         "Total Tiger 5 Fails",
         str(total_tiger5_fails),
-        "across all filtered rounds",
+        f"{fails_per_round:.2f} per round",
         sentiment=sentiment,
     )
 
@@ -46,10 +55,24 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails):
     for col, stat_name in zip([col1, col2, col3, col4, col5], tiger5_names):
         fails = int(tiger5_results[stat_name]['fails'])
         attempts = int(tiger5_results[stat_name]['attempts'])
-        sentiment = "negative" if fails > 0 else "positive"
+
+        # Calculate fails per round and determine sentiment
+        fails_per_round = fails / num_rounds if num_rounds > 0 else 0
+
+        if fails_per_round == 0:
+            sentiment = "positive"  # Green
+        elif fails_per_round < 3:
+            sentiment = "warning"   # Yellow
+        else:
+            sentiment = "negative"  # Red
+
         with col:
-            premium_hero_card(stat_name, str(fails), f"of {attempts}",
-                              sentiment=sentiment)
+            premium_hero_card(
+                stat_name,
+                str(fails),
+                f"{fails_per_round:.2f} per round",
+                sentiment=sentiment
+            )
 
     with col6:
         grit_score = tiger5_results["grit_score"]
