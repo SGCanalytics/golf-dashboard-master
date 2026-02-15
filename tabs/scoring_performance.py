@@ -142,7 +142,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
         'Lag Putts': CHART_PALETTE[5],        # Gold
         'Driving': ACCENT_PRIMARY,             # Blue
         'Approach': CHARCOAL,                  # Charcoal
-        'Short Game': POSITIVE,                # Green
+        'Short Game': CHART_SHORT_GAME,        # Slate gray
         'Recovery and Other': NEGATIVE         # Red
     }
 
