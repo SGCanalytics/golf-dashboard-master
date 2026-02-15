@@ -375,7 +375,6 @@ def coachs_corner_tab(cc):
     section_header("Practice Priorities")
 
     priorities = cc["practice_priorities"]
-    path = cc.get("player_path", {"strengths": [], "weaknesses": []})
 
     # ================================================================
     # SUBSECTION: AREAS TO IMPROVE
@@ -441,10 +440,11 @@ def coachs_corner_tab(cc):
         unsafe_allow_html=True,
     )
 
-    # Build strength items from PlayerPath strengths
+    # Build strength items from top-level strengths (not from player_path)
     strength_items = []
-    if path["strengths"]:
-        for idx, entry in enumerate(path["strengths"][:3], 1):  # Top 3 strengths
+    strengths = cc.get("strengths", [])
+    if strengths:
+        for idx, entry in enumerate(strengths[:3], 1):  # Top 3 strengths
             strength_items.append({
                 'label': entry['headline'],
                 'metric': f"{entry['sg_per_round']:+.2f} SG/round",
