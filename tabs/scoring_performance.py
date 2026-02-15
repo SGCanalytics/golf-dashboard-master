@@ -392,7 +392,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
         st.info("No scoring impact data available.")
 
     # ------------------------------------------------------------
-    # CATEGORY BREAKDOWN — GROUPED BAR CHART
+    # CATEGORY BREAKDOWN — DONUT CHARTS BY ISSUE TYPE
     # ------------------------------------------------------------
     section_header("Breakdown by Issue Type")
 
@@ -400,93 +400,134 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
     bogey_analysis = scoring_perf_results['bogey_analysis']
     underperf_analysis = scoring_perf_results['underperformance_analysis']
 
-    # Create grouped bar chart
-    with st.expander("View Root Cause Distribution by Issue Type"):
-        fig_breakdown = go.Figure()
+    # Create three columns for donut charts
+    donut_col1, donut_col2, donut_col3 = st.columns(3)
 
-        # Double Bogey+ bars
-        db_counts = [db_analysis['counts'].get(rc, 0) for rc in sorted_root_causes]
-        fig_breakdown.add_trace(go.Bar(
-            x=sorted_root_causes,
-            y=db_counts,
-            name='Double Bogey+',
-            marker_color=NEGATIVE,
-            text=db_counts,
-            textposition='outside'
-        ))
+    # Double Bogey+ Donut
+    with donut_col1:
+        st.markdown("**Double Bogey+ Distribution**")
+        if db_analysis['counts'] and len(db_analysis['holes']) > 0:
+            # Filter out zero counts and sort by count
+            db_data = [(rc, count) for rc, count in db_analysis['counts'].items() if count > 0]
+            db_data.sort(key=lambda x: x[1], reverse=True)
 
-        # Bogey bars
-        bogey_counts = [bogey_analysis['counts'].get(rc, 0) for rc in sorted_root_causes]
-        fig_breakdown.add_trace(go.Bar(
-            x=sorted_root_causes,
-            y=bogey_counts,
-            name='Bogey',
-            marker_color=WARNING,
-            text=bogey_counts,
-            textposition='outside'
-        ))
+            labels = [item[0] for item in db_data]
+            values = [item[1] for item in db_data]
+            colors = [rc_color_map.get(rc, CHARCOAL) for rc in labels]
 
-        # Underperformance bars
-        under_counts = [underperf_analysis['counts'].get(rc, 0) for rc in sorted_root_causes]
-        fig_breakdown.add_trace(go.Bar(
-            x=sorted_root_causes,
-            y=under_counts,
-            name='Underperformance',
-            marker_color=ACCENT_SECONDARY,
-            text=under_counts,
-            textposition='outside'
-        ))
+            fig_db = go.Figure(data=[go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.6,
+                marker_colors=colors,
+                textinfo='label+percent',
+                textposition='outside',
+                textfont=dict(family='Inter', size=11),
+                pull=[0.02] * len(labels),
+            )])
 
-        fig_breakdown.update_layout(
-            **CHART_LAYOUT,
-            barmode='group',
-            xaxis_title='Root Cause',
-            yaxis_title='Count',
-            height=450,
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                y=1.02,
-                xanchor='right',
-                x=1
-            ),
-            margin=dict(t=60, b=100, l=60, r=60),
-            xaxis=dict(tickangle=-45),
-            hovermode='x unified'
-        )
+            fig_db.update_layout(
+                **CHART_LAYOUT,
+                height=350,
+                margin=dict(t=20, b=20, l=20, r=20),
+                showlegend=False,
+                annotations=[dict(
+                    text=f"{len(db_analysis['holes'])}<br>Holes",
+                    x=0.5, y=0.5,
+                    font_size=16,
+                    showarrow=False,
+                    font_family='Inter',
+                    font_color=CHARCOAL
+                )]
+            )
 
-        st.plotly_chart(fig_breakdown, use_container_width=True,
-                        config={'displayModeBar': False})
+            st.plotly_chart(fig_db, use_container_width=True,
+                          config={'displayModeBar': False})
+        else:
+            st.info("No double bogey+ data")
 
-    # Summary tables below the chart
-    col_sum1, col_sum2, col_sum3 = st.columns(3)
+    # Bogey Donut
+    with donut_col2:
+        st.markdown("**Bogey Distribution**")
+        if bogey_analysis['counts'] and len(bogey_analysis['holes']) > 0:
+            # Filter out zero counts and sort by count
+            bogey_data = [(rc, count) for rc, count in bogey_analysis['counts'].items() if count > 0]
+            bogey_data.sort(key=lambda x: x[1], reverse=True)
 
-    with col_sum1:
-        st.markdown("**Double Bogey+ Summary**")
-        st.markdown(f"Total Holes: {len(db_analysis['holes'])}")
-        if db_analysis['counts']:
-            sorted_db = sorted(db_analysis['counts'].items(), key=lambda x: x[1], reverse=True)
-            for rc, count in sorted_db[:3]:
-                if count > 0:
-                    pct = (count / len(db_analysis['holes']) * 100) if len(db_analysis['holes']) > 0 else 0
-                    st.markdown(f"- {rc}: {count} ({pct:.0f}%)")
+            labels = [item[0] for item in bogey_data]
+            values = [item[1] for item in bogey_data]
+            colors = [rc_color_map.get(rc, CHARCOAL) for rc in labels]
 
-    with col_sum2:
-        st.markdown("**Bogey Summary**")
-        st.markdown(f"Total Holes: {len(bogey_analysis['holes'])}")
-        if bogey_analysis['counts']:
-            sorted_bog = sorted(bogey_analysis['counts'].items(), key=lambda x: x[1], reverse=True)
-            for rc, count in sorted_bog[:3]:
-                if count > 0:
-                    pct = (count / len(bogey_analysis['holes']) * 100) if len(bogey_analysis['holes']) > 0 else 0
-                    st.markdown(f"- {rc}: {count} ({pct:.0f}%)")
+            fig_bogey = go.Figure(data=[go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.6,
+                marker_colors=colors,
+                textinfo='label+percent',
+                textposition='outside',
+                textfont=dict(family='Inter', size=11),
+                pull=[0.02] * len(labels),
+            )])
 
-    with col_sum3:
-        st.markdown("**Underperformance Summary**")
-        st.markdown(f"Total Holes: {len(underperf_analysis['holes'])}")
-        if underperf_analysis['counts']:
-            sorted_under = sorted(underperf_analysis['counts'].items(), key=lambda x: x[1], reverse=True)
-            for rc, count in sorted_under[:3]:
-                if count > 0:
-                    pct = (count / len(underperf_analysis['holes']) * 100) if len(underperf_analysis['holes']) > 0 else 0
-                    st.markdown(f"- {rc}: {count} ({pct:.0f}%)")
+            fig_bogey.update_layout(
+                **CHART_LAYOUT,
+                height=350,
+                margin=dict(t=20, b=20, l=20, r=20),
+                showlegend=False,
+                annotations=[dict(
+                    text=f"{len(bogey_analysis['holes'])}<br>Holes",
+                    x=0.5, y=0.5,
+                    font_size=16,
+                    showarrow=False,
+                    font_family='Inter',
+                    font_color=CHARCOAL
+                )]
+            )
+
+            st.plotly_chart(fig_bogey, use_container_width=True,
+                          config={'displayModeBar': False})
+        else:
+            st.info("No bogey data")
+
+    # Underperformance Donut
+    with donut_col3:
+        st.markdown("**Underperformance Distribution**")
+        if underperf_analysis['counts'] and len(underperf_analysis['holes']) > 0:
+            # Filter out zero counts and sort by count
+            under_data = [(rc, count) for rc, count in underperf_analysis['counts'].items() if count > 0]
+            under_data.sort(key=lambda x: x[1], reverse=True)
+
+            labels = [item[0] for item in under_data]
+            values = [item[1] for item in under_data]
+            colors = [rc_color_map.get(rc, CHARCOAL) for rc in labels]
+
+            fig_under = go.Figure(data=[go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.6,
+                marker_colors=colors,
+                textinfo='label+percent',
+                textposition='outside',
+                textfont=dict(family='Inter', size=11),
+                pull=[0.02] * len(labels),
+            )])
+
+            fig_under.update_layout(
+                **CHART_LAYOUT,
+                height=350,
+                margin=dict(t=20, b=20, l=20, r=20),
+                showlegend=False,
+                annotations=[dict(
+                    text=f"{len(underperf_analysis['holes'])}<br>Holes",
+                    x=0.5, y=0.5,
+                    font_size=16,
+                    showarrow=False,
+                    font_family='Inter',
+                    font_color=CHARCOAL
+                )]
+            )
+
+            st.plotly_chart(fig_under, use_container_width=True,
+                          config={'displayModeBar': False})
+        else:
+            st.info("No underperformance data")

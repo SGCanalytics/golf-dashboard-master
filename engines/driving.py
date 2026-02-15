@@ -174,6 +174,14 @@ def build_driving_results(filtered_df, num_rounds, hole_summary):
     penalty_count = int(non_ob_penalty_mask.sum())
     penalty_sg = df.loc[non_ob_penalty_mask, 'Strokes Gained'].sum()
 
+    # Build penalty details DataFrame (excluding OB)
+    penalty_details = pd.DataFrame()
+    if penalty_count > 0:
+        penalty_details = df[non_ob_penalty_mask][[
+            'Player', 'Date', 'Course', 'Hole',
+            'Starting Distance', 'Ending Location', 'Strokes Gained'
+        ]].copy()
+
     # --- Obstruction rate ---
     obstruction_mask = df['Ending Location'].isin(['Sand', 'Recovery'])
     obstruction_count = int(obstruction_mask.sum())
@@ -326,6 +334,7 @@ def build_driving_results(filtered_df, num_rounds, hole_summary):
         "ob_count": ob_count,
         "ob_sg": ob_sg,
         "ob_details": ob_details,
+        "penalty_details": penalty_details,
         # Obstruction
         "obstruction_count": obstruction_count,
         "obstruction_pct": obstruction_pct,

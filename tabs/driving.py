@@ -408,6 +408,24 @@ def driving_tab(drive, num_rounds, hole_summary):
             ob_df['Hole'] = ob_df['Hole'].astype(int)
             st.dataframe(ob_df, use_container_width=True, hide_index=True)
 
+    # Penalty section (excluding OB)
+    if drive['penalty_count'] > 0:
+        with st.expander(f"Penalty Shots ({drive['penalty_count']} total)"):
+            penalty = drive['penalty_details'].copy()
+
+            penalty['Date'] = pd.to_datetime(penalty['Date']).dt.strftime('%m/%d/%y')
+
+            penalty.columns = [
+                'Player', 'Date', 'Course', 'Hole',
+                'Distance', 'Result', 'SG',
+            ]
+
+            penalty['Hole'] = penalty['Hole'].astype(int)
+            penalty['Distance'] = penalty['Distance'].round(0).astype(int)
+            penalty['SG'] = penalty['SG'].round(2)
+
+            st.dataframe(penalty, use_container_width=True, hide_index=True)
+
     if drive['obstruction_count'] > 0:
         with st.expander(f"Obstruction Shots ({drive['obstruction_count']} total)"):
             obs = drive["df"][
