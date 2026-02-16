@@ -50,7 +50,7 @@ def build_approach_results(filtered_df, num_rounds):
                                      "shots": 0} for b in APPROACH_BUCKETS},
         "rough_metrics": {b: {"total_sg": 0.0, "sg_per_shot": 0.0,
                                "prox": 0.0, "green_hit_pct": 0.0,
-                               "shots": 0} for b in ROUGH_APPROACH_BUCKETS},
+                               "shots": 0} for b in ROUGH_BUCKETS},
         "best_bucket": None,
         "worst_bucket": None,
         "profile_df": pd.DataFrame(),
@@ -103,7 +103,7 @@ def build_approach_results(filtered_df, num_rounds):
 
     # --- Section 2: Rough performance by distance ---
     rough_metrics = {}
-    for rb in ROUGH_APPROACH_BUCKETS:
+    for rb in ROUGH_BUCKETS:
         if rb == "<150":
             bdf = rough_df[rough_df['Starting Distance'] < 150]
         else:
@@ -142,7 +142,7 @@ def build_approach_results(filtered_df, num_rounds):
             "Total SG": m["total_sg"],
             "Proximity": m["prox"],
         })
-    for rb in ROUGH_APPROACH_BUCKETS:
+    for rb in ROUGH_BUCKETS:
         if rb == "<150":
             bdf = rough_df[rough_df['Starting Distance'] < 150]
         else:
@@ -277,7 +277,7 @@ def approach_narrative(results):
                      f"Proximity {m.get('prox', 0):.1f} ft")
 
     rough_metrics = results.get("rough_metrics", {})
-    for b in ROUGH_APPROACH_BUCKETS:
+    for b in ROUGH_BUCKETS:
         m = rough_metrics.get(b, {})
         lines.append(f"- Rough {b}: SG/Shot {m.get('sg_per_shot', 0):.3f}, "
                      f"Proximity {m.get('prox', 0):.1f} ft")
