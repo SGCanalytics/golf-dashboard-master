@@ -85,4 +85,8 @@ def load_data():
     # Date conversion
     df['Date'] = pd.to_datetime(df['Date'])
 
+    # Normalize distance fields to numeric (do once instead of per-engine)
+    df['Starting Distance'] = pd.to_numeric(df['Starting Distance'], errors='coerce')
+    df['Ending Distance'] = pd.to_numeric(df['Ending Distance'], errors='coerce')
+
     return df
