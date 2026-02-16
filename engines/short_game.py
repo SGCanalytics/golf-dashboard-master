@@ -95,7 +95,7 @@ def _build_leave_distribution(df):
     leave_dist = (
         df.groupby('Leave Bucket')
         .size()
-        .reindex(LEAVE_SHORT_GAME_BUCKETS, fill_value=0)
+        .reindex(LEAVE_BUCKETS, fill_value=0)
         .reset_index(name='Shots')
     )
     leave_dist.columns = ['Leave Bucket', 'Shots']
