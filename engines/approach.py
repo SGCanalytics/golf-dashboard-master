@@ -1,62 +1,15 @@
 import numpy as np
 import pandas as pd
 from ui.formatters import round_label
+from engines.helpers import (
+    approach_distance_bucket, rough_distance_bucket, zone_distance_bucket,
+    APPROACH_BUCKETS, ROUGH_BUCKETS, ZONE_BUCKETS, ZONE_RANGES
+)
 
 # ============================================================
 # APPROACH ENGINE
 # ============================================================
 
-BUCKET_LABELS = ["50\u2013100", "100\u2013150", "150\u2013200", ">200"]
-ROUGH_BUCKET_LABELS = ["<150", ">150"]
-
-
-def _bucket(d):
-    """Assign approach distance bucket using en-dash labels."""
-    if 50 <= d < 100:
-        return "50\u2013100"
-    elif 100 <= d < 150:
-        return "100\u2013150"
-    elif 150 <= d < 200:
-        return "150\u2013200"
-    elif d >= 200:
-        return ">200"
-    return None
-
-
-def _rough_bucket(d):
-    """Assign rough-specific distance bucket."""
-    if d < 150:
-        return "<150"
-    return ">150"
-
-
-# Zone labels for performance analysis
-ZONE_LABELS = ["Green Zone", "Yellow Zone", "Red Zone"]
-ZONE_RANGES = {
-    "Green Zone": "75-125",
-    "Yellow Zone": "125-175",
-    "Red Zone": "175-225"
-}
-
-
-def _zone_bucket(d):
-    """
-    Assign approach distance to performance zone.
-
-    Zones:
-    - Green Zone: 75-125 yards (short approach shots)
-    - Yellow Zone: 125-175 yards (mid-range approach shots)
-    - Red Zone: 175-225 yards (long approach shots)
-
-    Shots outside these ranges (<75 or >=225) return None and are excluded.
-    """
-    if 75 <= d < 125:
-        return "Green Zone"
-    elif 125 <= d < 175:
-        return "Yellow Zone"
-    elif 175 <= d < 225:
-        return "Red Zone"
-    return None
 
 
 def _compute_bucket_metrics(bdf):
@@ -94,10 +47,10 @@ def build_approach_results(filtered_df, num_rounds):
         "poor_shot_rate": 0.0,
         "fairway_tee_metrics": {b: {"total_sg": 0.0, "sg_per_shot": 0.0,
                                      "prox": 0.0, "green_hit_pct": 0.0,
-                                     "shots": 0} for b in BUCKET_LABELS},
+                                     "shots": 0} for b in APPROACH_BUCKETS},
         "rough_metrics": {b: {"total_sg": 0.0, "sg_per_shot": 0.0,
                                "prox": 0.0, "green_hit_pct": 0.0,
-                               "shots": 0} for b in ROUGH_BUCKET_LABELS},
+                               "shots": 0} for b in ROUGH_APPROACH_BUCKETS},
         "best_bucket": None,
         "worst_bucket": None,
         "profile_df": pd.DataFrame(),
@@ -139,18 +92,18 @@ def build_approach_results(filtered_df, num_rounds):
     poor_shot_rate = (df['Strokes Gained'] <= -0.15).sum() / num_approach * 100
 
     # --- Bucket assignment ---
-    df['Bucket'] = df['Starting Distance'].apply(_bucket)
+    df['Bucket'] = df['Starting Distance'].apply(approach_distance_bucket)
 
     # --- Section 2: Fairway/Tee performance by distance ---
     ft_df = df[df['Starting Location'].isin(['Fairway', 'Tee'])]
     fairway_tee_metrics = {}
-    for b in BUCKET_LABELS:
+    for b in APPROACH_BUCKETS:
         bdf = ft_df[ft_df['Bucket'] == b]
         fairway_tee_metrics[b] = _compute_bucket_metrics(bdf)
 
     # --- Section 2: Rough performance by distance ---
     rough_metrics = {}
-    for rb in ROUGH_BUCKET_LABELS:
+    for rb in ROUGH_APPROACH_BUCKETS:
         if rb == "<150":
             bdf = rough_df[rough_df['Starting Distance'] < 150]
         else:
@@ -158,10 +111,10 @@ def build_approach_results(filtered_df, num_rounds):
         rough_metrics[rb] = _compute_bucket_metrics(bdf)
 
     # --- Zone Performance (all approach shots combined) ---
-    df['Zone'] = df['Starting Distance'].apply(_zone_bucket)
+    df['Zone'] = df['Starting Distance'].apply(zone_distance_bucket)
     zone_metrics = {}
 
-    for zone in ZONE_LABELS:
+    for zone in ZONE_BUCKETS:
         zdf = df[df['Zone'] == zone]
         zone_metrics[zone] = _compute_bucket_metrics(zdf)
 
@@ -179,7 +132,7 @@ def build_approach_results(filtered_df, num_rounds):
 
     # --- Section 3: Approach Profile (horizontal bar chart data) ---
     profile_rows = []
-    for b in BUCKET_LABELS:
+    for b in APPROACH_BUCKETS:
         bdf = ft_df[ft_df['Bucket'] == b]
         m = _compute_bucket_metrics(bdf)
         profile_rows.append({
@@ -189,7 +142,7 @@ def build_approach_results(filtered_df, num_rounds):
             "Total SG": m["total_sg"],
             "Proximity": m["prox"],
         })
-    for rb in ROUGH_BUCKET_LABELS:
+    for rb in ROUGH_APPROACH_BUCKETS:
         if rb == "<150":
             bdf = rough_df[rough_df['Starting Distance'] < 150]
         else:
@@ -221,7 +174,7 @@ def build_approach_results(filtered_df, num_rounds):
         )
         # Reindex to consistent order; missing combos stay NaN for SG, 0 for counts
         ordered_cols = [c for c in loc_order if c in heatmap_sg.columns]
-        bucket_order = [b for b in BUCKET_LABELS if b in heatmap_sg.index]
+        bucket_order = [b for b in APPROACH_BUCKETS if b in heatmap_sg.index]
         heatmap_sg = heatmap_sg.reindex(index=bucket_order, columns=ordered_cols)
         heatmap_counts = heatmap_counts.reindex(index=bucket_order, columns=ordered_cols,
                                                  fill_value=0)
@@ -318,13 +271,13 @@ def approach_narrative(results):
     lines.append(f"- Positive shot rate: {pos_rate:.0f}%, Poor shot rate: {poor_rate:.0f}%")
 
     ft_metrics = results.get("fairway_tee_metrics", {})
-    for b in BUCKET_LABELS:
+    for b in APPROACH_BUCKETS:
         m = ft_metrics.get(b, {})
         lines.append(f"- Fairway/Tee {b}: SG/Shot {m.get('sg_per_shot', 0):.3f}, "
                      f"Proximity {m.get('prox', 0):.1f} ft")
 
     rough_metrics = results.get("rough_metrics", {})
-    for b in ROUGH_BUCKET_LABELS:
+    for b in ROUGH_APPROACH_BUCKETS:
         m = rough_metrics.get(b, {})
         lines.append(f"- Rough {b}: SG/Shot {m.get('sg_per_shot', 0):.3f}, "
                      f"Proximity {m.get('prox', 0):.1f} ft")

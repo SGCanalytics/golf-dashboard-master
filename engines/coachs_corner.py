@@ -1,17 +1,12 @@
 import pandas as pd
 
 from engines.tiger5 import build_tiger5_root_cause
+from engines.helpers import safe_divide, APPROACH_BUCKETS
 
 # ============================================================
 # COACH'S CORNER ENGINE
 # ============================================================
 
-APPROACH_BUCKETS = ["50\u2013100", "100\u2013150", "150\u2013200", ">200"]
-
-
-def safe_divide(num, denom):
-    """Safe division that returns 0 if denominator is 0."""
-    return num / denom if denom > 0 else 0
 
 
 def _strengths_weaknesses(sg_summary):
@@ -21,21 +16,6 @@ def _strengths_weaknesses(sg_summary):
     strengths.sort(key=lambda x: x[1], reverse=True)
     weaknesses.sort(key=lambda x: x[1])
     return strengths, weaknesses
-
-
-# Removed: _green_yellow_red() function - Green/Yellow/Red SG section has been removed
-# def _green_yellow_red(filtered_df):
-#     """DECADE-style shot classification by SG outcome."""
-#     sg_vals = filtered_df['Strokes Gained']
-#     green_sg = sg_vals[sg_vals > 0].sum()
-#     yellow_sg = sg_vals[(sg_vals >= -0.5) & (sg_vals <= 0)].sum()
-#     red_sg = sg_vals[sg_vals < -0.5].sum()
-#
-#     return [
-#         {"light": "Green", "total_sg": green_sg},
-#         {"light": "Yellow", "total_sg": yellow_sg},
-#         {"light": "Red", "total_sg": red_sg}
-#     ]
 
 
 def _bogey_avoidance(hole_summary):
