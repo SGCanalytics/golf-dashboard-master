@@ -249,10 +249,12 @@ def coachs_corner_tab(cc):
     strengths = cc.get("strengths", [])
     if strengths:
         for idx, entry in enumerate(strengths[:3], 1):  # Top 3 strengths
+            # strengths is a list of tuples: [(category, sg_value), ...]
+            category, sg_value = entry
             strength_items.append({
-                'label': entry['headline'],
-                'metric': f"{entry['sg_per_round']:+.2f} SG/round",
-                'sg_value': entry['sg_per_round'],
+                'label': category,
+                'metric': f"{sg_value:+.2f} SG/round",
+                'sg_value': sg_value,
             })
 
     if strength_items:
