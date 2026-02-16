@@ -26,12 +26,6 @@ from ui.formatters import format_sg, format_pct
 # ---- Local card helpers -----------------------------------------------
 
 # Removed: _LIGHT_COLORS - used by removed Green/Yellow/Red SG section
-    ''', unsafe_allow_html=True)
-
-
-                    )
-
-
 # Removed: _deep_dive_card() function - Tiger 5 Root Cause Deep Dive section has been removed
 
 
