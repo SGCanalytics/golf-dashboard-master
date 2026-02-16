@@ -140,6 +140,7 @@ with st.sidebar:
 
     # Render filters
     sidebar_label("Player")
+
     players = st.multiselect(
         "Player",
         options=available_players,
@@ -148,13 +149,53 @@ with st.sidebar:
         key="player_select",
     )
 
-    if st.button("🔄 Refresh Player Options", key="refresh_players", use_container_width=True):
-        st.session_state.excluded_players.clear()
-        st.rerun()
-
+    # Premium refresh control - only shown when players are hidden
     if st.session_state.excluded_players:
+        from ui.theme import ACCENT_PRIMARY, WHITE, BORDER_LIGHT, FONT_BODY
+
         num_excluded = len(st.session_state.excluded_players)
-        st.caption(f"ℹ️ {num_excluded} player(s) hidden. Click refresh to restore.")
+
+        # Inject custom CSS for premium button styling
+        st.markdown(f"""
+            <style>
+                /* Premium refresh button styling */
+                div[data-testid="stVerticalBlock"] > div:has(button[kind="secondary"]) button {{
+                    background: {WHITE} !important;
+                    border: 1px solid {BORDER_LIGHT} !important;
+                    border-radius: 6px !important;
+                    padding: 0.45rem 0.85rem !important;
+                    font-family: {FONT_BODY} !important;
+                    font-size: 0.7rem !important;
+                    font-weight: 500 !important;
+                    color: {ACCENT_PRIMARY} !important;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+                    letter-spacing: 0.02em !important;
+                    margin: 0.4rem 0 0 0 !important;
+                }}
+                div[data-testid="stVerticalBlock"] > div:has(button[kind="secondary"]) button:hover {{
+                    background: {ACCENT_PRIMARY} !important;
+                    color: {WHITE} !important;
+                    border-color: {ACCENT_PRIMARY} !important;
+                    box-shadow: 0 2px 6px rgba(50,23,77,0.2) !important;
+                    transform: translateY(-1px) !important;
+                }}
+                div[data-testid="stVerticalBlock"] > div:has(button[kind="secondary"]) button:active {{
+                    transform: translateY(0) !important;
+                    box-shadow: 0 1px 2px rgba(50,23,77,0.15) !important;
+                }}
+            </style>
+        """, unsafe_allow_html=True)
+
+        # Render premium refresh button
+        if st.button(
+            f"↻  Restore {num_excluded} player{'s' if num_excluded != 1 else ''}",
+            key="refresh_players",
+            type="secondary",
+            use_container_width=True
+        ):
+            st.session_state.excluded_players.clear()
+            st.rerun()
 
     sidebar_label("Course")
     courses = st.multiselect(
