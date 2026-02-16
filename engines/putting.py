@@ -141,6 +141,10 @@ def _build_outcome_chart_data(putting_df):
     """
     Stacked bar (1-putt / 2-putt / 3+ %) plus SG line, grouped by
     first-putt starting distance.
+
+    Note: Outcome distribution uses first-putt distance, but SG is calculated
+    from ALL putts at each distance (putt-level, not hole-level) to match
+    the stat cards above.
     """
     if putting_df.empty:
         return pd.DataFrame()
@@ -164,14 +168,18 @@ def _build_outcome_chart_data(putting_df):
         lambda x: '1-Putt' if x == 1 else ('2-Putt' if x == 2 else '3+ Putt')
     )
 
-    # Total SG per hole (all putts on that hole)
-    hole_sg = (
-        putting_df.groupby('Hole Key')['Strokes Gained']
-        .sum()
-        .reset_index()
-        .rename(columns={'Strokes Gained': 'Hole SG'})
+    # Calculate SG using ALL putts (putt-level), not hole-level
+    # This matches the stat cards calculation method
+    all_putts = putting_df.copy()
+    all_putts['Distance Bucket'] = pd.cut(
+        all_putts['Starting Distance'],
+        bins=bins,
+        labels=labels,
+        right=False,
     )
-    first_putts = first_putts.merge(hole_sg, on='Hole Key', how='left')
+
+    # Sum SG by distance bucket for all putts
+    sg_by_bucket = all_putts.groupby('Distance Bucket', observed=False)['Strokes Gained'].sum().to_dict()
 
     # Aggregate by bucket
     rows = []
@@ -191,7 +199,7 @@ def _build_outcome_chart_data(putting_df):
             'pct_1putt': (bucket_df['Outcome'] == '1-Putt').sum() / total_holes * 100,
             'pct_2putt': (bucket_df['Outcome'] == '2-Putt').sum() / total_holes * 100,
             'pct_3plus': (bucket_df['Outcome'] == '3+ Putt').sum() / total_holes * 100,
-            'sg': bucket_df['Hole SG'].sum(),
+            'sg': sg_by_bucket.get(bucket, 0.0),  # Use putt-level SG
             'holes': total_holes,
         })
 
