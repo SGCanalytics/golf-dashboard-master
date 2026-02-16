@@ -14,17 +14,14 @@ from ui.theme import (
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card,
     sg_sentiment, pct_sentiment_above, pct_sentiment_below,
+    severity_color, bounce_back_sentiment, drop_off_sentiment,
+    gas_pedal_sentiment, bogey_train_sentiment, grit_score_sentiment,
+    bogey_rate_sentiment, conversion_pct_sentiment,
 )
 from ui.formatters import format_sg, format_pct
 
 
 # ---- Local card helpers -----------------------------------------------
-
-_SEVERITY_COLORS = {
-    "critical": NEGATIVE,      # #C53030 (muted red)
-    "significant": WARNING,    # #B7791F (muted amber)
-    "moderate": ACCENT_MUTED,  # #8FA890 (light sage)
-}
 
 # Removed: _LIGHT_COLORS - used by removed Green/Yellow/Red SG section
 
@@ -32,10 +29,10 @@ _SEVERITY_COLORS = {
 def _driver_card(rank, driver):
     """Render a single Performance Driver as a premium numbered card."""
     sev = driver.get("severity", "moderate")
-    border_color = _SEVERITY_COLORS.get(sev, ACCENT_MUTED)
+    border_color = severity_color(sev)
     sev_label = sev.capitalize()
     sg_pr = driver["sg_per_round"]
-    sg_color = NEGATIVE if sg_pr < 0 else POSITIVE
+    sg_color = POSITIVE if sg_pr > 0 else NEGATIVE
 
     st.markdown(f'''
         <div style="background:{WHITE};border-radius:{CARD_RADIUS};
@@ -290,7 +287,7 @@ def coachs_corner_tab(cc):
         ''', unsafe_allow_html=True)
 
     with col_grit:
-        grit_sent = "positive" if grit >= 80 else ("warning" if grit >= 60 else "negative")
+        grit_sent = grit_score_sentiment(grit)
         premium_hero_card("Grit Score", format_pct(grit), "Tiger 5 success rate",
                           sentiment=grit_sent)
 
@@ -323,22 +320,22 @@ def coachs_corner_tab(cc):
     colA, colB, colC, colD = st.columns(4)
 
     with colA:
-        s = pct_sentiment_above(fm["bounce_back_pct"], "pct_bounce_back")
+        s = bounce_back_sentiment(fm["bounce_back_pct"])
         premium_stat_card("Bounce Back %",
                           format_pct(fm['bounce_back_pct']),
                           "par or better after bogey+", sentiment=s)
     with colB:
-        s = "positive" if fm["drop_off_pct"] <= 25 else "negative"
+        s = drop_off_sentiment(fm["drop_off_pct"])
         premium_stat_card("Drop Off %",
                           format_pct(fm['drop_off_pct']),
                           "bogey after birdie", sentiment=s)
     with colC:
-        s = "positive" if fm["gas_pedal_pct"] >= 20 else "neutral"
+        s = gas_pedal_sentiment(fm["gas_pedal_pct"])
         premium_stat_card("Gas Pedal %",
                           format_pct(fm['gas_pedal_pct']),
                           "birdie after birdie", sentiment=s)
     with colD:
-        s = "negative" if fm["bogey_train_count"] > 0 else "positive"
+        s = bogey_train_sentiment(fm["bogey_train_count"])
         premium_stat_card("Bogey Trains",
                           str(fm['bogey_train_count']),
                           sentiment=s)
@@ -572,7 +569,7 @@ def coachs_corner_tab(cc):
     for col, (key, label) in zip(ba_cols, ba_keys):
         rate = ba[key]["bogey_rate"]
         # Updated thresholds: ≤10% green, 10-30% yellow, ≥30% red
-        s = "positive" if rate <= 10 else ("warning" if rate < 30 else "negative")
+        s = bogey_rate_sentiment(rate)
         with col:
             premium_stat_card(label, format_pct(rate), "bogey rate", sentiment=s)
 
@@ -592,7 +589,7 @@ def coachs_corner_tab(cc):
         premium_stat_card("Conversions", str(bo["conversions"]),
                           "birdie or better", sentiment="positive")
     with bo_cols[2]:
-        s = "positive" if bo["conversion_pct"] >= 30 else "negative"
+        s = conversion_pct_sentiment(bo["conversion_pct"])
         premium_stat_card("Conversion %", format_pct(bo["conversion_pct"]),
                           sentiment=s)
 

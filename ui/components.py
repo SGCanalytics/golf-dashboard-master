@@ -129,6 +129,66 @@ def pct_sentiment_below(val, threshold_key):
     return "positive" if val <= t else "negative"
 
 
+def get_sentiment_color(sentiment):
+    """Get hex color for sentiment string."""
+    return _SENTIMENT_COLORS.get(sentiment, ACCENT_PRIMARY)
+
+
+def severity_color(severity):
+    """
+    Get color for severity levels (Coach's Corner).
+    severity: "critical" | "significant" | "moderate"
+    """
+    return {
+        "critical": NEGATIVE,
+        "significant": WARNING,
+        "moderate": ACCENT_MUTED,
+    }.get(severity, ACCENT_MUTED)
+
+
+def bounce_back_sentiment(pct):
+    """Sentiment for bounce back % (higher is better)."""
+    return pct_sentiment_above(pct, "pct_bounce_back")
+
+
+def drop_off_sentiment(pct):
+    """Sentiment for drop off % (lower is better)."""
+    return "positive" if pct <= 25 else "negative"
+
+
+def gas_pedal_sentiment(pct):
+    """Sentiment for gas pedal % (higher is better)."""
+    return "positive" if pct >= 20 else "neutral"
+
+
+def bogey_train_sentiment(count):
+    """Sentiment for bogey train count (lower is better)."""
+    return "negative" if count > 0 else "positive"
+
+
+def grit_score_sentiment(score):
+    """Sentiment for Tiger 5 grit score."""
+    if score >= 80:
+        return "positive"
+    elif score >= 60:
+        return "warning"
+    return "negative"
+
+
+def bogey_rate_sentiment(rate):
+    """Sentiment for bogey avoidance rate (lower is better)."""
+    if rate <= 10:
+        return "positive"
+    elif rate < 30:
+        return "warning"
+    return "negative"
+
+
+def conversion_pct_sentiment(pct):
+    """Sentiment for birdie conversion % (higher is better)."""
+    return "positive" if pct >= 30 else "negative"
+
+
 # ---- Sidebar helpers ------------------------------------------------
 
 def sidebar_title(text):
