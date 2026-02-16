@@ -1,29 +1,11 @@
 import pandas as pd
-from engines.helpers import sg_distance_bucket
+from engines.helpers import sg_distance_bucket, leave_distance_bucket, SHORT_GAME_BUCKETS, LEAVE_BUCKETS, LIE_ORDER
 from ui.formatters import round_label
 
 # ============================================================
 # SHORT GAME ENGINE
 # ============================================================
 
-# Ordered constants used by heat map and distance-lie table
-BUCKET_ORDER = ["<10", "10–20", "20–30", "30–40", "40–50"]
-LIE_ORDER = ["Fairway", "Rough", "Sand"]
-
-LEAVE_BUCKET_ORDER = ["0–3", "4–6", "7–10", "10–20", "20+"]
-
-
-def _leave_bucket(dist):
-    """Bucket ending distance into leave-distance ranges (feet)."""
-    if dist <= 3:
-        return "0–3"
-    if dist <= 6:
-        return "4–6"
-    if dist <= 10:
-        return "7–10"
-    if dist <= 20:
-        return "10–20"
-    return "20+"
 
 
 def _build_hero_metrics(df, num_rounds):
@@ -86,8 +68,8 @@ def _build_heatmap_data(df):
     )
 
     # Enforce consistent row/column ordering; missing combos become NaN
-    sg_pivot = sg_pivot.reindex(index=LIE_ORDER, columns=BUCKET_ORDER)
-    count_pivot = count_pivot.reindex(index=LIE_ORDER, columns=BUCKET_ORDER)
+    sg_pivot = sg_pivot.reindex(index=LIE_ORDER, columns=SHORT_GAME_BUCKETS)
+    count_pivot = count_pivot.reindex(index=LIE_ORDER, columns=SHORT_GAME_BUCKETS)
 
     return sg_pivot, count_pivot
 
@@ -108,12 +90,12 @@ def _build_distance_lie_table(df):
 def _build_leave_distribution(df):
     """Count shots in each leave-distance bucket."""
     df = df.copy()
-    df['Leave Bucket'] = df['Ending Distance'].apply(_leave_bucket)
+    df['Leave Bucket'] = df['Ending Distance'].apply(leave_distance_bucket)
 
     leave_dist = (
         df.groupby('Leave Bucket')
         .size()
-        .reindex(LEAVE_BUCKET_ORDER, fill_value=0)
+        .reindex(LEAVE_SHORT_GAME_BUCKETS, fill_value=0)
         .reset_index(name='Shots')
     )
     leave_dist.columns = ['Leave Bucket', 'Shots']

@@ -1,13 +1,12 @@
 import pandas as pd
 
 from engines.tiger5 import build_tiger5_root_cause
-from engines.helpers import safe_divide
+from engines.helpers import safe_divide, APPROACH_BUCKETS
 
 # ============================================================
 # COACH'S CORNER ENGINE
 # ============================================================
 
-APPROACH_BUCKETS = ["50\u2013100", "100\u2013150", "150\u2013200", ">200"]
 
 
 def _strengths_weaknesses(sg_summary):
