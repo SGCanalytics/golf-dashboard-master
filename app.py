@@ -18,7 +18,6 @@ from engines.putting import build_putting_results
 from engines.tiger5 import build_tiger5_results
 from engines.scoring_performance import build_scoring_performance
 from engines.coachs_corner import build_coachs_corner
-from engines.coaches_table import build_coaches_table_results
 from engines.strokes_gained import BENCHMARK_FILES, apply_benchmark_sg
 
 from ui.css import inject_css
@@ -309,11 +308,6 @@ coachs_corner_results = build_coachs_corner(
     num_rounds,
 )
 
-coaches_table_results = build_coaches_table_results(
-    filtered_df,
-    hole_summary
-)
-
 # ============================================================
 # TABS
 # ============================================================
@@ -353,4 +347,4 @@ with tab_coach:
     coachs_corner_tab(coachs_corner_results)
 
 with tab_coaches_table:
-    coaches_table_tab(coaches_table_results)
+    coaches_table_tab(filtered_df, hole_summary)
