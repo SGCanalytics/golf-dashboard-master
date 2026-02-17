@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from ui.components import section_header
+from engines.coaches_table import build_coaches_table_results
 
 # ============================================================
 # COACHES TABLE TAB
@@ -8,22 +9,23 @@ from ui.components import section_header
 # ============================================================
 
 
-def coaches_table_tab(coaches_table_results):
+def coaches_table_tab(filtered_df, hole_summary):
     """
     Render coaches table with tournament filter and rank/value toggle.
 
     Args:
-        coaches_table_results: Dictionary from build_coaches_table_results()
+        filtered_df: Shot-level data (from app.py filters)
+        hole_summary: Hole-level aggregated data
     """
     section_header("Coaches Table")
 
     # Handle empty data
-    if coaches_table_results["empty"]:
+    if filtered_df.empty or hole_summary.empty:
         st.warning("No player data available for the selected filters.")
         return
 
-    players_df = coaches_table_results["players_df"].copy()
-    tournaments = coaches_table_results["tournaments"]
+    # Get list of tournaments for dropdown
+    tournaments = sorted(filtered_df['Tournament'].unique())
 
     # Tournament selector (independent of sidebar filter)
     st.markdown("### Filter by Tournament")
@@ -36,16 +38,32 @@ def coaches_table_tab(coaches_table_results):
         label_visibility="collapsed"
     )
 
-    # Filter dataframe by selected tournament
+    # Filter data by selected tournament
     if selected_tournament != "All Tournaments":
-        display_players_df = players_df[players_df['Tournament'] == selected_tournament].copy()
+        tournament_filtered_df = filtered_df[filtered_df['Tournament'] == selected_tournament].copy()
+        # Get Round IDs from the tournament-filtered data
+        tournament_rounds = tournament_filtered_df['Round ID'].unique()
+        tournament_hole_summary = hole_summary[hole_summary['Round ID'].isin(tournament_rounds)].copy()
     else:
-        display_players_df = players_df.copy()
+        tournament_filtered_df = filtered_df.copy()
+        tournament_hole_summary = hole_summary.copy()
 
     # Check if filtered result is empty
-    if display_players_df.empty:
+    if tournament_filtered_df.empty:
         st.info(f"No data available for {selected_tournament}")
         return
+
+    # Call engine with tournament-filtered data
+    coaches_table_results = build_coaches_table_results(
+        tournament_filtered_df,
+        tournament_hole_summary
+    )
+
+    if coaches_table_results["empty"]:
+        st.info(f"No data available for {selected_tournament}")
+        return
+
+    players_df = coaches_table_results["players_df"].copy()
 
     # Toggle for rank vs values
     show_rank = st.checkbox(
@@ -57,9 +75,9 @@ def coaches_table_tab(coaches_table_results):
 
     # Create display dataframe
     if show_rank:
-        final_df = _create_ranked_df(display_players_df, coaches_table_results["column_groups"])
+        final_df = _create_ranked_df(players_df, coaches_table_results["column_groups"])
     else:
-        final_df = _create_values_df(display_players_df, coaches_table_results["column_groups"])
+        final_df = _create_values_df(players_df, coaches_table_results["column_groups"])
 
     # Display metric groups legend
     st.markdown("### Metric Categories")
@@ -83,7 +101,7 @@ def _create_ranked_df(players_df, column_groups):
     Convert values to ranks within the displayed subset.
     Lower rank number = better performance.
     """
-    ranked_df = players_df[['Player', 'Tournament']].copy()
+    ranked_df = players_df[['Player']].copy()
 
     # Higher is better (rank descending: highest value gets rank 1)
     higher_better = [
@@ -103,7 +121,7 @@ def _create_ranked_df(players_df, column_groups):
             ranked_df[col] = players_df[col].rank(ascending=False, method='min').astype(int)
         elif col in lower_better:
             ranked_df[col] = players_df[col].rank(ascending=True, method='min').astype(int)
-        elif col not in ['Player', 'Tournament', 'Rounds']:
+        elif col not in ['Player', 'Rounds']:
             ranked_df[col] = players_df[col]
 
     return ranked_df

@@ -9,13 +9,13 @@ from engines.helpers import zone_distance_bucket, safe_divide
 
 def _calculate_player_metrics(player, tournament, player_df, player_holes):
     """
-    Calculate all metrics for a single player-tournament combination.
+    Calculate all metrics for a single player.
 
     Args:
         player: Player name
-        tournament: Tournament name
-        player_df: Shot-level data filtered to this player-tournament
-        player_holes: Hole-level data filtered to this player-tournament
+        tournament: Tournament name (unused, kept for compatibility)
+        player_df: Shot-level data filtered to this player
+        player_holes: Hole-level data filtered to this player
 
     Returns:
         dict with all metric values for one row
@@ -25,12 +25,11 @@ def _calculate_player_metrics(player, tournament, player_df, player_holes):
 
     if num_rounds == 0 or player_holes.empty:
         # Return zeros for all metrics if no data
-        return _empty_player_row(player, tournament)
+        return _empty_player_row(player)
 
     # Calculate all metrics
     metrics = {
         'Player': player,
-        'Tournament': tournament,
         'Rounds': num_rounds,
     }
 
@@ -71,11 +70,10 @@ def _calculate_player_metrics(player, tournament, player_df, player_holes):
     return metrics
 
 
-def _empty_player_row(player, tournament):
+def _empty_player_row(player):
     """Return a row with all metrics set to 0."""
     return {
         'Player': player,
-        'Tournament': tournament,
         'Rounds': 0,
         'Avg Score': 0.0,
         'T5 Fails/Rd': 0.0,
@@ -398,8 +396,7 @@ def build_coaches_table_results(filtered_df, hole_summary):
 
     Returns:
         {
-            "players_df": pd.DataFrame with one row per player-tournament,
-            "tournaments": list of unique tournament names (sorted),
+            "players_df": pd.DataFrame with one row per player,
             "empty": bool indicating if data is empty,
             "column_groups": dict mapping group names to column lists
         }
@@ -408,49 +405,40 @@ def build_coaches_table_results(filtered_df, hole_summary):
         return {
             "empty": True,
             "players_df": pd.DataFrame(),
-            "tournaments": [],
             "column_groups": _get_column_groups(),
         }
 
     rows = []
 
-    # Loop through each unique (player, tournament) combination
+    # Loop through each unique player (aggregating across all tournaments)
     for player in sorted(filtered_df['Player'].unique()):
-        for tournament in sorted(filtered_df[filtered_df['Player'] == player]['Tournament'].unique()):
-            # Filter to this player-tournament combination
-            player_tournament_df = filtered_df[
-                (filtered_df['Player'] == player) &
-                (filtered_df['Tournament'] == tournament)
-            ].copy()
+        # Filter to this player
+        player_df = filtered_df[filtered_df['Player'] == player].copy()
 
-            # Get the Round IDs for this player-tournament combination
-            player_tournament_rounds = player_tournament_df['Round ID'].unique()
+        # Get the Round IDs for this player
+        player_rounds = player_df['Round ID'].unique()
 
-            # Filter hole_summary by player and these Round IDs
-            player_tournament_holes = hole_summary[
-                (hole_summary['Player'] == player) &
-                (hole_summary['Round ID'].isin(player_tournament_rounds))
-            ].copy()
+        # Filter hole_summary by player and these Round IDs
+        player_holes = hole_summary[
+            (hole_summary['Player'] == player) &
+            (hole_summary['Round ID'].isin(player_rounds))
+        ].copy()
 
-            # Calculate all metrics for this player-tournament
-            metrics = _calculate_player_metrics(
-                player,
-                tournament,
-                player_tournament_df,
-                player_tournament_holes
-            )
-            rows.append(metrics)
+        # Calculate all metrics for this player
+        metrics = _calculate_player_metrics(
+            player,
+            None,  # No tournament - aggregating across all
+            player_df,
+            player_holes
+        )
+        rows.append(metrics)
 
     # Build DataFrame
     players_df = pd.DataFrame(rows)
 
-    # Get unique tournaments for dropdown
-    tournaments = sorted(filtered_df['Tournament'].unique())
-
     return {
         "empty": False,
         "players_df": players_df,
-        "tournaments": tournaments,
         "column_groups": _get_column_groups(),
     }
 
@@ -458,7 +446,7 @@ def build_coaches_table_results(filtered_df, hole_summary):
 def _get_column_groups():
     """Return the column grouping structure for the UI."""
     return {
-        "basic": ["Player", "Tournament", "Rounds", "Avg Score"],
+        "basic": ["Player", "Rounds", "Avg Score"],
         "tiger5": ["T5 Fails/Rd", "3P/Rd", "DB/Rd", "P5B/Rd", "MG/Rd", "125B/Rd"],
         "scoring": ["SF/Rd", "BB%", "DO%", "GP%", "BT"],
         "total_sg": ["SG/Rd"],
