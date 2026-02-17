@@ -423,9 +423,13 @@ def build_coaches_table_results(filtered_df, hole_summary):
                 (filtered_df['Tournament'] == tournament)
             ].copy()
 
+            # Get the Round IDs for this player-tournament combination
+            player_tournament_rounds = player_tournament_df['Round ID'].unique()
+
+            # Filter hole_summary by player and these Round IDs
             player_tournament_holes = hole_summary[
                 (hole_summary['Player'] == player) &
-                (hole_summary['Tournament'] == tournament)
+                (hole_summary['Round ID'].isin(player_tournament_rounds))
             ].copy()
 
             # Calculate all metrics for this player-tournament
