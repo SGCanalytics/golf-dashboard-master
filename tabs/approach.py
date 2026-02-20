@@ -14,7 +14,7 @@ from ui.theme import (
     FONT_BODY, FONT_DATA, FONT_HEADING,
     THRESHOLDS, UNDER, GOLD, DOUBLE,
 )
-from ui.chart_config import CHART_LAYOUT, sg_bar_color, sg_color_5
+from ui.chart_config import CHART_LAYOUT, sg_bar_color, sg_color_5, SG_HEATMAP_COLORSCALE
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card, sg_sentiment,
 )
@@ -305,36 +305,48 @@ def approach_tab(approach, num_rounds):
     heatmap_counts = approach["heatmap_counts"]
 
     if not heatmap_sg.empty:
-        annotations = []
+        count_filled = heatmap_counts.fillna(0).astype(int)
+        text_matrix = count_filled.astype(str)
+        text_matrix = text_matrix.where(count_filled > 0, "")
+        text_vals = text_matrix.values.tolist()
+
+        hover_matrix = []
         for i, row_label in enumerate(heatmap_sg.index):
+            row = []
             for j, col_label in enumerate(heatmap_sg.columns):
                 sg_val = heatmap_sg.iloc[i, j]
-                cnt_val = (int(heatmap_counts.iloc[i, j])
-                           if not heatmap_counts.empty else 0)
-                if np.isnan(sg_val):
-                    continue
-                annotations.append(dict(
-                    x=col_label, y=row_label,
-                    text=f"{sg_val:+.2f}<br><span style='font-size:10px'>"
-                         f"({cnt_val})</span>",
-                    showarrow=False,
-                    font=dict(family=FONT_BODY, size=12, color=CHARCOAL),
-                ))
+                cnt = count_filled.iloc[i, j]
+                if cnt > 0 and not np.isnan(sg_val):
+                    row.append(
+                        f"Location: {col_label}<br>Distance: {row_label}<br>"
+                        f"SG/Shot: {sg_val:+.3f}<br>Shots: {cnt}"
+                    )
+                else:
+                    row.append("")
+            hover_matrix.append(row)
 
-        fig_heat = px.imshow(
-            heatmap_sg,
-            color_continuous_scale='RdYlGn',
-            aspect='auto',
-            labels=dict(x='Starting Location', y='Distance Bucket',
-                        color='SG/Shot'),
-        )
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=heatmap_sg.values,
+            x=heatmap_sg.columns.tolist(),
+            y=heatmap_sg.index.tolist(),
+            text=text_vals,
+            texttemplate="%{text}",
+            textfont=dict(size=14, color=WHITE),
+            colorscale=SG_HEATMAP_COLORSCALE,
+            zmid=0,
+            colorbar=dict(title="SG/Shot"),
+            hovertext=hover_matrix,
+            hovertemplate="%{hovertext}<extra></extra>",
+        ))
         fig_heat.update_layout(
             **CHART_LAYOUT,
-            annotations=annotations,
+            xaxis_title="Starting Location",
+            yaxis_title="Distance Bucket",
             height=400,
+            margin=dict(t=40, b=60, l=100, r=40),
         )
-        fig_heat.update_traces(showscale=True)
-        st.plotly_chart(fig_heat, use_container_width=True)
+        st.plotly_chart(fig_heat, use_container_width=True,
+                        config={'displayModeBar': False})
 
     # ----------------------------------------------------------------
     # SECTION 6: OUTCOME DISTRIBUTION
