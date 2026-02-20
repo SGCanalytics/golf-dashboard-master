@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, POSITIVE, NEGATIVE, ACCENT_PRIMARY, ACCENT_SECONDARY,
     WARNING, CHART_PUTTING, CHART_PALETTE, DONUT_SEQUENCE, CHART_SHORT_GAME,
-    FONT_BODY, FONT_HEADING, WHITE,
+    FONT_DATA, FONT_HEADING, WHITE, BOGEY,
 )
 from ui.chart_config import CHART_LAYOUT, sg_bar_color
 from ui.components import (
@@ -43,13 +43,13 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
         <div style="background:linear-gradient(135deg,{CHARCOAL} 0%,{CHARCOAL_LIGHT} 100%);
              border-radius:12px;padding:2rem 1.5rem;text-align:center;
              border:none;margin-bottom:1.5rem;">
-            <div style="font-family:{FONT_BODY};font-size:0.8rem;font-weight:600;
+            <div style="font-family:{FONT_DATA};font-size:0.8rem;font-weight:600;
                  color:rgba(255,255,255,0.9);text-transform:uppercase;
                  letter-spacing:0.08em;margin-bottom:0.75rem;">Total Scoring Fails</div>
             <div style="font-family:{FONT_HEADING};font-size:3.5rem;
                  font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.5rem;">
                 {total_fails}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.75rem;
+            <div style="font-family:{FONT_DATA};font-size:0.75rem;
                  color:rgba(255,255,255,0.8);">
                 Total SG Impact: {format_sg(total_sg_sum)}</div>
         </div>
@@ -67,15 +67,15 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
             <div style="background:linear-gradient(135deg,{NEGATIVE} 0%,{NEGATIVE}dd 100%);
                  border-radius:12px;padding:1.5rem 1rem;text-align:center;
                  border:none;margin-bottom:1rem;">
-                <div style="font-family:{FONT_BODY};font-size:0.75rem;font-weight:600;
+                <div style="font-family:{FONT_DATA};font-size:0.75rem;font-weight:600;
                      color:rgba(255,255,255,0.9);text-transform:uppercase;
                      letter-spacing:0.08em;margin-bottom:0.5rem;">Double Bogey+</div>
                 <div style="font-family:{FONT_HEADING};font-size:2.75rem;
                      font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.25rem;">
                     {db_count}</div>
-                <div style="font-family:{FONT_BODY};font-size:0.65rem;
+                <div style="font-family:{FONT_DATA};font-size:0.65rem;
                      color:rgba(255,255,255,0.7);">{db_pct:.0f}% of fails</div>
-                <div style="font-family:{FONT_BODY};font-size:0.65rem;
+                <div style="font-family:{FONT_DATA};font-size:0.65rem;
                      color:rgba(255,255,255,0.8);margin-top:0.5rem;">
                     SG Impact: {format_sg(db_sg)}</div>
             </div>
@@ -87,18 +87,18 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
         bog_pct = (bog_count / total_fails * 100) if total_fails > 0 else 0
 
         st.markdown(f'''
-            <div style="background:linear-gradient(135deg,{WARNING} 0%,{WARNING}dd 100%);
+            <div style="background:linear-gradient(135deg,{BOGEY} 0%,{BOGEY}dd 100%);
                  border-radius:12px;padding:1.5rem 1rem;text-align:center;
                  border:none;margin-bottom:1rem;">
-                <div style="font-family:{FONT_BODY};font-size:0.75rem;font-weight:600;
+                <div style="font-family:{FONT_DATA};font-size:0.75rem;font-weight:600;
                      color:rgba(255,255,255,0.9);text-transform:uppercase;
                      letter-spacing:0.08em;margin-bottom:0.5rem;">Bogey</div>
                 <div style="font-family:{FONT_HEADING};font-size:2.75rem;
                      font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.25rem;">
                     {bog_count}</div>
-                <div style="font-family:{FONT_BODY};font-size:0.65rem;
+                <div style="font-family:{FONT_DATA};font-size:0.65rem;
                      color:rgba(255,255,255,0.7);">{bog_pct:.0f}% of fails</div>
-                <div style="font-family:{FONT_BODY};font-size:0.65rem;
+                <div style="font-family:{FONT_DATA};font-size:0.65rem;
                      color:rgba(255,255,255,0.8);margin-top:0.5rem;">
                     SG Impact: {format_sg(bog_sg)}</div>
             </div>
@@ -110,18 +110,18 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
         under_pct = (under_count / total_fails * 100) if total_fails > 0 else 0
 
         st.markdown(f'''
-            <div style="background:linear-gradient(135deg,{ACCENT_SECONDARY} 0%,{ACCENT_SECONDARY}dd 100%);
+            <div style="background:linear-gradient(135deg,{ACCENT_PRIMARY} 0%,{ACCENT_PRIMARY}dd 100%);
                  border-radius:12px;padding:1.5rem 1rem;text-align:center;
                  border:none;margin-bottom:1rem;">
-                <div style="font-family:{FONT_BODY};font-size:0.75rem;font-weight:600;
+                <div style="font-family:{FONT_DATA};font-size:0.75rem;font-weight:600;
                      color:rgba(255,255,255,0.9);text-transform:uppercase;
                      letter-spacing:0.08em;margin-bottom:0.5rem;">Underperformance</div>
                 <div style="font-family:{FONT_HEADING};font-size:2.75rem;
                      font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.25rem;">
                     {under_count}</div>
-                <div style="font-family:{FONT_BODY};font-size:0.65rem;
+                <div style="font-family:{FONT_DATA};font-size:0.65rem;
                      color:rgba(255,255,255,0.7);">{under_pct:.0f}% of fails</div>
-                <div style="font-family:{FONT_BODY};font-size:0.65rem;
+                <div style="font-family:{FONT_DATA};font-size:0.65rem;
                      color:rgba(255,255,255,0.8);margin-top:0.5rem;">
                     SG Impact: {format_sg(under_sg)}</div>
             </div>
@@ -174,16 +174,16 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                         <div style="background:linear-gradient(135deg,{color} 0%,{color}dd 100%);
                              border-radius:12px;padding:1.25rem 1rem;text-align:center;
                              border:none;margin-bottom:1rem;">
-                            <div style="font-family:{FONT_BODY};font-size:0.7rem;font-weight:600;
+                            <div style="font-family:{FONT_DATA};font-size:0.7rem;font-weight:600;
                                  color:rgba(255,255,255,0.9);text-transform:uppercase;
                                  letter-spacing:0.08em;margin-bottom:0.5rem;">{rc_name}</div>
                             <div style="font-family:{FONT_HEADING};font-size:2.25rem;
                                  font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.25rem;">
                                 {count}</div>
-                            <div style="font-family:{FONT_BODY};font-size:0.65rem;
+                            <div style="font-family:{FONT_DATA};font-size:0.65rem;
                                  color:rgba(255,255,255,0.7);text-transform:uppercase;
                                  letter-spacing:0.05em;">{pct:.0f}% of fails</div>
-                            <div style="font-family:{FONT_BODY};font-size:0.65rem;
+                            <div style="font-family:{FONT_DATA};font-size:0.65rem;
                                  color:rgba(255,255,255,0.8);margin-top:0.5rem;">
                                 SG: {format_sg(sg_sum)}</div>
                         </div>
@@ -423,7 +423,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                 marker_colors=colors,
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family=FONT_BODY, size=11),
+                textfont=dict(family=FONT_DATA, size=11),
                 pull=[0.02] * len(labels),
             )])
 
@@ -437,7 +437,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                     x=0.5, y=0.5,
                     font_size=16,
                     showarrow=False,
-                    font_family=FONT_BODY,
+                    font_family=FONT_HEADING,
                     font_color=CHARCOAL
                 )]
             )
@@ -466,7 +466,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                 marker_colors=colors,
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family=FONT_BODY, size=11),
+                textfont=dict(family=FONT_DATA, size=11),
                 pull=[0.02] * len(labels),
             )])
 
@@ -480,7 +480,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                     x=0.5, y=0.5,
                     font_size=16,
                     showarrow=False,
-                    font_family=FONT_BODY,
+                    font_family=FONT_HEADING,
                     font_color=CHARCOAL
                 )]
             )
@@ -509,7 +509,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                 marker_colors=colors,
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family=FONT_BODY, size=11),
+                textfont=dict(family=FONT_DATA, size=11),
                 pull=[0.02] * len(labels),
             )])
 
@@ -523,7 +523,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                     x=0.5, y=0.5,
                     font_size=16,
                     showarrow=False,
-                    font_family=FONT_BODY,
+                    font_family=FONT_HEADING,
                     font_color=CHARCOAL
                 )]
             )
