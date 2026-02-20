@@ -57,8 +57,8 @@ def putting_tab(putting, num_rounds):
         )
 
     with col4:
-        # Lag miss % — lower is better; card is positive when inverted val >= 80
-        s = sg_sentiment(100 - hero["lag_miss_pct"], threshold=80)
+        # Lag miss % — lower is better; card is positive when inverted val >= 90
+        s = sg_sentiment(100 - hero["lag_miss_pct"], threshold=90)
         premium_hero_card(
             "Poor Lag %", format_pct(hero["lag_miss_pct"]),
             "First putts \u226520 ft leaving >5 ft",
@@ -248,7 +248,7 @@ def putting_tab(putting, num_rounds):
         )
 
     with colC:
-        s = sg_sentiment(100 - lag["pct_over_5"], threshold=80)
+        s = sg_sentiment(100 - lag["pct_over_5"], threshold=90)
         premium_hero_card(
             "Leaves Over 5 ft", format_pct(lag["pct_over_5"]),
             "Putts \u226520 ft", sentiment=s,
