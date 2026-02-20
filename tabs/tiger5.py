@@ -25,6 +25,11 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
     tiger5_names = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
                     'Missed Green', '125yd Bogey']
 
+    # Display-only name overrides (internal dict keys stay unchanged)
+    T5_DISPLAY_NAMES = {
+        'Missed Green': 'Missed Green (Short Game)',
+    }
+
     # ----------------------------------------------------------------
     # HERO CARD — TOTAL TIGER 5 FAILS
     # ----------------------------------------------------------------
@@ -38,10 +43,18 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
     else:
         sentiment = "negative"  # Red
 
+    # Most common fail type for context
+    most_common_fail = max(tiger5_names, key=lambda n: tiger5_results[n]['fails'])
+    most_common_display = T5_DISPLAY_NAMES.get(most_common_fail, most_common_fail)
+    most_common_count = tiger5_results[most_common_fail]['fails']
+
     premium_hero_card(
         "Total Tiger 5 Fails",
         str(total_tiger5_fails),
-        f"{fails_per_round:.2f} per round",
+        (
+            f"{fails_per_round:.1f} per round · {num_rounds} rounds  |  "
+            f"Most common: {most_common_display} ({most_common_count})"
+        ),
         sentiment=sentiment,
     )
 
@@ -52,9 +65,15 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-    for col, stat_name in zip([col1, col2, col3, col4, col5], tiger5_names):
+    # Sort categories by fail count descending so the worst shows first
+    sorted_tiger5_names = sorted(
+        tiger5_names,
+        key=lambda n: tiger5_results[n]['fails'],
+        reverse=True,
+    )
+
+    for col, stat_name in zip([col1, col2, col3, col4, col5], sorted_tiger5_names):
         fails = int(tiger5_results[stat_name]['fails'])
-        attempts = int(tiger5_results[stat_name]['attempts'])
 
         # Calculate fails per round and determine sentiment
         fails_per_round = fails / num_rounds if num_rounds > 0 else 0
@@ -68,7 +87,7 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
 
         with col:
             premium_hero_card(
-                stat_name,
+                T5_DISPLAY_NAMES.get(stat_name, stat_name),
                 str(fails),
                 f"{fails_per_round:.2f} per round",
                 sentiment=sentiment
@@ -92,17 +111,21 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
             t5_df['Date'].dt.strftime('%m/%d/%y') + ' ' + t5_df['Course']
         )
 
-        fail_types = ['3 Putts', 'Double Bogey', 'Par 5 Bogey',
-                      'Missed Green', '125yd Bogey']
-        t5_colors = [CHART_PUTTING, NEGATIVE, ACCENT_PRIMARY,
-                     CHART_SHORT_GAME, CHARCOAL]
+        # (col_name, display_label, color) — col_name matches by_round columns
+        fail_type_defs = [
+            ('3 Putts',      '3 Putts',                    CHART_PUTTING),
+            ('Double Bogey', 'Double Bogey',               NEGATIVE),
+            ('Par 5 Bogey',  'Par 5 Bogey',                ACCENT_PRIMARY),
+            ('Missed Green', 'Missed Green (Short Game)',   CHART_SHORT_GAME),
+            ('125yd Bogey',  '125yd Bogey',                CHARCOAL),
+        ]
 
         fig_t5 = go.Figure()
-        for fail_type, color in zip(fail_types, t5_colors):
+        for col_name, display_label, color in fail_type_defs:
             fig_t5.add_trace(go.Bar(
                 x=t5_df['Chart Label'],
-                y=t5_df[fail_type],
-                name=fail_type,
+                y=t5_df[col_name],
+                name=display_label,
                 marker_color=color,
             ))
 
@@ -135,10 +158,15 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
 
     rc_cols = st.columns(5)
     rc_types = ['Driving', 'Approach', 'Short Game', 'Short Putts', 'Lag Putts']
-    rc_palette = [ACCENT_PRIMARY, CHARCOAL, POSITIVE, CHART_PUTTING,
-                  ACCENT_SECONDARY]
 
-    for col, stype, color in zip(rc_cols, rc_types, rc_palette):
+    # Sort root cause types by count descending so the biggest driver shows first
+    sorted_rc_types = sorted(
+        rc_types,
+        key=lambda t: shot_type_counts.get(t, 0),
+        reverse=True,
+    )
+
+    for col, stype in zip(rc_cols, sorted_rc_types):
         count = shot_type_counts.get(stype, 0)
         pct = (count / total_tiger5_fails * 100) if total_tiger5_fails > 0 else 0
         with col:
@@ -150,7 +178,7 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
             items = detail_by_type.get(stat_name, [])
             if not items:
                 continue
-            st.markdown(f"#### {stat_name}")
+            st.markdown(f"#### {T5_DISPLAY_NAMES.get(stat_name, stat_name)}")
             if stat_name == '3 Putts':
                 lag = sum(1 for i in items if i['cause'] == 'Poor Lag Putt')
                 short = sum(1 for i in items if i['cause'] == 'Missed Short Putt')
@@ -192,7 +220,7 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
             holes = fail_shots.get(stat_name, [])
             if holes:
                 any_fails = True
-                st.markdown(f"#### {stat_name}")
+                st.markdown(f"#### {T5_DISPLAY_NAMES.get(stat_name, stat_name)}")
                 for hole_data in holes:
                     st.markdown(
                         f"**{hole_data['date']} &mdash; "
