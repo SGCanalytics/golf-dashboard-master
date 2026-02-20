@@ -385,6 +385,61 @@ def player_path_category_card(entry, is_strength):
                     )
 
 
+# ---- PlayerPath Root Cause Card (Coach's Corner) -------------------
+
+def player_path_root_cause_card(rc):
+    """Render a single PlayerPath root cause card, consistent with the page design system."""
+    border_color = severity_color(rc['severity'])
+    sg_color = POSITIVE if rc['sg_per_round'] >= 0 else NEGATIVE
+
+    # Card header — matches performance_driver_card() layout
+    st.markdown(f'''
+        <div style="background:{WHITE};border-radius:{CARD_RADIUS};
+             padding:{CARD_PADDING};margin-bottom:0.75rem;
+             border:1px solid {BORDER_LIGHT};border-left:5px solid {border_color};
+             box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+            <div style="display:flex;justify-content:space-between;
+                 align-items:baseline;margin-bottom:0.5rem;">
+                <div>
+                    <span style="font-family:{FONT_HEADING};font-size:1rem;
+                          font-weight:700;color:{CHARCOAL};">
+                        {rc['headline']}</span>
+                    <span style="font-family:{FONT_BODY};font-size:0.65rem;
+                          color:{border_color};margin-left:0.75rem;
+                          text-transform:uppercase;letter-spacing:0.05em;">
+                        {rc['severity']}</span>
+                </div>
+                <div style="text-align:right;">
+                    <span style="font-family:{FONT_HEADING};font-size:1.3rem;
+                          font-weight:700;color:{sg_color};">
+                        {rc['sg_per_round']:+.2f}</span>
+                    <span style="font-family:{FONT_BODY};font-size:0.6rem;
+                          color:{SLATE};margin-left:0.2rem;">SG/rd</span>
+                </div>
+            </div>
+        </div>
+    ''', unsafe_allow_html=True)
+
+    # Metrics row — 3 compact_stat_cards in columns (matches rest of page)
+    m1, m2, m3 = st.columns(3)
+    with m1:
+        compact_stat_card("Tiger 5 Fails", str(rc.get('t5_fails', 0)), sentiment="negative")
+    with m2:
+        compact_stat_card("Scoring Issues", str(rc.get('sp_issues', 0)), sentiment="warning")
+    with m3:
+        compact_stat_card("Total Issues", str(rc.get('total_issues', 0)), sentiment="neutral")
+
+    # Details in expander — matches player_path_category_card() pattern
+    if rc.get('details'):
+        with st.expander(f"View {rc['headline']} Details"):
+            for detail in rc['details']:
+                st.markdown(
+                    f'<p style="font-family:{FONT_BODY};font-size:0.78rem;'
+                    f'color:{CHARCOAL_LIGHT};margin-bottom:0.3rem;">• {detail}</p>',
+                    unsafe_allow_html=True,
+                )
+
+
 # ---- Sidebar helpers ------------------------------------------------
 
 def sidebar_title(text):
