@@ -143,8 +143,10 @@ def putting_tab(putting, num_rounds):
                          font-weight:700;color:{sg_color};
                          line-height:1;">{sg_str}</div>
                     <div style="font-family:Inter,sans-serif;font-size:0.7rem;
-                         color:{SLATE};margin-top:0.3rem;">
-                         {attempts} putts &middot; Make: {make_pct_str}</div>
+                         color:{SLATE};margin-top:0.5rem;line-height:1.9;">
+                        <div>{attempts} putts</div>
+                        <div>Make: {make_pct_str}</div>
+                    </div>
                 </div>
             ''', unsafe_allow_html=True)
 
