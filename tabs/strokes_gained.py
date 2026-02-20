@@ -10,10 +10,10 @@ from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, SLATE, WHITE, WARM_GRAY,
     ACCENT_PRIMARY, ACCENT_SECONDARY,
     POSITIVE, NEGATIVE, CHART_PUTTING, CHART_SHORT_GAME,
-    FONT_HEADING, FONT_BODY, CARD_RADIUS, CARD_PADDING, OUTCOME_COLORS,
+    FONT_HEADING, FONT_BODY, FONT_DATA, CARD_RADIUS, CARD_PADDING, OUTCOME_COLORS,
     BORDER_LIGHT,
 )
-from ui.chart_config import CHART_LAYOUT, sg_cell_style
+from ui.chart_config import CHART_LAYOUT, sg_cell_style, sg_color_5
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card, sg_sentiment,
 )
@@ -100,7 +100,7 @@ def strokes_gained_tab(
             elif key == worst_key:
                 border_style = f"border:2px solid {NEGATIVE};"
 
-            sent_color = POSITIVE if val >= 0 else NEGATIVE
+            sent_color = sg_color_5(val)
 
             with col:
                 st.markdown(f'''
@@ -108,12 +108,12 @@ def strokes_gained_tab(
                          padding:{CARD_PADDING};text-align:center;
                          box-shadow:0 1px 4px rgba(0,0,0,0.04);
                          border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                        <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
+                        <div style="font-family:{FONT_DATA};font-size:0.65rem;font-weight:400;
                              color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
                              margin-bottom:0.5rem;">{label}</div>
                         <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
                              color:{sent_color};line-height:1;">{format_sg(val)}</div>
-                        <div style="font-family:{FONT_BODY};font-size:0.65rem;color:{SLATE};
+                        <div style="font-family:{FONT_DATA};font-size:0.65rem;color:{SLATE};
                              margin-top:0.3rem;">{format_sg(pr)} per round</div>
                     </div>
                 ''', unsafe_allow_html=True)
@@ -126,7 +126,7 @@ def strokes_gained_tab(
             elif key == worst_key:
                 border_style = f"border:2px solid {NEGATIVE};"
 
-            sent_color = POSITIVE if val >= 0 else NEGATIVE
+            sent_color = sg_color_5(val)
 
             with col:
                 st.markdown(f'''
@@ -134,12 +134,12 @@ def strokes_gained_tab(
                          padding:{CARD_PADDING};text-align:center;
                          box-shadow:0 1px 4px rgba(0,0,0,0.04);
                          border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                        <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
+                        <div style="font-family:{FONT_DATA};font-size:0.65rem;font-weight:400;
                              color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
                              margin-bottom:0.5rem;">{label}</div>
                         <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
                              color:{sent_color};line-height:1;">{format_sg(val)}</div>
-                        <div style="font-family:{FONT_BODY};font-size:0.65rem;color:{SLATE};
+                        <div style="font-family:{FONT_DATA};font-size:0.65rem;color:{SLATE};
                              margin-top:0.3rem;">{format_sg(pr)} per round</div>
                     </div>
                 ''', unsafe_allow_html=True)
@@ -165,10 +165,10 @@ def strokes_gained_tab(
 
         html = '<div style="overflow-x:auto;">'
         html += (
-            '<table style="width:100%;border-collapse:separate;'
-            'border-spacing:0;font-family:Inter,sans-serif;'
+            f'<table style="width:100%;border-collapse:separate;'
+            f'border-spacing:0;font-family:{FONT_BODY};'
             f'background:{WHITE};border-radius:12px;overflow:hidden;'
-            'box-shadow:0 4px 16px rgba(0,0,0,0.08);table-layout:fixed;">'
+            f'box-shadow:0 4px 16px rgba(0,0,0,0.08);table-layout:fixed;">'
         )
 
         label_w = '90px'
@@ -357,7 +357,7 @@ def strokes_gained_tab(
                                for s in chart_data['Score']],
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family='Inter', size=12),
+                textfont=dict(family=FONT_BODY, size=12),
                 pull=[0.02] * len(chart_data),
                 domain=dict(x=[0.1, 0.9], y=[0.05, 0.95]),
             )])
@@ -370,7 +370,7 @@ def strokes_gained_tab(
                 annotations=[dict(
                     text=f'<b>{total_holes}</b><br>Holes',
                     x=0.5, y=0.5,
-                    font=dict(family='Playfair Display', size=22,
+                    font=dict(family=FONT_HEADING, size=22,
                               color=CHARCOAL),
                     showarrow=False,
                 )],
@@ -386,7 +386,7 @@ def strokes_gained_tab(
             overall_sg = hole_summary['total_sg'].sum()
             overall_sg_hole = hole_summary['total_sg'].mean()
 
-            sg_color = POSITIVE if overall_sg >= 0 else NEGATIVE
+            sg_color = sg_color_5(overall_sg)
             st.markdown(f'''
                 <div style="background:{WHITE};border-radius:12px;
                      padding:1rem 1.25rem;
@@ -424,7 +424,7 @@ def strokes_gained_tab(
                 t_sg = row['Total SG']
                 sg_h = row['SG / Hole']
                 holes_n = int(row['Holes Played'])
-                sg_color_p = POSITIVE if t_sg >= 0 else NEGATIVE
+                sg_color_p = sg_color_5(t_sg)
                 vs_par = sc_avg - par_val
 
                 st.markdown(f'''

@@ -11,9 +11,10 @@ import plotly.graph_objects as go
 from ui.theme import (
     CHARCOAL, SLATE, WHITE, ACCENT_PRIMARY, ACCENT_SECONDARY,
     POSITIVE, NEGATIVE, BORDER_LIGHT,
-    THRESHOLDS,
+    FONT_BODY, FONT_DATA, FONT_HEADING,
+    THRESHOLDS, UNDER, GOLD, DOUBLE,
 )
-from ui.chart_config import CHART_LAYOUT, sg_bar_color
+from ui.chart_config import CHART_LAYOUT, sg_bar_color, sg_color_5, SG_HEATMAP_COLORSCALE
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card, sg_sentiment,
 )
@@ -67,7 +68,7 @@ def approach_tab(approach, num_rounds):
 
     # Row 1: Fairway / Tee
     st.markdown(
-        f'<p style="font-family:{st.__name__ and "Inter"},sans-serif;'
+        f'<p style="font-family:{FONT_BODY};'
         f'font-size:0.85rem;font-weight:600;color:{ACCENT_SECONDARY};'
         f'text-transform:uppercase;letter-spacing:0.08em;'
         f'margin-bottom:0.5rem;">From Fairway / Tee</p>',
@@ -95,14 +96,14 @@ def approach_tab(approach, num_rounds):
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
                      border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          font-weight:600;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {bucket} Yards</div>
-                    <div style="font-family:Playfair Display,serif;font-size:2rem;
-                         font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
+                    <div style="font-family:{FONT_HEADING};font-size:2rem;
+                         font-weight:700;color:{sg_color_5(m['total_sg'])};
                          line-height:1;">{m['total_sg']:+.2f}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.5rem;line-height:1.9;">
                         <div>{m['shots']} shots</div>
                         <div>Prox: {m['prox']:.1f} ft</div>
@@ -113,7 +114,7 @@ def approach_tab(approach, num_rounds):
 
     # Row 2: Rough
     st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.85rem;'
+        f'<p style="font-family:{FONT_BODY};font-size:0.85rem;'
         f'font-weight:600;color:{ACCENT_SECONDARY};text-transform:uppercase;'
         f'letter-spacing:0.08em;margin-top:1rem;margin-bottom:0.5rem;">'
         f'From Rough</p>',
@@ -140,14 +141,14 @@ def approach_tab(approach, num_rounds):
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
                      border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          font-weight:600;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {rb} Yards</div>
-                    <div style="font-family:Playfair Display,serif;font-size:2rem;
-                         font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
+                    <div style="font-family:{FONT_HEADING};font-size:2rem;
+                         font-weight:700;color:{sg_color_5(m['total_sg'])};
                          line-height:1;">{m['total_sg']:+.2f}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.5rem;line-height:1.9;">
                         <div>{m['shots']} shots</div>
                         <div>Prox: {m['prox']:.1f} ft</div>
@@ -158,7 +159,7 @@ def approach_tab(approach, num_rounds):
 
     # Best / worst legend
     st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:{SLATE};'
+        f'<p style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};'
         f'margin-top:0.5rem;">'
         f'<span style="color:{POSITIVE};">\u25aa</span> Best Total SG &nbsp;&nbsp;'
         f'<span style="color:{NEGATIVE};">\u25aa</span> Worst Total SG</p>',
@@ -180,9 +181,9 @@ def approach_tab(approach, num_rounds):
 
     # Zone display configuration (emoji and color for zone names)
     ZONE_CONFIG = {
-        "Green Zone": {"emoji": "🟢", "color": "#2D6A4F"},
-        "Yellow Zone": {"emoji": "🟡", "color": "#D97706"},
-        "Red Zone": {"emoji": "🔴", "color": "#C53030"},
+        "Green Zone":  {"emoji": "🟢", "color": UNDER},
+        "Yellow Zone": {"emoji": "🟡", "color": GOLD},
+        "Red Zone":    {"emoji": "🔴", "color": DOUBLE},
     }
 
     zone_cols = st.columns(3)
@@ -206,18 +207,18 @@ def approach_tab(approach, num_rounds):
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
                      border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                    <div style="font-family:Inter,sans-serif;font-size:0.85rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.85rem;
                          font-weight:700;color:{config['color']};
                          margin-bottom:0.25rem;">
                          {config['emoji']} {zone}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.65rem;
-                         font-weight:600;color:{SLATE};text-transform:uppercase;
+                    <div style="font-family:{FONT_DATA};font-size:0.65rem;
+                         font-weight:400;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {zone_range} Yards</div>
-                    <div style="font-family:Playfair Display,serif;font-size:2rem;
-                         font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
+                    <div style="font-family:{FONT_HEADING};font-size:2rem;
+                         font-weight:700;color:{sg_color_5(m['total_sg'])};
                          line-height:1;">{m['total_sg']:+.2f}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.3rem;">
                          {m['shots']} shots &middot; Prox: {(m['prox'] if m['shots'] > 0 else 0):.1f} ft
                          &middot; GIR: {(m['green_hit_pct'] if m['shots'] > 0 else 0):.0f}%</div>
@@ -226,7 +227,7 @@ def approach_tab(approach, num_rounds):
 
     # Best / worst legend
     st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:{SLATE};'
+        f'<p style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};'
         f'margin-top:0.5rem;">'
         f'<span style="color:{POSITIVE};">\u25aa</span> Best Zone &nbsp;&nbsp;'
         f'<span style="color:{NEGATIVE};">\u25aa</span> Worst Zone</p>',
@@ -259,7 +260,7 @@ def approach_tab(approach, num_rounds):
                               for g in profile_df['Group']],
                 text=profile_df['Green Hit %'].apply(lambda v: f"{v:.0f}%"),
                 textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+                textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
             ))
             fig_gir.update_layout(
                 **CHART_LAYOUT,
@@ -282,7 +283,7 @@ def approach_tab(approach, num_rounds):
                               for g in profile_df['Group']],
                 text=profile_df['Proximity'].apply(lambda v: f"{v:.1f} ft"),
                 textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+                textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
             ))
             fig_prox.update_layout(
                 **CHART_LAYOUT,
@@ -304,36 +305,48 @@ def approach_tab(approach, num_rounds):
     heatmap_counts = approach["heatmap_counts"]
 
     if not heatmap_sg.empty:
-        annotations = []
+        count_filled = heatmap_counts.fillna(0).astype(int)
+        text_matrix = count_filled.astype(str)
+        text_matrix = text_matrix.where(count_filled > 0, "")
+        text_vals = text_matrix.values.tolist()
+
+        hover_matrix = []
         for i, row_label in enumerate(heatmap_sg.index):
+            row = []
             for j, col_label in enumerate(heatmap_sg.columns):
                 sg_val = heatmap_sg.iloc[i, j]
-                cnt_val = (int(heatmap_counts.iloc[i, j])
-                           if not heatmap_counts.empty else 0)
-                if np.isnan(sg_val):
-                    continue
-                annotations.append(dict(
-                    x=col_label, y=row_label,
-                    text=f"{sg_val:+.2f}<br><span style='font-size:10px'>"
-                         f"({cnt_val})</span>",
-                    showarrow=False,
-                    font=dict(family='Inter', size=12, color=CHARCOAL),
-                ))
+                cnt = count_filled.iloc[i, j]
+                if cnt > 0 and not np.isnan(sg_val):
+                    row.append(
+                        f"Location: {col_label}<br>Distance: {row_label}<br>"
+                        f"SG/Shot: {sg_val:+.3f}<br>Shots: {cnt}"
+                    )
+                else:
+                    row.append("")
+            hover_matrix.append(row)
 
-        fig_heat = px.imshow(
-            heatmap_sg,
-            color_continuous_scale='RdYlGn',
-            aspect='auto',
-            labels=dict(x='Starting Location', y='Distance Bucket',
-                        color='SG/Shot'),
-        )
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=heatmap_sg.values,
+            x=heatmap_sg.columns.tolist(),
+            y=heatmap_sg.index.tolist(),
+            text=text_vals,
+            texttemplate="%{text}",
+            textfont=dict(size=14, color=WHITE),
+            colorscale=SG_HEATMAP_COLORSCALE,
+            zmid=0,
+            colorbar=dict(title="SG/Shot"),
+            hovertext=hover_matrix,
+            hovertemplate="%{hovertext}<extra></extra>",
+        ))
         fig_heat.update_layout(
             **CHART_LAYOUT,
-            annotations=annotations,
+            xaxis_title="Starting Location",
+            yaxis_title="Distance Bucket",
             height=400,
+            margin=dict(t=40, b=60, l=100, r=40),
         )
-        fig_heat.update_traces(showscale=True)
-        st.plotly_chart(fig_heat, use_container_width=True)
+        st.plotly_chart(fig_heat, use_container_width=True,
+                        config={'displayModeBar': False})
 
     # ----------------------------------------------------------------
     # SECTION 6: OUTCOME DISTRIBUTION
@@ -352,7 +365,7 @@ def approach_tab(approach, num_rounds):
                 marker_color=ACCENT_PRIMARY,
                 text=outcome_df['Pct'].apply(lambda v: f"{v:.1f}%"),
                 textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+                textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
             ))
             fig_pct.update_layout(
                 **CHART_LAYOUT,
@@ -373,7 +386,7 @@ def approach_tab(approach, num_rounds):
                 marker_color=bar_colors,
                 text=outcome_df['Total SG'].apply(lambda v: f"{v:+.2f}"),
                 textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+                textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
             ))
             fig_out_sg.update_layout(
                 **CHART_LAYOUT,

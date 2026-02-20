@@ -6,11 +6,12 @@
 # ============================================================
 
 import streamlit as st
+from ui.chart_config import sg_color_5
 from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, SLATE, WHITE, BORDER_LIGHT,
     ACCENT_PRIMARY, ACCENT_SECONDARY, ACCENT_MUTED, ACCENT_PALE,
     POSITIVE, NEGATIVE, NEUTRAL, WARNING,
-    FONT_HEADING, FONT_BODY, CARD_RADIUS, CARD_PADDING,
+    FONT_HEADING, FONT_DATA, FONT_BODY, CARD_RADIUS, CARD_PADDING,
     THRESHOLDS,
 )
 
@@ -53,12 +54,12 @@ def premium_hero_card(label, value, unit="", sentiment="neutral"):
              border-radius:{CARD_RADIUS};padding:{CARD_PADDING};text-align:center;
              border:1px solid {BORDER_LIGHT};border-left:4px solid {color};
              box-shadow:0 1px 4px rgba(0,0,0,0.04);margin-bottom:1rem;">
-            <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
+            <div style="font-family:{FONT_DATA};font-size:0.65rem;font-weight:400;
                  color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
                  margin-bottom:0.5rem;">{label}</div>
             <div style="font-family:{FONT_HEADING};font-size:2.1rem;font-weight:700;
                  color:{color};line-height:1;margin-bottom:0.25rem;">{value}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.6rem;
+            <div style="font-family:{FONT_DATA};font-size:0.6rem;
                  color:{SLATE};text-transform:uppercase;
                  letter-spacing:0.05em;">{unit}</div>
         </div>
@@ -84,12 +85,12 @@ def premium_stat_card(label, value, subtitle="", sentiment="neutral"):
              padding:{CARD_PADDING};text-align:center;
              box-shadow:0 1px 4px rgba(0,0,0,0.04);
              border:1px solid {BORDER_LIGHT};margin-bottom:1rem;">
-            <div style="font-family:{FONT_BODY};font-size:0.65rem;font-weight:600;
+            <div style="font-family:{FONT_DATA};font-size:0.65rem;font-weight:400;
                  color:{SLATE};text-transform:uppercase;letter-spacing:0.08em;
                  margin-bottom:0.5rem;">{label}</div>
             <div style="font-family:{FONT_HEADING};font-size:2rem;font-weight:700;
                  color:{value_color};line-height:1;">{value}</div>
-            <div style="font-family:{FONT_BODY};font-size:0.65rem;color:{SLATE};
+            <div style="font-family:{FONT_DATA};font-size:0.65rem;color:{SLATE};
                  margin-top:0.3rem;">{subtitle}</div>
         </div>
     ''', unsafe_allow_html=True)
@@ -197,7 +198,7 @@ def performance_driver_card(rank, driver):
     border_color = severity_color(sev)
     sev_label = sev.capitalize()
     sg_pr = driver["sg_per_round"]
-    sg_color = POSITIVE if sg_pr > 0 else NEGATIVE
+    sg_color = sg_color_5(sg_pr)
 
     st.markdown(f'''
         <div style="background:{WHITE};border-radius:{CARD_RADIUS};
@@ -214,10 +215,10 @@ def performance_driver_card(rank, driver):
                 <div style="display:flex;justify-content:space-between;
                      align-items:baseline;margin-bottom:0.3rem;">
                     <div>
-                        <span style="font-family:{FONT_BODY};font-size:0.7rem;
-                              font-weight:600;color:{SLATE};text-transform:uppercase;
-                              letter-spacing:0.06em;">{driver["category"]}</span>
-                        <span style="font-family:{FONT_BODY};font-size:0.6rem;
+                        <span style="font-family:{FONT_DATA};font-size:0.7rem;
+                              font-weight:400;color:{SLATE};text-transform:uppercase;
+                              letter-spacing:0.08em;">{driver["category"]}</span>
+                        <span style="font-family:{FONT_DATA};font-size:0.6rem;
                               color:{border_color};margin-left:0.5rem;
                               text-transform:uppercase;letter-spacing:0.05em;">
                             {sev_label}</span>
@@ -226,7 +227,7 @@ def performance_driver_card(rank, driver):
                          font-weight:700;color:{sg_color};">
                         {sg_pr:+.2f}
                         <span style="font-size:0.65rem;color:{SLATE};
-                              font-weight:400;">SG/rd</span>
+                              font-family:{FONT_DATA};font-weight:400;">SG/rd</span>
                     </div>
                 </div>
                 <div style="font-family:{FONT_HEADING};font-size:0.95rem;
@@ -265,7 +266,7 @@ def practice_priority_card(item, number, border_color):
                     <div style="font-family:{FONT_BODY};font-size:0.75rem;
                          color:{CHARCOAL_LIGHT};">
                         <strong>Current:</strong> {metric} | <strong>Target:</strong> {target}</div>
-                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
+                    <div style="font-family:{FONT_DATA};font-size:0.7rem;
                          color:{SLATE};margin-top:0.2rem;">
                         Impact: {impact:.1f} strokes/round</div>
                 </div>
@@ -299,7 +300,7 @@ def strength_maintenance_card(item, number):
                     <div style="font-family:{FONT_BODY};font-size:0.75rem;
                          color:{CHARCOAL_LIGHT};">
                         <strong>Performance:</strong> {metric}</div>
-                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
+                    <div style="font-family:{FONT_DATA};font-size:0.7rem;
                          color:{POSITIVE};margin-top:0.2rem;">
                         Gaining: {sg_value:+.2f} strokes/round</div>
                 </div>
@@ -329,13 +330,13 @@ def compact_stat_card(label, value, subtitle="", sentiment="neutral"):
              padding:{CARD_PADDING};text-align:center;
              border:1px solid {BORDER_LIGHT};
              box-shadow:0 1px 3px rgba(0,0,0,0.04);margin-bottom:0.75rem;">
-            <div style="font-family:{FONT_BODY};font-size:0.55rem;
-                 font-weight:600;color:{SLATE};text-transform:uppercase;
+            <div style="font-family:{FONT_DATA};font-size:0.55rem;
+                 font-weight:400;color:{SLATE};text-transform:uppercase;
                  letter-spacing:0.08em;margin-bottom:0.4rem;">{label}</div>
             <div style="font-family:{FONT_HEADING};font-size:1.4rem;
                  font-weight:700;color:{color};line-height:1;">
                 {value}</div>
-            {f'<div style="font-family:{FONT_BODY};font-size:0.55rem;color:{SLATE};margin-top:0.25rem;">{subtitle}</div>' if subtitle else ''}
+            {f'<div style="font-family:{FONT_DATA};font-size:0.55rem;color:{SLATE};margin-top:0.25rem;">{subtitle}</div>' if subtitle else ''}
         </div>
     ''', unsafe_allow_html=True)
 
@@ -363,9 +364,9 @@ def player_path_category_card(entry, is_strength):
                     <span style="font-family:{FONT_HEADING};font-size:1.3rem;
                           font-weight:700;color:{color};">
                         {sg_val:+.2f}</span>
-                    <span style="font-family:{FONT_BODY};font-size:0.6rem;
+                    <span style="font-family:{FONT_DATA};font-size:0.6rem;
                           color:{SLATE};margin-left:0.25rem;">SG</span>
-                    <div style="font-family:{FONT_BODY};font-size:0.6rem;
+                    <div style="font-family:{FONT_DATA};font-size:0.6rem;
                          color:{SLATE};">{sg_pr:+.2f} per round</div>
                 </div>
             </div>
@@ -390,7 +391,7 @@ def player_path_category_card(entry, is_strength):
 def player_path_root_cause_card(rc):
     """Render a single PlayerPath root cause card, consistent with the page design system."""
     border_color = severity_color(rc['severity'])
-    sg_color = POSITIVE if rc['sg_per_round'] >= 0 else NEGATIVE
+    sg_color = sg_color_5(rc['sg_per_round'])
 
     # Card header — matches performance_driver_card() layout
     st.markdown(f'''
@@ -404,7 +405,7 @@ def player_path_root_cause_card(rc):
                     <span style="font-family:{FONT_HEADING};font-size:1rem;
                           font-weight:700;color:{CHARCOAL};">
                         {rc['headline']}</span>
-                    <span style="font-family:{FONT_BODY};font-size:0.65rem;
+                    <span style="font-family:{FONT_DATA};font-size:0.65rem;
                           color:{border_color};margin-left:0.75rem;
                           text-transform:uppercase;letter-spacing:0.05em;">
                         {rc['severity']}</span>
@@ -413,7 +414,7 @@ def player_path_root_cause_card(rc):
                     <span style="font-family:{FONT_HEADING};font-size:1.3rem;
                           font-weight:700;color:{sg_color};">
                         {rc['sg_per_round']:+.2f}</span>
-                    <span style="font-family:{FONT_BODY};font-size:0.6rem;
+                    <span style="font-family:{FONT_DATA};font-size:0.6rem;
                           color:{SLATE};margin-left:0.2rem;">SG/rd</span>
                 </div>
             </div>
@@ -453,7 +454,7 @@ def sidebar_title(text):
 
 def sidebar_label(text):
     st.markdown(
-        f'<p style="font-family:{FONT_BODY};font-size:0.75rem;font-weight:500;'
+        f'<p style="font-family:{FONT_DATA};font-size:0.75rem;font-weight:400;'
         f'color:{ACCENT_SECONDARY};text-transform:uppercase;letter-spacing:0.08em;'
         f'margin-bottom:0.5rem;margin-top:1.25rem;">{text}</p>',
         unsafe_allow_html=True,

@@ -98,7 +98,7 @@ def driving_tab(drive, num_rounds, hole_summary):
             marker_colors=[d[2] for d in chart_data],
             textinfo='label+percent',
             textposition='outside',
-            textfont=dict(family='Inter', size=12),
+            textfont=dict(family=FONT_BODY, size=12),
             pull=[0.02] * len(chart_data),
         )])
 
@@ -110,7 +110,7 @@ def driving_tab(drive, num_rounds, hole_summary):
             annotations=[dict(
                 text=f'<b>{drive["num_drives"]}</b><br>Drives',
                 x=0.5, y=0.5,
-                font=dict(family='Playfair Display', size=24,
+                font=dict(family=FONT_HEADING, size=24,
                           color=CHARCOAL),
                 showarrow=False,
             )],
@@ -129,7 +129,7 @@ def driving_tab(drive, num_rounds, hole_summary):
             marker_color=colors_bar,
             text=sg_df['Total SG'].apply(lambda x: f'{x:+.2f}'),
             textposition='outside',
-            textfont=dict(family='Inter', size=12, color=CHARCOAL),
+            textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
         )])
 
         fig_sg_result.update_layout(
@@ -280,7 +280,7 @@ def driving_tab(drive, num_rounds, hole_summary):
             marker_color=bar_colors,
             text=avg_loc['Avg vs Par'].apply(lambda x: f'{x:+.2f}'),
             textposition='outside',
-            textfont=dict(family='Inter', size=12, color=CHARCOAL),
+            textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
         )])
 
         fig_avg.update_layout(

@@ -12,8 +12,9 @@ from ui.theme import (
     POSITIVE, NEGATIVE, WARNING,
     BORDER_LIGHT, DONUT_SEQUENCE, THRESHOLDS,
     WHITE, SLATE,
+    FONT_BODY, FONT_DATA, FONT_HEADING,
 )
-from ui.chart_config import CHART_LAYOUT
+from ui.chart_config import CHART_LAYOUT, sg_color_5
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card, sg_sentiment,
 )
@@ -127,7 +128,7 @@ def putting_tab(putting, num_rounds):
 
         # Parse SG for color
         sg_numeric = float(sg_str.replace('+', '').replace(',', '')) if isinstance(sg_str, str) and sg_str != '-' else 0.0
-        sg_color = POSITIVE if sg_numeric >= 0 else NEGATIVE
+        sg_color = sg_color_5(sg_numeric)
 
         with all_cols[idx]:
             st.markdown(f'''
@@ -135,14 +136,14 @@ def putting_tab(putting, num_rounds):
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
                      border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                    <div style="font-family:Inter,sans-serif;font-size:0.75rem;
-                         font-weight:600;color:{SLATE};text-transform:uppercase;
+                    <div style="font-family:{FONT_DATA};font-size:0.75rem;
+                         font-weight:400;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {bucket_name} Feet</div>
-                    <div style="font-family:Playfair Display,serif;font-size:2rem;
+                    <div style="font-family:{FONT_HEADING};font-size:2rem;
                          font-weight:700;color:{sg_color};
                          line-height:1;">{sg_str}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_DATA};font-size:0.7rem;
                          color:{SLATE};margin-top:0.5rem;line-height:1.9;">
                         <div>{attempts} putts</div>
                         <div>Make: {make_pct_str}</div>
@@ -152,7 +153,7 @@ def putting_tab(putting, num_rounds):
 
     # Best / worst legend
     st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:{SLATE};'
+        f'<p style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};'
         f'margin-top:0.5rem;">'
         f'<span style="color:{POSITIVE};">\u25aa</span> Best SG &nbsp;&nbsp;'
         f'<span style="color:{NEGATIVE};">\u25aa</span> Worst SG</p>',
@@ -273,7 +274,7 @@ def putting_tab(putting, num_rounds):
                 marker_colors=DONUT_SEQUENCE[:len(chart_a)],
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family='Inter', size=12),
+                textfont=dict(family=FONT_BODY, size=12),
                 pull=[0.02] * len(chart_a),
             )])
             fig_a.update_layout(
@@ -284,7 +285,7 @@ def putting_tab(putting, num_rounds):
                 annotations=[dict(
                     text=f'<b>{total_3putts}</b><br>3-Putts',
                     x=0.5, y=0.5,
-                    font=dict(family='Playfair Display', size=22,
+                    font=dict(family=FONT_HEADING, size=22,
                               color=CHARCOAL),
                     showarrow=False,
                 )],
@@ -310,7 +311,7 @@ def putting_tab(putting, num_rounds):
                 marker_colors=DONUT_SEQUENCE[:len(chart_b)],
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family='Inter', size=12),
+                textfont=dict(family=FONT_BODY, size=12),
                 pull=[0.02] * len(chart_b),
             )])
             fig_b.update_layout(
@@ -321,7 +322,7 @@ def putting_tab(putting, num_rounds):
                 annotations=[dict(
                     text=f'<b>{total_lag}</b><br>Putts',
                     x=0.5, y=0.5,
-                    font=dict(family='Playfair Display', size=22,
+                    font=dict(family=FONT_HEADING, size=22,
                               color=CHARCOAL),
                     showarrow=False,
                 )],
