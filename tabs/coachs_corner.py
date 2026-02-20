@@ -18,7 +18,7 @@ from ui.components import (
     gas_pedal_sentiment, bogey_train_sentiment, grit_score_sentiment,
     bogey_rate_sentiment, conversion_pct_sentiment,
     performance_driver_card, practice_priority_card, strength_maintenance_card,
-    compact_stat_card, player_path_category_card,
+    compact_stat_card, player_path_category_card, player_path_root_cause_card,
 )
 from ui.formatters import format_sg, format_pct
 
@@ -280,75 +280,7 @@ def coachs_corner_tab(cc):
 
     if root_causes:
         for rc in root_causes:
-            # Severity color mapping
-            severity_colors = {
-                "critical": NEGATIVE,
-                "significant": WARNING,
-                "moderate": ACCENT_MUTED,
-            }
-            border_color = severity_colors.get(rc['severity'], ACCENT_MUTED)
-            sg_color = NEGATIVE if rc['sg_per_round'] < 0 else POSITIVE
-
-            # Build details list HTML
-            details_html = ""
-            if rc['details']:
-                details_html = "<ul style='margin:0.5rem 0 0 1.2rem;padding:0;'>"
-                for detail in rc['details']:
-                    details_html += f"<li style='font-family:{FONT_BODY};font-size:0.7rem;color:{CHARCOAL_LIGHT};margin-bottom:0.2rem;'>{detail}</li>"
-                details_html += "</ul>"
-
-            st.markdown(f'''
-                <div style="background:{WHITE};border-radius:{CARD_RADIUS};
-                     padding:1rem 1.25rem;margin-bottom:0.75rem;
-                     border:1px solid {BORDER_LIGHT};border-left:5px solid {border_color};
-                     box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.5rem;">
-                        <div>
-                            <span style="font-family:{FONT_HEADING};font-size:1rem;
-                                  font-weight:700;color:{CHARCOAL};">
-                                {rc['headline']}</span>
-                            <span style="font-family:{FONT_BODY};font-size:0.65rem;
-                                  color:{border_color};margin-left:0.75rem;
-                                  text-transform:uppercase;letter-spacing:0.05em;">
-                                {rc['severity']}</span>
-                        </div>
-                        <div style="text-align:right;">
-                            <span style="font-family:{FONT_HEADING};font-size:1.3rem;
-                                  font-weight:700;color:{sg_color};">
-                                {rc['sg_per_round']:+.2f}</span>
-                            <span style="font-family:{FONT_BODY};font-size:0.6rem;
-                                  color:{SLATE};margin-left:0.2rem;">SG/rd</span>
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:1.5rem;margin-bottom:0.3rem;">
-                        <div>
-                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
-                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
-                                Tiger 5 Fails</span>
-                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
-                                 font-weight:700;color:{NEGATIVE};">
-                                {rc.get('t5_fails', 0)}</div>
-                        </div>
-                        <div>
-                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
-                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
-                                Scoring Issues</span>
-                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
-                                 font-weight:700;color:{WARNING};">
-                                {rc.get('sp_issues', 0)}</div>
-                        </div>
-                        <div>
-                            <span style="font-family:{FONT_BODY};font-size:0.7rem;
-                                  color:{SLATE};text-transform:uppercase;letter-spacing:0.05em;">
-                                Total Issues</span>
-                            <div style="font-family:{FONT_HEADING};font-size:1.1rem;
-                                 font-weight:700;color:{CHARCOAL};">
-                                {rc.get('total_issues', 0)}</div>
-                        </div>
-                    </div>
-                    {details_html}
-                </div>
-            ''', unsafe_allow_html=True)
+            player_path_root_cause_card(rc)
     else:
         st.info("Great job! No significant root causes detected. Keep up the consistent play!")
 
