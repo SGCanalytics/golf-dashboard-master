@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from ui.components import section_header
+from ui.theme import POSITIVE_BG, NEGATIVE_BG, WHITE
 from engines.coaches_table import build_coaches_table_results
 
 # ============================================================
@@ -17,9 +18,14 @@ _SG_COLS = [
 # Normalization cap: values at ±MAX_SG get full saturation
 _MAX_SG = 2.0
 
-# Theme colors (from ui/theme.py)
-_POSITIVE_BG = (209, 250, 229)   # #D1FAE5
-_NEGATIVE_BG = (254, 215, 215)   # #FED7D7
+def _hex_to_rgb(hex_color):
+    """Convert '#RRGGBB' to (R, G, B) int tuple for gradient interpolation."""
+    h = hex_color.lstrip('#')
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+# Derived from ui/theme.py — stays in sync automatically when theme changes
+_POSITIVE_BG = _hex_to_rgb(POSITIVE_BG)
+_NEGATIVE_BG = _hex_to_rgb(NEGATIVE_BG)
 
 
 def coaches_table_tab(filtered_df, hole_summary):
@@ -87,7 +93,7 @@ def _sg_bg_color(val):
     elif v < 0:
         target = _NEGATIVE_BG
     else:
-        return 'background-color: #FFFFFF'
+        return f'background-color: {WHITE}'
 
     r = int(255 + (target[0] - 255) * intensity)
     g = int(255 + (target[1] - 255) * intensity)

@@ -11,10 +11,10 @@ import plotly.graph_objects as go
 from ui.theme import (
     CHARCOAL, SLATE, WHITE, ACCENT_PRIMARY, ACCENT_SECONDARY,
     POSITIVE, NEGATIVE, BORDER_LIGHT,
-    FONT_BODY, FONT_HEADING,
-    THRESHOLDS,
+    FONT_BODY, FONT_DATA, FONT_HEADING,
+    THRESHOLDS, UNDER, GOLD, DOUBLE,
 )
-from ui.chart_config import CHART_LAYOUT, sg_bar_color
+from ui.chart_config import CHART_LAYOUT, sg_bar_color, sg_color_5
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card, sg_sentiment,
 )
@@ -101,7 +101,7 @@ def approach_tab(approach, num_rounds):
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {bucket} Yards</div>
                     <div style="font-family:{FONT_HEADING};font-size:2rem;
-                         font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
+                         font-weight:700;color:{sg_color_5(m['total_sg'])};
                          line-height:1;">{m['total_sg']:+.2f}</div>
                     <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.5rem;line-height:1.9;">
@@ -146,7 +146,7 @@ def approach_tab(approach, num_rounds):
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {rb} Yards</div>
                     <div style="font-family:{FONT_HEADING};font-size:2rem;
-                         font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
+                         font-weight:700;color:{sg_color_5(m['total_sg'])};
                          line-height:1;">{m['total_sg']:+.2f}</div>
                     <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.5rem;line-height:1.9;">
@@ -181,9 +181,9 @@ def approach_tab(approach, num_rounds):
 
     # Zone display configuration (emoji and color for zone names)
     ZONE_CONFIG = {
-        "Green Zone": {"emoji": "🟢", "color": "#2D6A4F"},
-        "Yellow Zone": {"emoji": "🟡", "color": "#D97706"},
-        "Red Zone": {"emoji": "🔴", "color": "#C53030"},
+        "Green Zone":  {"emoji": "🟢", "color": UNDER},
+        "Yellow Zone": {"emoji": "🟡", "color": GOLD},
+        "Red Zone":    {"emoji": "🔴", "color": DOUBLE},
     }
 
     zone_cols = st.columns(3)
@@ -211,12 +211,12 @@ def approach_tab(approach, num_rounds):
                          font-weight:700;color:{config['color']};
                          margin-bottom:0.25rem;">
                          {config['emoji']} {zone}</div>
-                    <div style="font-family:{FONT_BODY};font-size:0.65rem;
-                         font-weight:600;color:{SLATE};text-transform:uppercase;
+                    <div style="font-family:{FONT_DATA};font-size:0.65rem;
+                         font-weight:400;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {zone_range} Yards</div>
                     <div style="font-family:{FONT_HEADING};font-size:2rem;
-                         font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
+                         font-weight:700;color:{sg_color_5(m['total_sg'])};
                          line-height:1;">{m['total_sg']:+.2f}</div>
                     <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.3rem;">

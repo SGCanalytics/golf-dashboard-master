@@ -6,6 +6,7 @@
 # ============================================================
 
 import streamlit as st
+from ui.chart_config import sg_color_5
 from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, SLATE, WHITE, BORDER_LIGHT,
     ACCENT_PRIMARY, ACCENT_SECONDARY, ACCENT_MUTED, ACCENT_PALE,
@@ -197,7 +198,7 @@ def performance_driver_card(rank, driver):
     border_color = severity_color(sev)
     sev_label = sev.capitalize()
     sg_pr = driver["sg_per_round"]
-    sg_color = POSITIVE if sg_pr > 0 else NEGATIVE
+    sg_color = sg_color_5(sg_pr)
 
     st.markdown(f'''
         <div style="background:{WHITE};border-radius:{CARD_RADIUS};
@@ -390,7 +391,7 @@ def player_path_category_card(entry, is_strength):
 def player_path_root_cause_card(rc):
     """Render a single PlayerPath root cause card, consistent with the page design system."""
     border_color = severity_color(rc['severity'])
-    sg_color = POSITIVE if rc['sg_per_round'] >= 0 else NEGATIVE
+    sg_color = sg_color_5(rc['sg_per_round'])
 
     # Card header — matches performance_driver_card() layout
     st.markdown(f'''

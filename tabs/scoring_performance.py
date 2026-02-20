@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from ui.theme import (
     CHARCOAL, CHARCOAL_LIGHT, POSITIVE, NEGATIVE, ACCENT_PRIMARY, ACCENT_SECONDARY,
     WARNING, CHART_PUTTING, CHART_PALETTE, DONUT_SEQUENCE, CHART_SHORT_GAME,
-    FONT_BODY, FONT_HEADING,
+    FONT_BODY, FONT_HEADING, WHITE,
 )
 from ui.chart_config import CHART_LAYOUT, sg_bar_color
 from ui.components import (
@@ -47,7 +47,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                  color:rgba(255,255,255,0.9);text-transform:uppercase;
                  letter-spacing:0.08em;margin-bottom:0.75rem;">Total Scoring Fails</div>
             <div style="font-family:{FONT_HEADING};font-size:3.5rem;
-                 font-weight:700;color:#ffffff;line-height:1;margin-bottom:0.5rem;">
+                 font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.5rem;">
                 {total_fails}</div>
             <div style="font-family:{FONT_BODY};font-size:0.75rem;
                  color:rgba(255,255,255,0.8);">
@@ -71,7 +71,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                      color:rgba(255,255,255,0.9);text-transform:uppercase;
                      letter-spacing:0.08em;margin-bottom:0.5rem;">Double Bogey+</div>
                 <div style="font-family:{FONT_HEADING};font-size:2.75rem;
-                     font-weight:700;color:#ffffff;line-height:1;margin-bottom:0.25rem;">
+                     font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.25rem;">
                     {db_count}</div>
                 <div style="font-family:{FONT_BODY};font-size:0.65rem;
                      color:rgba(255,255,255,0.7);">{db_pct:.0f}% of fails</div>
@@ -94,7 +94,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                      color:rgba(255,255,255,0.9);text-transform:uppercase;
                      letter-spacing:0.08em;margin-bottom:0.5rem;">Bogey</div>
                 <div style="font-family:{FONT_HEADING};font-size:2.75rem;
-                     font-weight:700;color:#ffffff;line-height:1;margin-bottom:0.25rem;">
+                     font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.25rem;">
                     {bog_count}</div>
                 <div style="font-family:{FONT_BODY};font-size:0.65rem;
                      color:rgba(255,255,255,0.7);">{bog_pct:.0f}% of fails</div>
@@ -117,7 +117,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                      color:rgba(255,255,255,0.9);text-transform:uppercase;
                      letter-spacing:0.08em;margin-bottom:0.5rem;">Underperformance</div>
                 <div style="font-family:{FONT_HEADING};font-size:2.75rem;
-                     font-weight:700;color:#ffffff;line-height:1;margin-bottom:0.25rem;">
+                     font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.25rem;">
                     {under_count}</div>
                 <div style="font-family:{FONT_BODY};font-size:0.65rem;
                      color:rgba(255,255,255,0.7);">{under_pct:.0f}% of fails</div>
@@ -178,7 +178,7 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                                  color:rgba(255,255,255,0.9);text-transform:uppercase;
                                  letter-spacing:0.08em;margin-bottom:0.5rem;">{rc_name}</div>
                             <div style="font-family:{FONT_HEADING};font-size:2.25rem;
-                                 font-weight:700;color:#ffffff;line-height:1;margin-bottom:0.25rem;">
+                                 font-weight:700;color:{WHITE};line-height:1;margin-bottom:0.25rem;">
                                 {count}</div>
                             <div style="font-family:{FONT_BODY};font-size:0.65rem;
                                  color:rgba(255,255,255,0.7);text-transform:uppercase;
