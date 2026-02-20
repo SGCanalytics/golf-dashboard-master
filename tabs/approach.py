@@ -166,202 +166,7 @@ def approach_tab(approach, num_rounds):
     )
 
     # ----------------------------------------------------------------
-    # SECTION 3: APPROACH PROFILE
-    # ----------------------------------------------------------------
-    section_header("Approach Profile")
-
-    profile_df = approach["profile_df"]
-
-    if not profile_df.empty:
-        profile_df['Label'] = profile_df.apply(
-            lambda r: f"{r['Group']}: {r['Category']}", axis=1
-        )
-        label_order = profile_df['Label'].tolist()
-
-        # Two-column layout for side-by-side comparison
-        col_chart1, col_chart2 = st.columns(2)
-
-        with col_chart1:
-            # Chart 1: Green Hit %
-            fig_gir = go.Figure(go.Bar(
-                y=profile_df['Label'],
-                x=profile_df['Green Hit %'],
-                orientation='h',
-                marker_color=[ACCENT_PRIMARY if g == 'Fairway / Tee' else NEGATIVE
-                              for g in profile_df['Group']],
-                text=profile_df['Green Hit %'].apply(lambda v: f"{v:.0f}%"),
-                textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
-            ))
-            fig_gir.update_layout(
-                **CHART_LAYOUT,
-                title=dict(text='Green Hit %', font=dict(size=14)),
-                yaxis=dict(categoryorder='array',
-                           categoryarray=label_order[::-1]),
-                xaxis=dict(title='', showticklabels=False),
-                margin=dict(t=40, b=20, l=160, r=60),
-                height=280,
-            )
-            st.plotly_chart(fig_gir, use_container_width=True)
-
-        with col_chart2:
-            # Chart 2: Proximity
-            fig_prox = go.Figure(go.Bar(
-                y=profile_df['Label'],
-                x=profile_df['Proximity'],
-                orientation='h',
-                marker_color=[ACCENT_PRIMARY if g == 'Fairway / Tee' else NEGATIVE
-                              for g in profile_df['Group']],
-                text=profile_df['Proximity'].apply(lambda v: f"{v:.1f} ft"),
-                textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
-            ))
-            fig_prox.update_layout(
-                **CHART_LAYOUT,
-                title=dict(text='Proximity (ft)', font=dict(size=14)),
-                yaxis=dict(categoryorder='array',
-                           categoryarray=label_order[::-1]),
-                xaxis=dict(title='', showticklabels=False),
-                margin=dict(t=40, b=20, l=160, r=60),
-                height=280,
-            )
-            st.plotly_chart(fig_prox, use_container_width=True)
-
-    # ----------------------------------------------------------------
-    # SECTION 4: HEATMAP
-    # ----------------------------------------------------------------
-    section_header("Strokes Gained per Shot Heatmap")
-
-    heatmap_sg = approach["heatmap_sg"]
-    heatmap_counts = approach["heatmap_counts"]
-
-    if not heatmap_sg.empty:
-        annotations = []
-        for i, row_label in enumerate(heatmap_sg.index):
-            for j, col_label in enumerate(heatmap_sg.columns):
-                sg_val = heatmap_sg.iloc[i, j]
-                cnt_val = (int(heatmap_counts.iloc[i, j])
-                           if not heatmap_counts.empty else 0)
-                if np.isnan(sg_val):
-                    continue
-                annotations.append(dict(
-                    x=col_label, y=row_label,
-                    text=f"{sg_val:+.2f}<br><span style='font-size:10px'>"
-                         f"({cnt_val})</span>",
-                    showarrow=False,
-                    font=dict(family='Inter', size=12, color=CHARCOAL),
-                ))
-
-        fig_heat = px.imshow(
-            heatmap_sg,
-            color_continuous_scale='RdYlGn',
-            aspect='auto',
-            labels=dict(x='Starting Location', y='Distance Bucket',
-                        color='SG/Shot'),
-        )
-        fig_heat.update_layout(
-            **CHART_LAYOUT,
-            annotations=annotations,
-            height=400,
-        )
-        fig_heat.update_traces(showscale=True)
-        st.plotly_chart(fig_heat, use_container_width=True)
-
-    # ----------------------------------------------------------------
-    # SECTION 5: OUTCOME DISTRIBUTION
-    # ----------------------------------------------------------------
-    section_header("Approach Outcome Distribution")
-
-    outcome_df = approach["outcome_df"]
-
-    if not outcome_df.empty:
-        col_out1, col_out2 = st.columns(2)
-
-        with col_out1:
-            fig_pct = go.Figure(go.Bar(
-                x=outcome_df['Ending Location'],
-                y=outcome_df['Pct'],
-                marker_color=ACCENT_PRIMARY,
-                text=outcome_df['Pct'].apply(lambda v: f"{v:.1f}%"),
-                textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
-            ))
-            fig_pct.update_layout(
-                **CHART_LAYOUT,
-                title=dict(text='% of Shots by Ending Location',
-                           font=dict(size=14)),
-                yaxis=dict(title='% of Shots', gridcolor=BORDER_LIGHT),
-                xaxis=dict(title=''),
-                margin=dict(t=40, b=40, l=60, r=40),
-                height=350,
-            )
-            st.plotly_chart(fig_pct, use_container_width=True)
-
-        with col_out2:
-            bar_colors = [sg_bar_color(v) for v in outcome_df['Total SG']]
-            fig_out_sg = go.Figure(go.Bar(
-                x=outcome_df['Ending Location'],
-                y=outcome_df['Total SG'],
-                marker_color=bar_colors,
-                text=outcome_df['Total SG'].apply(lambda v: f"{v:+.2f}"),
-                textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
-            ))
-            fig_out_sg.update_layout(
-                **CHART_LAYOUT,
-                title=dict(text='Total SG by Ending Location',
-                           font=dict(size=14)),
-                yaxis=dict(title='Total SG', gridcolor=BORDER_LIGHT,
-                           zerolinecolor=CHARCOAL, zerolinewidth=2),
-                xaxis=dict(title=''),
-                margin=dict(t=40, b=40, l=60, r=40),
-                height=350,
-            )
-            st.plotly_chart(fig_out_sg, use_container_width=True)
-
-    # ----------------------------------------------------------------
-    # SECTION 6: TREND
-    # ----------------------------------------------------------------
-    section_header("Approach SG Trend by Round")
-
-    trend_df = approach["trend_df"]
-
-    use_ma = st.checkbox("Apply Moving Average", value=False,
-                         key="approach_ma")
-
-    if use_ma:
-        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0,
-                              key="approach_ma_window")
-        trend_df["SG_MA"] = trend_df["Strokes Gained"].rolling(
-            window=window).mean()
-        y_col = "SG_MA"
-    else:
-        y_col = "Strokes Gained"
-
-    fig_trend = px.line(
-        trend_df, x="Label", y=y_col, markers=True,
-        title="SG: Approach Trend",
-        color_discrete_sequence=[CHARCOAL],
-    )
-    fig_trend.update_layout(
-        **CHART_LAYOUT,
-        xaxis_title='', yaxis_title='Strokes Gained', height=400,
-    )
-    fig_trend.update_xaxes(tickangle=-45)
-    st.plotly_chart(fig_trend, use_container_width=True)
-
-    # ----------------------------------------------------------------
-    # SECTION 7: SHOT DETAIL
-    # ----------------------------------------------------------------
-    detail_df = approach["detail_df"]
-
-    if not detail_df.empty:
-        with st.expander("Approach Shot Detail"):
-            st.dataframe(detail_df, use_container_width=True,
-                         hide_index=True)
-
-    # ----------------------------------------------------------------
-    # SECTION 8: ZONE PERFORMANCE
+    # SECTION 3: ZONE PERFORMANCE
     # ----------------------------------------------------------------
     section_header("Zone Performance")
 
@@ -427,3 +232,198 @@ def approach_tab(approach, num_rounds):
         f'<span style="color:{NEGATIVE};">\u25aa</span> Worst Zone</p>',
         unsafe_allow_html=True,
     )
+
+    # ----------------------------------------------------------------
+    # SECTION 4: APPROACH PROFILE
+    # ----------------------------------------------------------------
+    section_header("Approach Profile")
+
+    profile_df = approach["profile_df"]
+
+    if not profile_df.empty:
+        profile_df['Label'] = profile_df.apply(
+            lambda r: f"{r['Group']}: {r['Category']}", axis=1
+        )
+        label_order = profile_df['Label'].tolist()
+
+        # Two-column layout for side-by-side comparison
+        col_chart1, col_chart2 = st.columns(2)
+
+        with col_chart1:
+            # Chart 1: Green Hit %
+            fig_gir = go.Figure(go.Bar(
+                y=profile_df['Label'],
+                x=profile_df['Green Hit %'],
+                orientation='h',
+                marker_color=[ACCENT_PRIMARY if g == 'Fairway / Tee' else NEGATIVE
+                              for g in profile_df['Group']],
+                text=profile_df['Green Hit %'].apply(lambda v: f"{v:.0f}%"),
+                textposition='outside',
+                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+            ))
+            fig_gir.update_layout(
+                **CHART_LAYOUT,
+                title=dict(text='Green Hit %', font=dict(size=14)),
+                yaxis=dict(categoryorder='array',
+                           categoryarray=label_order[::-1]),
+                xaxis=dict(title='', showticklabels=False),
+                margin=dict(t=40, b=20, l=160, r=60),
+                height=280,
+            )
+            st.plotly_chart(fig_gir, use_container_width=True)
+
+        with col_chart2:
+            # Chart 2: Proximity
+            fig_prox = go.Figure(go.Bar(
+                y=profile_df['Label'],
+                x=profile_df['Proximity'],
+                orientation='h',
+                marker_color=[ACCENT_PRIMARY if g == 'Fairway / Tee' else NEGATIVE
+                              for g in profile_df['Group']],
+                text=profile_df['Proximity'].apply(lambda v: f"{v:.1f} ft"),
+                textposition='outside',
+                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+            ))
+            fig_prox.update_layout(
+                **CHART_LAYOUT,
+                title=dict(text='Proximity (ft)', font=dict(size=14)),
+                yaxis=dict(categoryorder='array',
+                           categoryarray=label_order[::-1]),
+                xaxis=dict(title='', showticklabels=False),
+                margin=dict(t=40, b=20, l=160, r=60),
+                height=280,
+            )
+            st.plotly_chart(fig_prox, use_container_width=True)
+
+    # ----------------------------------------------------------------
+    # SECTION 5: HEATMAP
+    # ----------------------------------------------------------------
+    section_header("Strokes Gained per Shot Heatmap")
+
+    heatmap_sg = approach["heatmap_sg"]
+    heatmap_counts = approach["heatmap_counts"]
+
+    if not heatmap_sg.empty:
+        annotations = []
+        for i, row_label in enumerate(heatmap_sg.index):
+            for j, col_label in enumerate(heatmap_sg.columns):
+                sg_val = heatmap_sg.iloc[i, j]
+                cnt_val = (int(heatmap_counts.iloc[i, j])
+                           if not heatmap_counts.empty else 0)
+                if np.isnan(sg_val):
+                    continue
+                annotations.append(dict(
+                    x=col_label, y=row_label,
+                    text=f"{sg_val:+.2f}<br><span style='font-size:10px'>"
+                         f"({cnt_val})</span>",
+                    showarrow=False,
+                    font=dict(family='Inter', size=12, color=CHARCOAL),
+                ))
+
+        fig_heat = px.imshow(
+            heatmap_sg,
+            color_continuous_scale='RdYlGn',
+            aspect='auto',
+            labels=dict(x='Starting Location', y='Distance Bucket',
+                        color='SG/Shot'),
+        )
+        fig_heat.update_layout(
+            **CHART_LAYOUT,
+            annotations=annotations,
+            height=400,
+        )
+        fig_heat.update_traces(showscale=True)
+        st.plotly_chart(fig_heat, use_container_width=True)
+
+    # ----------------------------------------------------------------
+    # SECTION 6: OUTCOME DISTRIBUTION
+    # ----------------------------------------------------------------
+    section_header("Approach Outcome Distribution")
+
+    outcome_df = approach["outcome_df"]
+
+    if not outcome_df.empty:
+        col_out1, col_out2 = st.columns(2)
+
+        with col_out1:
+            fig_pct = go.Figure(go.Bar(
+                x=outcome_df['Ending Location'],
+                y=outcome_df['Pct'],
+                marker_color=ACCENT_PRIMARY,
+                text=outcome_df['Pct'].apply(lambda v: f"{v:.1f}%"),
+                textposition='outside',
+                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+            ))
+            fig_pct.update_layout(
+                **CHART_LAYOUT,
+                title=dict(text='% of Shots by Ending Location',
+                           font=dict(size=14)),
+                yaxis=dict(title='% of Shots', gridcolor=BORDER_LIGHT),
+                xaxis=dict(title=''),
+                margin=dict(t=40, b=40, l=60, r=40),
+                height=350,
+            )
+            st.plotly_chart(fig_pct, use_container_width=True)
+
+        with col_out2:
+            bar_colors = [sg_bar_color(v) for v in outcome_df['Total SG']]
+            fig_out_sg = go.Figure(go.Bar(
+                x=outcome_df['Ending Location'],
+                y=outcome_df['Total SG'],
+                marker_color=bar_colors,
+                text=outcome_df['Total SG'].apply(lambda v: f"{v:+.2f}"),
+                textposition='outside',
+                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+            ))
+            fig_out_sg.update_layout(
+                **CHART_LAYOUT,
+                title=dict(text='Total SG by Ending Location',
+                           font=dict(size=14)),
+                yaxis=dict(title='Total SG', gridcolor=BORDER_LIGHT,
+                           zerolinecolor=CHARCOAL, zerolinewidth=2),
+                xaxis=dict(title=''),
+                margin=dict(t=40, b=40, l=60, r=40),
+                height=350,
+            )
+            st.plotly_chart(fig_out_sg, use_container_width=True)
+
+    # ----------------------------------------------------------------
+    # SECTION 7: TREND
+    # ----------------------------------------------------------------
+    section_header("Approach SG Trend by Round")
+
+    trend_df = approach["trend_df"]
+
+    use_ma = st.checkbox("Apply Moving Average", value=False,
+                         key="approach_ma")
+
+    if use_ma:
+        window = st.selectbox("Moving Average Window", [3, 5, 10], index=0,
+                              key="approach_ma_window")
+        trend_df["SG_MA"] = trend_df["Strokes Gained"].rolling(
+            window=window).mean()
+        y_col = "SG_MA"
+    else:
+        y_col = "Strokes Gained"
+
+    fig_trend = px.line(
+        trend_df, x="Label", y=y_col, markers=True,
+        title="SG: Approach Trend",
+        color_discrete_sequence=[CHARCOAL],
+    )
+    fig_trend.update_layout(
+        **CHART_LAYOUT,
+        xaxis_title='', yaxis_title='Strokes Gained', height=400,
+    )
+    fig_trend.update_xaxes(tickangle=-45)
+    st.plotly_chart(fig_trend, use_container_width=True)
+
+    # ----------------------------------------------------------------
+    # SECTION 8: SHOT DETAIL
+    # ----------------------------------------------------------------
+    detail_df = approach["detail_df"]
+
+    if not detail_df.empty:
+        with st.expander("Approach Shot Detail"):
+            st.dataframe(detail_df, use_container_width=True,
+                         hide_index=True)
