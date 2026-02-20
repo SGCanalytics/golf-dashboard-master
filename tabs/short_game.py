@@ -10,6 +10,7 @@ from plotly.subplots import make_subplots
 from ui.theme import (
     CHARCOAL, WHITE, ACCENT_PRIMARY, POSITIVE, NEGATIVE,
     BORDER_LIGHT, THRESHOLDS,
+    FONT_BODY,
 )
 from ui.chart_config import CHART_LAYOUT, SG_HEATMAP_COLORSCALE
 from ui.components import (
@@ -146,7 +147,7 @@ def short_game_tab(sg, num_rounds):
             marker_color=ACCENT_PRIMARY,
             text=leave['Shots'],
             textposition='outside',
-            textfont=dict(size=13, family='Inter'),
+            textfont=dict(size=13, family=FONT_BODY),
         ))
 
         fig_leave.update_layout(

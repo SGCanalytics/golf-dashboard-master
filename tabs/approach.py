@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 from ui.theme import (
     CHARCOAL, SLATE, WHITE, ACCENT_PRIMARY, ACCENT_SECONDARY,
     POSITIVE, NEGATIVE, BORDER_LIGHT,
+    FONT_BODY, FONT_HEADING,
     THRESHOLDS,
 )
 from ui.chart_config import CHART_LAYOUT, sg_bar_color
@@ -67,7 +68,7 @@ def approach_tab(approach, num_rounds):
 
     # Row 1: Fairway / Tee
     st.markdown(
-        f'<p style="font-family:{st.__name__ and "Inter"},sans-serif;'
+        f'<p style="font-family:{FONT_BODY};'
         f'font-size:0.85rem;font-weight:600;color:{ACCENT_SECONDARY};'
         f'text-transform:uppercase;letter-spacing:0.08em;'
         f'margin-bottom:0.5rem;">From Fairway / Tee</p>',
@@ -95,14 +96,14 @@ def approach_tab(approach, num_rounds):
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
                      border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          font-weight:600;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {bucket} Yards</div>
-                    <div style="font-family:Playfair Display,serif;font-size:2rem;
+                    <div style="font-family:{FONT_HEADING};font-size:2rem;
                          font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
                          line-height:1;">{m['total_sg']:+.2f}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.5rem;line-height:1.9;">
                         <div>{m['shots']} shots</div>
                         <div>Prox: {m['prox']:.1f} ft</div>
@@ -113,7 +114,7 @@ def approach_tab(approach, num_rounds):
 
     # Row 2: Rough
     st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.85rem;'
+        f'<p style="font-family:{FONT_BODY};font-size:0.85rem;'
         f'font-weight:600;color:{ACCENT_SECONDARY};text-transform:uppercase;'
         f'letter-spacing:0.08em;margin-top:1rem;margin-bottom:0.5rem;">'
         f'From Rough</p>',
@@ -140,14 +141,14 @@ def approach_tab(approach, num_rounds):
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
                      border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          font-weight:600;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {rb} Yards</div>
-                    <div style="font-family:Playfair Display,serif;font-size:2rem;
+                    <div style="font-family:{FONT_HEADING};font-size:2rem;
                          font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
                          line-height:1;">{m['total_sg']:+.2f}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.5rem;line-height:1.9;">
                         <div>{m['shots']} shots</div>
                         <div>Prox: {m['prox']:.1f} ft</div>
@@ -158,7 +159,7 @@ def approach_tab(approach, num_rounds):
 
     # Best / worst legend
     st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:{SLATE};'
+        f'<p style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};'
         f'margin-top:0.5rem;">'
         f'<span style="color:{POSITIVE};">\u25aa</span> Best Total SG &nbsp;&nbsp;'
         f'<span style="color:{NEGATIVE};">\u25aa</span> Worst Total SG</p>',
@@ -206,18 +207,18 @@ def approach_tab(approach, num_rounds):
                      padding:1.25rem 1rem;text-align:center;
                      box-shadow:0 2px 8px rgba(0,0,0,0.06);
                      border:1px solid {BORDER_LIGHT};margin-bottom:1rem;{border_style}">
-                    <div style="font-family:Inter,sans-serif;font-size:0.85rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.85rem;
                          font-weight:700;color:{config['color']};
                          margin-bottom:0.25rem;">
                          {config['emoji']} {zone}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.65rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.65rem;
                          font-weight:600;color:{SLATE};text-transform:uppercase;
                          letter-spacing:0.08em;margin-bottom:0.5rem;">
                          {zone_range} Yards</div>
-                    <div style="font-family:Playfair Display,serif;font-size:2rem;
+                    <div style="font-family:{FONT_HEADING};font-size:2rem;
                          font-weight:700;color:{POSITIVE if m['total_sg'] >= 0 else NEGATIVE};
                          line-height:1;">{m['total_sg']:+.2f}</div>
-                    <div style="font-family:Inter,sans-serif;font-size:0.7rem;
+                    <div style="font-family:{FONT_BODY};font-size:0.7rem;
                          color:{SLATE};margin-top:0.3rem;">
                          {m['shots']} shots &middot; Prox: {(m['prox'] if m['shots'] > 0 else 0):.1f} ft
                          &middot; GIR: {(m['green_hit_pct'] if m['shots'] > 0 else 0):.0f}%</div>
@@ -226,7 +227,7 @@ def approach_tab(approach, num_rounds):
 
     # Best / worst legend
     st.markdown(
-        f'<p style="font-family:Inter,sans-serif;font-size:0.7rem;color:{SLATE};'
+        f'<p style="font-family:{FONT_BODY};font-size:0.7rem;color:{SLATE};'
         f'margin-top:0.5rem;">'
         f'<span style="color:{POSITIVE};">\u25aa</span> Best Zone &nbsp;&nbsp;'
         f'<span style="color:{NEGATIVE};">\u25aa</span> Worst Zone</p>',
@@ -259,7 +260,7 @@ def approach_tab(approach, num_rounds):
                               for g in profile_df['Group']],
                 text=profile_df['Green Hit %'].apply(lambda v: f"{v:.0f}%"),
                 textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+                textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
             ))
             fig_gir.update_layout(
                 **CHART_LAYOUT,
@@ -282,7 +283,7 @@ def approach_tab(approach, num_rounds):
                               for g in profile_df['Group']],
                 text=profile_df['Proximity'].apply(lambda v: f"{v:.1f} ft"),
                 textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+                textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
             ))
             fig_prox.update_layout(
                 **CHART_LAYOUT,
@@ -317,7 +318,7 @@ def approach_tab(approach, num_rounds):
                     text=f"{sg_val:+.2f}<br><span style='font-size:10px'>"
                          f"({cnt_val})</span>",
                     showarrow=False,
-                    font=dict(family='Inter', size=12, color=CHARCOAL),
+                    font=dict(family=FONT_BODY, size=12, color=CHARCOAL),
                 ))
 
         fig_heat = px.imshow(
@@ -352,7 +353,7 @@ def approach_tab(approach, num_rounds):
                 marker_color=ACCENT_PRIMARY,
                 text=outcome_df['Pct'].apply(lambda v: f"{v:.1f}%"),
                 textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+                textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
             ))
             fig_pct.update_layout(
                 **CHART_LAYOUT,
@@ -373,7 +374,7 @@ def approach_tab(approach, num_rounds):
                 marker_color=bar_colors,
                 text=outcome_df['Total SG'].apply(lambda v: f"{v:+.2f}"),
                 textposition='outside',
-                textfont=dict(family='Inter', size=12, color=CHARCOAL),
+                textfont=dict(family=FONT_BODY, size=12, color=CHARCOAL),
             ))
             fig_out_sg.update_layout(
                 **CHART_LAYOUT,

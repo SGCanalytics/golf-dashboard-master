@@ -5,6 +5,7 @@
 from ui.theme import (
     WHITE, CHARCOAL, BORDER_LIGHT, WARM_GRAY, POSITIVE, POSITIVE_BG,
     POSITIVE_TEXT, NEGATIVE, NEGATIVE_BG, NEGATIVE_TEXT,
+    SG_STRONG, SG_GAIN, SG_NEUTRAL, SG_LOSS, SG_WEAK,
     FONT_BODY, THRESHOLDS,
 )
 
@@ -12,7 +13,7 @@ from ui.theme import (
 CHART_LAYOUT = dict(
     plot_bgcolor=WHITE,
     paper_bgcolor=WHITE,
-    font=dict(family="Inter", color=CHARCOAL),
+    font=dict(family="Outfit", color=CHARCOAL),
 )
 
 
@@ -42,27 +43,49 @@ def sg_bar_color(val):
     return POSITIVE if val >= 0 else NEGATIVE
 
 
+def sg_color_5(val):
+    """5-level SG color per v1.6 scale: teal-to-rust, gold at neutral."""
+    try:
+        v = float(val)
+    except (ValueError, TypeError):
+        return SG_NEUTRAL
+    if v >= 1.0:
+        return SG_STRONG
+    if v >= 0.3:
+        return SG_GAIN
+    if v >= -0.3:
+        return SG_NEUTRAL
+    if v >= -1.0:
+        return SG_LOSS
+    return SG_WEAK
+
+
 def sg_cell_style(val):
-    """Inline CSS for SG heatmap / table cells (conditional colouring)."""
+    """Inline CSS for SG heatmap / table cells (5-level conditional colouring)."""
     try:
         v = float(val)
     except (ValueError, TypeError):
         return ""
-    strong = THRESHOLDS["sg_strong"]
-    if v > strong:
+    if v >= 1.0:
+        return f"background:{POSITIVE_BG};color:{POSITIVE_TEXT};font-weight:700;"
+    if v >= 0.3:
         return f"background:{POSITIVE_BG};color:{POSITIVE_TEXT};font-weight:600;"
     if v > 0:
         return f"background:{POSITIVE_BG};color:{POSITIVE};"
-    if v < -strong:
+    if v <= -1.0:
+        return f"background:{NEGATIVE_BG};color:{NEGATIVE_TEXT};font-weight:700;"
+    if v <= -0.3:
         return f"background:{NEGATIVE_BG};color:{NEGATIVE_TEXT};font-weight:600;"
     if v < 0:
         return f"background:{NEGATIVE_BG};color:{NEGATIVE};"
     return f"color:{CHARCOAL};"
 
 
-# Diverging heatmap colorscale centred on zero
+# Diverging heatmap colorscale — 5-stop, gold at centre
 SG_HEATMAP_COLORSCALE = [
-    [0.0, NEGATIVE],
-    [0.5, WARM_GRAY],
-    [1.0, POSITIVE],
+    [0.0,  SG_WEAK],
+    [0.25, SG_LOSS],
+    [0.5,  SG_NEUTRAL],
+    [0.75, SG_GAIN],
+    [1.0,  SG_STRONG],
 ]

@@ -165,10 +165,10 @@ def strokes_gained_tab(
 
         html = '<div style="overflow-x:auto;">'
         html += (
-            '<table style="width:100%;border-collapse:separate;'
-            'border-spacing:0;font-family:Inter,sans-serif;'
+            f'<table style="width:100%;border-collapse:separate;'
+            f'border-spacing:0;font-family:{FONT_BODY};'
             f'background:{WHITE};border-radius:12px;overflow:hidden;'
-            'box-shadow:0 4px 16px rgba(0,0,0,0.08);table-layout:fixed;">'
+            f'box-shadow:0 4px 16px rgba(0,0,0,0.08);table-layout:fixed;">'
         )
 
         label_w = '90px'
@@ -357,7 +357,7 @@ def strokes_gained_tab(
                                for s in chart_data['Score']],
                 textinfo='label+percent',
                 textposition='outside',
-                textfont=dict(family='Inter', size=12),
+                textfont=dict(family=FONT_BODY, size=12),
                 pull=[0.02] * len(chart_data),
                 domain=dict(x=[0.1, 0.9], y=[0.05, 0.95]),
             )])
@@ -370,7 +370,7 @@ def strokes_gained_tab(
                 annotations=[dict(
                     text=f'<b>{total_holes}</b><br>Holes',
                     x=0.5, y=0.5,
-                    font=dict(family='Playfair Display', size=22,
+                    font=dict(family=FONT_HEADING, size=22,
                               color=CHARCOAL),
                     showarrow=False,
                 )],
