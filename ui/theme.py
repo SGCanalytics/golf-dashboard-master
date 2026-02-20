@@ -77,7 +77,7 @@ THRESHOLDS = {
     "pct_nonplayable":        15,
     "pct_positive_shot":      50,
     "pct_poor_shot":          20,
-    "pct_inside_8ft":         60,
+    "pct_inside_8ft":         70,
     "pct_make_0_3":           95,
     "pct_lag_miss":           20,
     "pct_lag_inside_3":       50,
