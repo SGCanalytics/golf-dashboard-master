@@ -36,12 +36,12 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
     # Calculate fails per round and determine sentiment
     fails_per_round = total_tiger5_fails / num_rounds if num_rounds > 0 else 0
 
-    if fails_per_round == 0:
+    if fails_per_round <= 0.5:
         sentiment = "positive"  # Green
-    elif fails_per_round < 3:
-        sentiment = "warning"   # Yellow
+    elif fails_per_round <= 1.5:
+        sentiment = "warning"   # Gold
     else:
-        sentiment = "negative"  # Red
+        sentiment = "negative"  # Rust
 
     # Most common fail type for context
     most_common_fail = max(tiger5_names, key=lambda n: tiger5_results[n]['fails'])
@@ -78,12 +78,12 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
         # Calculate fails per round and determine sentiment
         fails_per_round = fails / num_rounds if num_rounds > 0 else 0
 
-        if fails_per_round == 0:
+        if fails_per_round <= 0.5:
             sentiment = "positive"  # Green
-        elif fails_per_round < 3:
-            sentiment = "warning"   # Yellow
+        elif fails_per_round <= 1.5:
+            sentiment = "warning"   # Gold
         else:
-            sentiment = "negative"  # Red
+            sentiment = "negative"  # Rust
 
         with col:
             premium_hero_card(
