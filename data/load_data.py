@@ -89,4 +89,17 @@ def load_data():
     df['Starting Distance'] = pd.to_numeric(df['Starting Distance'], errors='coerce')
     df['Ending Distance'] = pd.to_numeric(df['Ending Distance'], errors='coerce')
 
+    # Pre-compute date column for fast filter comparisons (avoids repeated .dt.date calls)
+    df['_date'] = df['Date'].dt.date
+
     return df
+
+
+@st.cache_data(ttl=300)
+def get_df_with_sg(benchmark_name: str) -> pd.DataFrame:
+    """
+    Load data and compute Strokes Gained for the selected benchmark.
+    Cached per benchmark — filter changes never trigger SG recalculation.
+    """
+    from engines.strokes_gained import apply_benchmark_sg
+    return apply_benchmark_sg(load_data(), benchmark_name)
