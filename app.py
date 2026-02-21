@@ -9,7 +9,7 @@
 import streamlit as st
 import pandas as pd
 
-from data.load_data import load_data
+from data.load_data import load_data, get_df_with_sg
 from engines.hole_summary import build_hole_summary
 from engines.driving import build_driving_results
 from engines.approach import build_approach_results
@@ -18,7 +18,7 @@ from engines.putting import build_putting_results
 from engines.tiger5 import build_tiger5_results
 from engines.scoring_performance import build_scoring_performance
 from engines.coachs_corner import build_coachs_corner
-from engines.strokes_gained import BENCHMARK_FILES, apply_benchmark_sg
+from engines.strokes_gained import BENCHMARK_FILES
 
 from ui.css import inject_css
 from ui.components import sidebar_title, sidebar_label
@@ -41,13 +41,8 @@ st.set_page_config(page_title="Golf Analytics Dashboard", layout="wide")
 inject_css()
 
 # ============================================================
-# DATA LOADING
-# ============================================================
-
-df = load_data()
-
-# ============================================================
-# SIDEBAR FILTERS (DYNAMIC/CASCADING)
+# BENCHMARK SELECTION (must come before data loading so SG
+# can be computed on the full df and cached per benchmark)
 # ============================================================
 
 with st.sidebar:
@@ -62,6 +57,18 @@ with st.sidebar:
     )
 
     st.markdown("---")
+
+# ============================================================
+# DATA LOADING — SG computed once per benchmark, then cached
+# ============================================================
+
+df = get_df_with_sg(benchmark_choice)
+
+# ============================================================
+# SIDEBAR FILTERS (DYNAMIC/CASCADING)
+# ============================================================
+
+with st.sidebar:
 
     # Initialize session state for filter selections if not exists
     if 'selected_players' not in st.session_state:
@@ -84,8 +91,8 @@ with st.sidebar:
     temp_df = df[
         (df['Player'].isin(st.session_state.selected_players))
         & (df['Tournament'].isin(st.session_state.selected_tournaments))
-        & (df['Date'].dt.date >= st.session_state.selected_date_range[0])
-        & (df['Date'].dt.date <= st.session_state.selected_date_range[1])
+        & (df['_date'] >= st.session_state.selected_date_range[0])
+        & (df['_date'] <= st.session_state.selected_date_range[1])
     ]
     available_courses = sorted(temp_df['Course'].unique())
 
@@ -93,8 +100,8 @@ with st.sidebar:
     temp_df = df[
         (df['Player'].isin(st.session_state.selected_players))
         & (df['Course'].isin(st.session_state.selected_courses))
-        & (df['Date'].dt.date >= st.session_state.selected_date_range[0])
-        & (df['Date'].dt.date <= st.session_state.selected_date_range[1])
+        & (df['_date'] >= st.session_state.selected_date_range[0])
+        & (df['_date'] <= st.session_state.selected_date_range[1])
     ]
     available_tournaments = sorted(temp_df['Tournament'].unique())
 
@@ -192,15 +199,9 @@ filtered_df = df[
     (df['Player'].isin(final_players))
     & (df['Course'].isin(final_courses))
     & (df['Tournament'].isin(final_tournaments))
-    & (df['Date'].dt.date >= date_range[0])
-    & (df['Date'].dt.date <= date_range[1])
+    & (df['_date'] >= date_range[0])
+    & (df['_date'] <= date_range[1])
 ].copy()
-
-# ============================================================
-# RECALCULATE SG FROM BENCHMARK
-# ============================================================
-
-filtered_df = apply_benchmark_sg(filtered_df, benchmark_choice)
 
 num_rounds = filtered_df['Round ID'].nunique()
 

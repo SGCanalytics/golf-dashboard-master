@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import streamlit as st
 
 # ============================================================
 # STROKES GAINED ENGINE — BENCHMARK-BASED SG CALCULATOR
@@ -25,6 +26,7 @@ LOCATION_TO_COLUMN = {
 }
 
 
+@st.cache_data
 def load_benchmark(benchmark_name):
     """
     Load a benchmark CSV into a dict-of-dicts for fast lookup.
@@ -134,22 +136,27 @@ def apply_benchmark_sg(df, benchmark_name):
 
     df = df.copy()
 
-    start_dist = pd.to_numeric(df['Starting Distance'], errors='coerce')
-    end_dist = pd.to_numeric(df['Ending Distance'], errors='coerce')
+    start_dist = pd.to_numeric(df['Starting Distance'], errors='coerce').round().clip(0, 600).astype('Int64')
+    end_dist   = pd.to_numeric(df['Ending Distance'],   errors='coerce').round().clip(0, 600).astype('Int64')
 
-    new_sg = []
-    for idx in df.index:
-        sg = calculate_sg_for_shot(
-            lookup,
-            df.at[idx, 'Starting Location'],
-            start_dist.at[idx],
-            df.at[idx, 'Ending Location'],
-            end_dist.at[idx],
-            df.at[idx, 'Penalty']
-        )
-        new_sg.append(sg)
+    exp_start = pd.Series(np.nan, index=df.index, dtype=float)
+    exp_end   = pd.Series(np.nan, index=df.index, dtype=float)
 
-    calculated = pd.Series(new_sg, index=df.index, dtype=float)
+    for loc, col in LOCATION_TO_COLUMN.items():
+        s_mask = df['Starting Location'] == loc
+        if s_mask.any():
+            exp_start[s_mask] = start_dist[s_mask].map(lookup[col])
+
+        e_mask = df['Ending Location'] == loc
+        if e_mask.any():
+            exp_end[e_mask] = end_dist[e_mask].map(lookup[col])
+
+    # Holed-out shots (ending distance <= 0)
+    holed = pd.to_numeric(df['Ending Distance'], errors='coerce') <= 0
+    exp_end[holed] = 0.0
+
+    penalty_strokes = (df['Penalty'].astype(str).str.strip().str.lower() == 'yes').astype(int)
+    calculated = exp_start - exp_end - 1 - penalty_strokes
 
     # Use calculated SG where possible, fall back to original
     original_sg = pd.to_numeric(df['Strokes Gained'], errors='coerce')
