@@ -378,15 +378,58 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
     db_analysis = scoring_perf_results['double_bogey_analysis']
     bogey_analysis = scoring_perf_results['bogey_analysis']
     underperf_analysis = scoring_perf_results['underperformance_analysis']
+    total_counts = scoring_perf_results['total_counts']
+    total_fails = scoring_perf_results['total_fails']
 
-    # Create three columns for donut charts
-    donut_col1, donut_col2, donut_col3 = st.columns(3)
+    # Row 1: Total Fails (new) | Double Bogey+
+    row1_col1, row1_col2 = st.columns(2)
+
+    # Total Fails Donut (all scoring issues combined)
+    with row1_col1:
+        st.markdown("**Total Fails Distribution**")
+        if total_counts and total_fails > 0:
+            all_data = [(rc, count) for rc, count in total_counts.items() if count > 0]
+            all_data.sort(key=lambda x: x[1], reverse=True)
+
+            labels = [item[0] for item in all_data]
+            values = [item[1] for item in all_data]
+            colors = [rc_color_map.get(rc, CHARCOAL) for rc in labels]
+
+            fig_total = go.Figure(data=[go.Pie(
+                labels=labels,
+                values=values,
+                hole=0.6,
+                marker_colors=colors,
+                textinfo='label+percent',
+                textposition='outside',
+                textfont=dict(family=FONT_DATA, size=11),
+                pull=[0.02] * len(labels),
+            )])
+
+            fig_total.update_layout(
+                **CHART_LAYOUT,
+                height=350,
+                margin=dict(t=20, b=20, l=20, r=20),
+                showlegend=False,
+                annotations=[dict(
+                    text=f"{total_fails}<br>Total Fails",
+                    x=0.5, y=0.5,
+                    font_size=16,
+                    showarrow=False,
+                    font_family=FONT_HEADING,
+                    font_color=CHARCOAL,
+                )]
+            )
+
+            st.plotly_chart(fig_total, use_container_width=True,
+                            config={'displayModeBar': False})
+        else:
+            st.info("No total fail data available.")
 
     # Double Bogey+ Donut
-    with donut_col1:
+    with row1_col2:
         st.markdown("**Double Bogey+ Distribution**")
         if db_analysis['counts'] and len(db_analysis['holes']) > 0:
-            # Filter out zero counts and sort by count
             db_data = [(rc, count) for rc, count in db_analysis['counts'].items() if count > 0]
             db_data.sort(key=lambda x: x[1], reverse=True)
 
@@ -416,20 +459,22 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                     font_size=16,
                     showarrow=False,
                     font_family=FONT_HEADING,
-                    font_color=CHARCOAL
+                    font_color=CHARCOAL,
                 )]
             )
 
             st.plotly_chart(fig_db, use_container_width=True,
-                          config={'displayModeBar': False})
+                            config={'displayModeBar': False})
         else:
             st.info("No double bogey+ data")
 
+    # Row 2: Bogey | Underperformance
+    row2_col1, row2_col2 = st.columns(2)
+
     # Bogey Donut
-    with donut_col2:
+    with row2_col1:
         st.markdown("**Bogey Distribution**")
         if bogey_analysis['counts'] and len(bogey_analysis['holes']) > 0:
-            # Filter out zero counts and sort by count
             bogey_data = [(rc, count) for rc, count in bogey_analysis['counts'].items() if count > 0]
             bogey_data.sort(key=lambda x: x[1], reverse=True)
 
@@ -459,20 +504,19 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                     font_size=16,
                     showarrow=False,
                     font_family=FONT_HEADING,
-                    font_color=CHARCOAL
+                    font_color=CHARCOAL,
                 )]
             )
 
             st.plotly_chart(fig_bogey, use_container_width=True,
-                          config={'displayModeBar': False})
+                            config={'displayModeBar': False})
         else:
             st.info("No bogey data")
 
     # Underperformance Donut
-    with donut_col3:
+    with row2_col2:
         st.markdown("**Underperformance Distribution**")
         if underperf_analysis['counts'] and len(underperf_analysis['holes']) > 0:
-            # Filter out zero counts and sort by count
             under_data = [(rc, count) for rc, count in underperf_analysis['counts'].items() if count > 0]
             under_data.sort(key=lambda x: x[1], reverse=True)
 
@@ -502,11 +546,11 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                     font_size=16,
                     showarrow=False,
                     font_family=FONT_HEADING,
-                    font_color=CHARCOAL
+                    font_color=CHARCOAL,
                 )]
             )
 
             st.plotly_chart(fig_under, use_container_width=True,
-                          config={'displayModeBar': False})
+                            config={'displayModeBar': False})
         else:
             st.info("No underperformance data")
