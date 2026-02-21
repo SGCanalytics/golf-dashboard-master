@@ -10,7 +10,7 @@ from ui.theme import (
     CHARCOAL, POSITIVE, NEGATIVE, ACCENT_PRIMARY, ACCENT_SECONDARY,
     CHART_PUTTING, CHART_PALETTE, DONUT_SEQUENCE, CHART_SHORT_GAME,
 )
-from ui.chart_config import CHART_LAYOUT, sg_bar_color
+from ui.chart_config import CHART_LAYOUT, trend_layout, sg_bar_color
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card, sg_sentiment,
 )
@@ -130,16 +130,9 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
             ))
 
         fig_t5.update_layout(
-            **CHART_LAYOUT,
+            **trend_layout(height=400),
             barmode='stack',
-            xaxis_title='',
             yaxis_title='Tiger 5 Fails',
-            height=400,
-            legend=dict(orientation='h', yanchor='bottom', y=1.02,
-                        xanchor='right', x=1),
-            margin=dict(t=60, b=80, l=60, r=40),
-            xaxis=dict(tickangle=-45),
-            hovermode='x unified',
         )
 
         st.plotly_chart(fig_t5, use_container_width=True,
@@ -264,16 +257,9 @@ def tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, nu
         ))
 
         fig_impact.update_layout(
-            **CHART_LAYOUT,
+            **trend_layout(height=400),
             barmode='group',
-            xaxis_title='',
             yaxis_title='Score',
-            height=400,
-            legend=dict(orientation='h', yanchor='bottom', y=1.02,
-                        xanchor='right', x=1),
-            margin=dict(t=60, b=80, l=60, r=40),
-            xaxis=dict(tickangle=-45),
-            hovermode='x unified',
         )
 
         st.plotly_chart(fig_impact, use_container_width=True,

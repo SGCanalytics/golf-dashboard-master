@@ -11,7 +11,7 @@ from ui.theme import (
     WARNING, CHART_PUTTING, CHART_PALETTE, DONUT_SEQUENCE, CHART_SHORT_GAME,
     FONT_DATA, FONT_HEADING, WHITE, BOGEY,
 )
-from ui.chart_config import CHART_LAYOUT, sg_bar_color
+from ui.chart_config import CHART_LAYOUT, trend_layout, sg_bar_color
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card, sg_sentiment,
 )
@@ -222,27 +222,16 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
             ))
 
             fig_sp.update_layout(
-                **CHART_LAYOUT,
+                **trend_layout(height=400),
                 barmode='stack',
-                xaxis_title='',
                 yaxis_title='Issues by Root Cause',
                 yaxis2=dict(
                     title='Total Fails',
                     overlaying='y',
                     side='right',
-                    showgrid=False
-                ),
-                height=400,
-                legend=dict(
-                    orientation='h',
-                    yanchor='bottom',
-                    y=1.02,
-                    xanchor='right',
-                    x=1
+                    showgrid=False,
                 ),
                 margin=dict(t=60, b=80, l=60, r=60),
-                xaxis=dict(tickangle=-45),
-                hovermode='x unified'
             )
 
             st.plotly_chart(fig_sp, use_container_width=True,
@@ -346,21 +335,10 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
         ))
 
         fig_impact.update_layout(
-            **CHART_LAYOUT,
+            **trend_layout(height=400),
             barmode='group',
-            xaxis_title='',
             yaxis_title='Score',
-            height=400,
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                y=1.02,
-                xanchor='right',
-                x=1
-            ),
             margin=dict(t=60, b=80, l=60, r=60),
-            xaxis=dict(tickangle=-45),
-            hovermode='x unified'
         )
 
         st.plotly_chart(fig_impact, use_container_width=True,
