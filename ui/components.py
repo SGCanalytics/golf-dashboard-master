@@ -248,6 +248,8 @@ def practice_priority_card(item, number, border_color):
     metric = item.get('metric', '')
     target = item.get('target', '')
     impact = item.get('impact', 0)
+    sg_pr = item.get('sg_per_round', -impact)
+    sg_col = sg_color_5(sg_pr)
 
     st.markdown(f'''
         <div style="background:{WHITE};border-radius:8px;
@@ -260,15 +262,22 @@ def practice_priority_card(item, number, border_color):
                      font-weight:700;color:{border_color};min-width:24px;
                      text-align:center;flex-shrink:0;">{number}</div>
                 <div style="flex:1;">
-                    <div style="font-family:{FONT_HEADING};font-size:0.9rem;
-                         font-weight:600;color:{CHARCOAL};margin-bottom:0.3rem;">
-                        {label}</div>
+                    <div style="display:flex;justify-content:space-between;
+                         align-items:baseline;margin-bottom:0.3rem;">
+                        <div style="font-family:{FONT_HEADING};font-size:0.9rem;
+                             font-weight:600;color:{CHARCOAL};">
+                            {label}</div>
+                        <div style="text-align:right;flex-shrink:0;margin-left:0.75rem;">
+                            <span style="font-family:{FONT_HEADING};font-size:1.4rem;
+                                  font-weight:700;color:{sg_col};">
+                                {sg_pr:+.2f}</span>
+                            <span style="font-family:{FONT_DATA};font-size:0.65rem;
+                                  color:{SLATE};margin-left:0.2rem;font-weight:400;">SG/rd</span>
+                        </div>
+                    </div>
                     <div style="font-family:{FONT_BODY};font-size:0.75rem;
                          color:{CHARCOAL_LIGHT};">
                         <strong>Current:</strong> {metric} | <strong>Target:</strong> {target}</div>
-                    <div style="font-family:{FONT_DATA};font-size:0.7rem;
-                         color:{SLATE};margin-top:0.2rem;">
-                        Impact: {impact:.1f} strokes/round</div>
                 </div>
             </div>
         </div>
@@ -393,6 +402,14 @@ def player_path_root_cause_card(rc):
     border_color = severity_color(rc['severity'])
     sg_color = sg_color_5(rc['sg_per_round'])
 
+    # Build inline details html — shown directly on card instead of in an expander
+    details = rc.get('details', [])
+    details_html = ''.join([
+        f'<p style="font-family:{FONT_BODY};font-size:0.78rem;'
+        f'color:{CHARCOAL_LIGHT};margin:0.15rem 0;">• {d}</p>'
+        for d in details
+    ])
+
     # Card header — matches performance_driver_card() layout
     st.markdown(f'''
         <div style="background:{WHITE};border-radius:{CARD_RADIUS};
@@ -418,6 +435,7 @@ def player_path_root_cause_card(rc):
                           color:{SLATE};margin-left:0.2rem;">SG/rd</span>
                 </div>
             </div>
+            {f'<div style="margin-top:0.4rem;">{details_html}</div>' if details_html else ''}
         </div>
     ''', unsafe_allow_html=True)
 
@@ -429,16 +447,6 @@ def player_path_root_cause_card(rc):
         compact_stat_card("Scoring Issues", str(rc.get('sp_issues', 0)), sentiment="warning")
     with m3:
         compact_stat_card("Total Issues", str(rc.get('total_issues', 0)), sentiment="neutral")
-
-    # Details in expander — matches player_path_category_card() pattern
-    if rc.get('details'):
-        with st.expander(f"View {rc['headline']} Details"):
-            for detail in rc['details']:
-                st.markdown(
-                    f'<p style="font-family:{FONT_BODY};font-size:0.78rem;'
-                    f'color:{CHARCOAL_LIGHT};margin-bottom:0.3rem;">• {detail}</p>',
-                    unsafe_allow_html=True,
-                )
 
 
 # ---- Sidebar helpers ------------------------------------------------
