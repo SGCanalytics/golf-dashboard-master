@@ -231,7 +231,6 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
                     side='right',
                     showgrid=False,
                 ),
-                margin=dict(t=60, b=80, l=60, r=60),
             )
 
             st.plotly_chart(fig_sp, use_container_width=True,
@@ -338,7 +337,6 @@ def scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results):
             **trend_layout(height=400),
             barmode='group',
             yaxis_title='Score',
-            margin=dict(t=60, b=80, l=60, r=60),
         )
 
         st.plotly_chart(fig_impact, use_container_width=True,
