@@ -12,7 +12,7 @@ from ui.theme import (
     BORDER_LIGHT, THRESHOLDS,
     FONT_BODY,
 )
-from ui.chart_config import CHART_LAYOUT, SG_HEATMAP_COLORSCALE
+from ui.chart_config import CHART_LAYOUT, SG_HEATMAP_COLORSCALE, SG_HEATMAP_COLORBAR
 from ui.components import (
     section_header, premium_hero_card, sg_sentiment,
 )
@@ -108,7 +108,7 @@ def short_game_tab(sg, num_rounds):
             textfont=dict(size=14, color=WHITE),
             colorscale=SG_HEATMAP_COLORSCALE,
             zmid=0,
-            colorbar=dict(title="SG/Shot"),
+            colorbar=SG_HEATMAP_COLORBAR,
             hovertext=hover_matrix,
             hovertemplate="%{hovertext}<extra></extra>",
         ))
@@ -118,7 +118,7 @@ def short_game_tab(sg, num_rounds):
             xaxis_title="Distance (yards)",
             yaxis_title="Starting Lie",
             height=300,
-            margin=dict(t=40, b=60, l=100, r=40),
+            margin=dict(t=40, b=60, l=100, r=120),
         )
 
         st.plotly_chart(fig_heat, use_container_width=True,

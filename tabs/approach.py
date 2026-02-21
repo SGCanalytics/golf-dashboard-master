@@ -14,7 +14,7 @@ from ui.theme import (
     FONT_BODY, FONT_DATA, FONT_HEADING,
     THRESHOLDS, UNDER, GOLD, DOUBLE,
 )
-from ui.chart_config import CHART_LAYOUT, sg_bar_color, sg_color_5, SG_HEATMAP_COLORSCALE
+from ui.chart_config import CHART_LAYOUT, sg_bar_color, sg_color_5, SG_HEATMAP_COLORSCALE, SG_HEATMAP_COLORBAR
 from ui.components import (
     section_header, premium_hero_card, premium_stat_card, sg_sentiment,
 )
@@ -334,7 +334,7 @@ def approach_tab(approach, num_rounds):
             textfont=dict(size=14, color=WHITE),
             colorscale=SG_HEATMAP_COLORSCALE,
             zmid=0,
-            colorbar=dict(title="SG/Shot"),
+            colorbar=SG_HEATMAP_COLORBAR,
             hovertext=hover_matrix,
             hovertemplate="%{hovertext}<extra></extra>",
         ))
@@ -343,7 +343,7 @@ def approach_tab(approach, num_rounds):
             xaxis_title="Starting Location",
             yaxis_title="Distance Bucket",
             height=400,
-            margin=dict(t=40, b=60, l=100, r=40),
+            margin=dict(t=40, b=60, l=100, r=120),
         )
         st.plotly_chart(fig_heat, use_container_width=True,
                         config={'displayModeBar': False})

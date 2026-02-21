@@ -89,3 +89,14 @@ SG_HEATMAP_COLORSCALE = [
     [0.75, SG_GAIN],
     [1.0,  SG_STRONG],
 ]
+
+# Colorbar config for SG heatmaps — shows tick labels at every scale breakpoint
+SG_HEATMAP_COLORBAR = dict(
+    title=dict(text="SG/Shot", side="right", font=dict(size=12)),
+    tickvals=[-1.0, -0.3, 0, 0.3, 1.0],
+    ticktext=["-1.0", "-0.3", "0", "+0.3", "+1.0"],
+    tickfont=dict(size=11),
+    thickness=14,
+    len=0.85,
+    outlinewidth=0,
+)
