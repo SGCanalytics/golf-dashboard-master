@@ -18,7 +18,7 @@ from ui.components import (
     gas_pedal_sentiment, bogey_train_sentiment, grit_score_sentiment,
     bogey_rate_sentiment, conversion_pct_sentiment,
     performance_driver_card, practice_priority_card, strength_maintenance_card,
-    compact_stat_card, player_path_category_card, player_path_root_cause_card,
+    compact_stat_card,
 )
 from ui.formatters import format_sg, format_pct
 
@@ -262,27 +262,6 @@ def coachs_corner_tab(cc):
             strength_maintenance_card(item, i)
     else:
         st.info("Build positive SG areas to create strengths to maintain.")
-
-    # ================================================================
-    # SECTION 5: PLAYERPATH — ROOT CAUSE SCORING ROADMAP
-    # ================================================================
-    section_header("PlayerPath: Your Scoring Roadmap")
-
-    st.markdown(
-        f'<p style="font-family:{FONT_BODY};font-size:0.8rem;color:{SLATE};'
-        f'margin-bottom:1rem;">Combining Tiger 5 fails AND scoring issues to show exactly '
-        f'what\'s causing higher scores and how to fix it.</p>',
-        unsafe_allow_html=True,
-    )
-
-    path = cc.get("player_path", {"root_causes": []})
-    root_causes = path.get("root_causes", [])
-
-    if root_causes:
-        for rc in root_causes:
-            player_path_root_cause_card(rc)
-    else:
-        st.info("Great job! No significant root causes detected. Keep up the consistent play!")
 
     # ================================================================
     # SECTION 5: TIGER 5 ROOT CAUSE DEEP DIVE — REMOVED
