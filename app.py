@@ -73,27 +73,12 @@ with st.sidebar:
     if 'selected_date_range' not in st.session_state:
         min_date, max_date = df['Date'].min().date(), df['Date'].max().date()
         st.session_state.selected_date_range = (min_date, max_date)
-    if 'excluded_players' not in st.session_state:
-        st.session_state.excluded_players = set()
 
     # Dynamic filter options based on other selections
     # For each filter, calculate available options by applying ALL OTHER filters
 
-    # Available players (filtered by course, tournament, date)
-    temp_df = df[
-        (df['Course'].isin(st.session_state.selected_courses))
-        & (df['Tournament'].isin(st.session_state.selected_tournaments))
-        & (df['Date'].dt.date >= st.session_state.selected_date_range[0])
-        & (df['Date'].dt.date <= st.session_state.selected_date_range[1])
-    ]
-    # Calculate players from data filters
-    data_filtered_players = set(temp_df['Player'].unique())
-
-    # Available players = currently selected OR (data-filtered AND not excluded)
-    available_players = sorted(
-        set(st.session_state.selected_players) |
-        (data_filtered_players - st.session_state.excluded_players)
-    )
+    # Always show all players — no cascading or exclusion tracking
+    available_players = sorted(df['Player'].unique())
 
     # Available courses (filtered by player, tournament, date)
     temp_df = df[
@@ -150,20 +135,6 @@ with st.sidebar:
         key="player_select",
     )
 
-    # Premium refresh control - only shown when players are hidden
-    if st.session_state.excluded_players:
-        num_excluded = len(st.session_state.excluded_players)
-
-        # Render premium refresh button (styling lives in ui/css.py)
-        if st.button(
-            f"↻  Restore {num_excluded} player{'s' if num_excluded != 1 else ''}",
-            key="refresh_players",
-            type="secondary",
-            use_container_width=True
-        ):
-            st.session_state.excluded_players.clear()
-            st.rerun()
-
     sidebar_label("Course")
     courses = st.multiselect(
         "Course",
@@ -199,13 +170,6 @@ with st.sidebar:
     )
 
     # Update session state with current selections
-    # Detect manual removals and add to exclusion list
-    if players is not None:
-        previously_selected = set(st.session_state.selected_players)
-        currently_selected = set(players)
-        newly_excluded = previously_selected - currently_selected
-        st.session_state.excluded_players.update(newly_excluded)
-
     st.session_state.selected_players = players if players else available_players
     st.session_state.selected_courses = courses if courses else available_courses
     st.session_state.selected_tournaments = tournaments if tournaments else available_tournaments
