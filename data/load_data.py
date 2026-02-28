@@ -55,6 +55,11 @@ def load_data():
     df['Course'] = df['Course'].str.strip().str.title()
     df['Tournament'] = df['Tournament'].str.strip().str.title()
 
+    # Rename columns to match expected schema
+    df = df.rename(columns={
+        'Ending Lie': 'Ending Location',
+    })
+
     # Compute par from first shot
     first_shots = df[df['Shot'] == 1].copy()
     first_shots['Par'] = first_shots['Starting Distance'].apply(determine_par)

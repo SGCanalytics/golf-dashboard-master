@@ -158,8 +158,12 @@ def apply_benchmark_sg(df, benchmark_name):
     penalty_strokes = (df['Penalty'].astype(str).str.strip().str.lower() == 'yes').astype(int)
     calculated = exp_start - exp_end - 1 - penalty_strokes
 
-    # Use calculated SG where possible, fall back to original
-    original_sg = pd.to_numeric(df['Strokes Gained'], errors='coerce')
-    df['Strokes Gained'] = calculated.fillna(original_sg)
+    # Use calculated SG - if 'Strokes Gained' column doesn't exist in source data,
+    # just use the calculated values
+    if 'Strokes Gained' in df.columns:
+        original_sg = pd.to_numeric(df['Strokes Gained'], errors='coerce')
+        df['Strokes Gained'] = calculated.fillna(original_sg)
+    else:
+        df['Strokes Gained'] = calculated
 
     return df
