@@ -243,24 +243,17 @@ coachs_corner_results = build_coachs_corner(
 # TABS
 # ============================================================
 
-tab_tiger5, tab_scoring_perf, tab_sg, tab_driving, tab_approach, tab_short_game, \
-    tab_putting, tab_coach, tab_coaches_table = st.tabs(
-        ["Tiger 5", "Scoring Performance", "Strokes Gained", "Driving", "Approach",
-         "Short Game", "Putting", "Coach's Corner", "Coaches Table"]
+tab_tiger5, tab_coach, tab_driving, tab_approach, tab_short_game, \
+    tab_putting, tab_sg, tab_coaches_table, tab_scoring_perf = st.tabs(
+        ["Tiger 5", "PlayerPath", "Driving", "Approach",
+         "Short Game", "Putting", "Strokes Gained", "Coaches Table", "Scoring Performance"]
     )
 
 with tab_tiger5:
     tiger5_tab(filtered_df, hole_summary, tiger5_results, total_tiger5_fails, num_rounds)
 
-with tab_scoring_perf:
-    scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results)
-
-with tab_sg:
-    strokes_gained_tab(
-        filtered_df, hole_summary, num_rounds,
-        driving_results, approach_results, short_game_results,
-        putting_results, tiger5_results,
-    )
+with tab_coach:
+    coachs_corner_tab(coachs_corner_results)
 
 with tab_driving:
     driving_tab(driving_results, num_rounds, hole_summary)
@@ -274,8 +267,15 @@ with tab_short_game:
 with tab_putting:
     putting_tab(putting_results, num_rounds)
 
-with tab_coach:
-    coachs_corner_tab(coachs_corner_results)
+with tab_sg:
+    strokes_gained_tab(
+        filtered_df, hole_summary, num_rounds,
+        driving_results, approach_results, short_game_results,
+        putting_results, tiger5_results,
+    )
 
 with tab_coaches_table:
     coaches_table_tab(filtered_df, hole_summary)
+
+with tab_scoring_perf:
+    scoring_perf_tab(filtered_df, hole_summary, scoring_perf_results)
