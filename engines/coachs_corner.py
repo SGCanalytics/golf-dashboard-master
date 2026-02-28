@@ -122,7 +122,8 @@ def _flow_metrics(hole_summary):
         "gas_pedal_pct": 0.0,
         "bogey_train_count": 0,
         "longest_bogey_train": 0,
-        "bogey_trains": []
+        "bogey_trains": [],
+        "bogey_train_pct": 0.0
     }
 
     if hole_summary.empty:
@@ -135,6 +136,8 @@ def _flow_metrics(hole_summary):
     gas_pedal_attempts = 0
     gas_pedal_count = 0
     all_bogey_trains = []
+    total_bogey_plus = 0  # Total holes with score > par
+    consecutive_bogey_plus = 0  # Bogey+ holes that follow another bogey+
 
     for rid, round_df in hole_summary.groupby('Round ID'):
         round_sorted = round_df.sort_values('Hole').reset_index(drop=True)
@@ -150,6 +153,10 @@ def _flow_metrics(hole_summary):
             # Track bogey trains
             if is_bogey_plus:
                 current_train += 1
+                total_bogey_plus += 1
+                # Check if previous hole was also bogey+
+                if i > 0 and scores[i - 1] > pars[i - 1]:
+                    consecutive_bogey_plus += 1
             else:
                 if current_train >= 2:
                     all_bogey_trains.append(current_train)
@@ -199,6 +206,10 @@ def _flow_metrics(hole_summary):
     result["bogey_train_count"] = len(all_bogey_trains)
     result["longest_bogey_train"] = max(all_bogey_trains) if all_bogey_trains else 0
     result["bogey_trains"] = all_bogey_trains
+    result["bogey_train_pct"] = (
+        consecutive_bogey_plus / total_bogey_plus * 100
+        if total_bogey_plus > 0 else 0.0
+    )
 
     return result
 

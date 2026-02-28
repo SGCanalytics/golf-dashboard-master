@@ -15,8 +15,8 @@ from ui.components import (
     section_header, premium_hero_card, premium_stat_card,
     sg_sentiment, pct_sentiment_above, pct_sentiment_below,
     severity_color, bounce_back_sentiment, drop_off_sentiment,
-    gas_pedal_sentiment, bogey_train_sentiment, grit_score_sentiment,
-    bogey_rate_sentiment, conversion_pct_sentiment,
+    gas_pedal_sentiment, bogey_train_sentiment, bogey_train_pct_sentiment,
+    grit_score_sentiment, bogey_rate_sentiment, conversion_pct_sentiment,
     performance_driver_card, practice_priority_card, strength_maintenance_card,
     compact_stat_card,
 )
@@ -142,12 +142,12 @@ def coachs_corner_tab(cc):
                           format_pct(fm['gas_pedal_pct']),
                           "birdie after birdie", sentiment=s)
     with colD:
-        s = bogey_train_sentiment(fm["bogey_train_count"])
-        premium_stat_card("Bogey Trains",
-                          str(fm['bogey_train_count']),
-                          sentiment=s)
+        s = bogey_train_pct_sentiment(fm["bogey_train_pct"])
+        premium_stat_card("Bogey Train %",
+                          format_pct(fm['bogey_train_pct']),
+                          "bogey+ after bogey+", sentiment=s)
 
-    if fm["bogey_train_count"] > 0:
+    if fm["bogey_train_pct"] > 0:
         bt_c1, bt_c2 = st.columns(2)
         with bt_c1:
             premium_stat_card("Longest Train",
@@ -169,8 +169,8 @@ def coachs_corner_tab(cc):
         **Gas Pedal %**: How often you follow one birdie with another birdie. Higher is better —
         shows you can "keep your foot on the gas" when playing well.
 
-        **Bogey Trains**: Consecutive holes with bogey or worse. Lower count is better —
-        indicates you avoid extended rough patches.
+        **Bogey Train %**: Percentage of bogey+ holes that follow another bogey+ hole.
+        Lower is better — indicates you avoid consecutive bad holes.
         ''')
 
     # ================================================================

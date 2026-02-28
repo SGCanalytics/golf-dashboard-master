@@ -167,6 +167,19 @@ def bogey_train_sentiment(count):
     return "negative" if count > 0 else "positive"
 
 
+def bogey_train_pct_sentiment(pct):
+    """Sentiment for bogey train percentage (lower is better).
+
+    This measures the % of bogey+ holes that follow another bogey+ hole.
+    Lower percentage means fewer consecutive bogey+ streaks.
+    """
+    if pct <= 20:
+        return "positive"
+    elif pct <= 40:
+        return "warning"
+    return "negative"
+
+
 def grit_score_sentiment(score):
     """Sentiment for Tiger 5 grit score."""
     if score >= 80:
