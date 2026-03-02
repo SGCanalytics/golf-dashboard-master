@@ -52,7 +52,7 @@ with st.sidebar:
     benchmark_choice = st.selectbox(
         "SG Benchmark",
         options=list(BENCHMARK_FILES.keys()),
-        index=0,
+        index=1,
         label_visibility="collapsed",
     )
 
